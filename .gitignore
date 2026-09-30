@@ -1,0 +1,26 @@
+# File export Shopee asli (berisi data pribadi pembeli) — JANGAN pernah di-commit
+/sample-data/
+
+# Jaring pengaman: file Excel/CSV di mana pun tidak ikut ter-commit,
+# kecuali fixture dummy untuk test
+*.xlsx
+*.xls
+*.csv
+!/tests/fixtures/**
+
+# Dependencies & build
+node_modules/
+dist/
+.vite/
+coverage/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
