@@ -132,7 +132,14 @@ function MainApp({ email }: { email: string }) {
                 onlyMissingInitially={params.get('kosong') === '1'}
               />
             )}
-            {route === 'biaya' && <ExpensesPage stores={stores} storeId={storeId} onStoreChange={setStoreId} />}
+            {route === 'biaya' && (
+              <ExpensesPage
+                stores={stores}
+                storeId={storeId}
+                onStoreChange={setStoreId}
+                initialMonth={params.get('bulan')}
+              />
+            )}
             {route === 'rekap' && <RecapPage stores={stores} storeId={storeId} onStoreChange={setStoreId} />}
           </>
         )}

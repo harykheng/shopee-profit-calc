@@ -18,13 +18,20 @@ export function ExpensesPage({
   stores,
   storeId,
   onStoreChange,
+  initialMonth,
 }: {
   stores: Store[]
   storeId: number | null
   onStoreChange: (id: number) => void
+  /** Dari link "Isi biaya" di Rekap, mis. "2026-08-01". */
+  initialMonth?: string | null
 }) {
   // Biaya biasanya direkap setelah bulan selesai → default bulan lalu.
-  const [month, setMonth] = useState(() => addMonths(currentMonth(), -1))
+  const pickMonth = (m?: string | null) => (m && /^\d{4}-\d{2}-01$/.test(m) ? m : addMonths(currentMonth(), -1))
+  const [month, setMonth] = useState(() => pickMonth(initialMonth))
+  useEffect(() => {
+    if (initialMonth) setMonth(pickMonth(initialMonth))
+  }, [initialMonth])
   const [values, setValues] = useState<Values | null>(null)
   const [loadError, setLoadError] = useState<unknown>(null)
   const [saving, setSaving] = useState(false)
@@ -128,6 +135,11 @@ export function ExpensesPage({
             Total biaya: <strong className="tabular-nums">{formatRupiah(total)}</strong>
           </p>
 
+          {/* Pesan status di BAWAH tombol, supaya tombol tidak bergeser saat ditekan. */}
+          <Button className="mt-4" onClick={save} disabled={saving}>
+            {saving ? 'Menyimpan…' : 'Simpan biaya'}
+          </Button>
+
           {saveError ? <div className="mt-4"><ErrorBox error={saveError} /></div> : null}
           {saved && (
             <div className="mt-4">
@@ -135,10 +147,6 @@ export function ExpensesPage({
             </div>
           )}
           {dirty && !saving && <p className="mt-4 text-amber-700">Ada perubahan yang belum disimpan.</p>}
-
-          <Button className="mt-4" onClick={save} disabled={saving}>
-            {saving ? 'Menyimpan…' : 'Simpan biaya'}
-          </Button>
         </Card>
       )}
     </>

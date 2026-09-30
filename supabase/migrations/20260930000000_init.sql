@@ -385,7 +385,9 @@ with inc as (
          sum(amount) filter (where category = 'iklan_shopee') as iklan_shopee,
          sum(amount) filter (where category = 'meta_ads')     as meta_ads,
          sum(amount) filter (where category = 'packaging')    as packaging,
-         sum(amount) filter (where category = 'lain_lain')    as lain_lain
+         sum(amount) filter (where category = 'lain_lain')    as lain_lain,
+         -- > 0 berarti biaya bulan ini sudah pernah disimpan (walau nominalnya 0).
+         count(*)                                              as expense_entries
   from public.expenses
   group by 1, 2
 ), months as (
@@ -405,7 +407,8 @@ with inc as (
          coalesce(exp.iklan_shopee, 0)     as iklan_shopee,
          coalesce(exp.meta_ads, 0)         as meta_ads,
          coalesce(exp.packaging, 0)        as packaging,
-         coalesce(exp.lain_lain, 0)        as lain_lain
+         coalesce(exp.lain_lain, 0)        as lain_lain,
+         coalesce(exp.expense_entries, 0)  as expense_entries
   from months m
   left join inc   using (store_id, month)
   left join modal using (store_id, month)
@@ -428,7 +431,8 @@ select t.store_id,
                        / t.total_income, 2)
        end as margin_pct,
        t.total_qty,
-       t.items_missing_hpp
+       t.items_missing_hpp,
+       t.expense_entries
 from totals t
 join public.stores s on s.id = t.store_id;
 

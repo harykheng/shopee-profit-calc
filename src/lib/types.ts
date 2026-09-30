@@ -48,6 +48,7 @@ export interface MonthlyRecap {
   margin_pct: number | null
   total_qty: number
   items_missing_hpp: number
+  expense_entries: number
 }
 
 export interface ProductRecap {

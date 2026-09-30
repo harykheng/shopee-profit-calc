@@ -18,6 +18,7 @@ import {
   formatRupiah,
 } from '../lib/format'
 import { navigate } from '../lib/router'
+import { monthStatus, type MonthStatus } from '../lib/monthStatus'
 import type { DailyReconciliation, MonthlyRecap, ProductRecap, ReturnedItem, Store } from '../lib/types'
 
 interface RecapData {
@@ -134,12 +135,15 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
     { income: 0, modal: 0, expenses: 0, profit: 0 },
   )
   const margin = totals.income > 0 ? (totals.profit / totals.income) * 100 : null
-  const inaccurate = data.months.some((m) => m.items_missing_hpp > 0)
-  const profitTone = inaccurate ? 'warning' : totals.profit >= 0 ? 'good' : 'bad'
+  const statuses = new Map(data.months.map((m) => [m.month, monthStatus(m, data.reconciliation)]))
+  const allFinal = [...statuses.values()].every((s) => s.final)
+  const profitTone = !allFinal ? 'warning' : totals.profit >= 0 ? 'good' : 'bad'
 
   return (
     <div className="space-y-6">
-      <RecapWarnings data={data} onRecalc={onRecalc} />
+      {data.months.map((m) => (
+        <MonthStatusCard key={m.month} month={m.month} status={statuses.get(m.month)!} onRecalc={onRecalc} />
+      ))}
 
       <Card title={data.months.length > 1 ? 'Total periode' : formatMonth(data.months[0].month)}>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -150,9 +154,9 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
             label="Profit bersih"
             value={formatRupiah(totals.profit)}
             tone={profitTone}
-            note={inaccurate ? 'Belum akurat: ada HPP kosong' : undefined}
+            note={allFinal ? undefined : 'Belum final — lihat status di atas'}
           />
-          <Stat label="Margin" value={formatPercent(margin)} tone={inaccurate ? 'warning' : undefined} />
+          <Stat label="Margin" value={formatPercent(margin)} tone={allFinal ? undefined : 'warning'} />
         </div>
       </Card>
 
@@ -175,9 +179,7 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
                 <tr key={m.month} className="border-b border-slate-100 tabular-nums">
                   <td className="py-3 pr-3 font-medium">
                     {formatMonth(m.month)}
-                    {m.items_missing_hpp > 0 && (
-                      <span className="ml-2 rounded-lg bg-red-100 px-2 py-0.5 text-sm text-red-800">HPP kosong</span>
-                    )}
+                    <StatusBadge final={statuses.get(m.month)!.final} />
                   </td>
                   <td className="py-3 pr-3 text-right">{formatRupiah(Number(m.total_income))}</td>
                   <td className="py-3 pr-3 text-right">{formatRupiah(Number(m.total_modal))}</td>
@@ -205,8 +207,17 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
         </div>
       </Card>
 
+      <ReturnedItems items={data.returned} />
       <ProductTable products={data.products} />
     </div>
+  )
+}
+
+function StatusBadge({ final }: { final: boolean }) {
+  return final ? (
+    <span className="ml-2 whitespace-nowrap rounded-lg bg-emerald-100 px-2 py-0.5 text-sm text-emerald-800">✅ Final</span>
+  ) : (
+    <span className="ml-2 whitespace-nowrap rounded-lg bg-amber-100 px-2 py-0.5 text-sm text-amber-900">⚠️ Belum lengkap</span>
   )
 }
 
@@ -217,7 +228,8 @@ function ExpenseBreakdown({ m }: { m: MonthlyRecap }) {
     ['Packaging', m.packaging],
     ['Lain-lain', m.lain_lain],
   ].filter(([, v]) => Number(v) > 0)
-  if (parts.length === 0) return <span className="block text-xs text-amber-700">belum diisi</span>
+  if (Number(m.expense_entries) === 0) return <span className="block text-xs text-amber-700">belum diisi</span>
+  if (parts.length === 0) return null
   return (
     <span className="block text-xs text-slate-500">
       {parts.map(([label, v]) => `${label} ${formatRupiah(Number(v))}`).join(' · ')}
@@ -225,100 +237,112 @@ function ExpenseBreakdown({ m }: { m: MonthlyRecap }) {
   )
 }
 
-function RecapWarnings({ data, onRecalc }: { data: RecapData; onRecalc: (month: string) => void }) {
-  const byMonth = new Map<string, DailyReconciliation[]>()
-  for (const d of data.reconciliation) {
-    const list = byMonth.get(d.month) ?? []
-    list.push(d)
-    byMonth.set(d.month, list)
-  }
+const dayList = (days: string[]) => days.map((d) => formatDate(d)).join(', ')
 
-  const alerts: ReactNode[] = []
-  for (const m of data.months) {
-    const days = byMonth.get(m.month) ?? []
-    const label = formatMonth(m.month)
+/** Status per bulan: ✅ Angka final, atau ⚠️ Belum lengkap + daftar yang kurang. */
+function MonthStatusCard({
+  month,
+  status,
+  onRecalc,
+}: {
+  month: string
+  status: MonthStatus
+  onRecalc: (month: string) => void
+}) {
+  const label = formatMonth(month)
+  const prev = formatMonth(addMonths(month, -1))
 
-    if (m.items_missing_hpp > 0) {
-      alerts.push(
-        <Alert key={`hpp-${m.month}`} tone="error" title={`${label}: ${m.items_missing_hpp} item belum punya HPP — profit belum akurat`}>
-          <p>Modal item ini dihitung Rp0, jadi profit terlihat lebih besar dari sebenarnya.</p>
-          <p className="mt-1">Isi HPP-nya dulu, lalu tekan "Hitung ulang HPP" untuk bulan ini.</p>
-          <div className="mt-3 flex flex-wrap gap-3">
-            <Button variant="danger" onClick={() => navigate('hpp', { kosong: '1' })}>Isi HPP</Button>
-            <Button variant="secondary" onClick={() => onRecalc(m.month)}>Hitung ulang HPP</Button>
-          </div>
-        </Alert>,
-      )
-    }
+  const refundNote =
+    status.refunds.days.length > 0 ? (
+      <p className="mt-2 text-sm">
+        ℹ️ Termasuk refund/pengembalian dana {formatRupiah(status.refunds.amount)} ({dayList(status.refunds.days)}) —
+        sudah dihitung dari laporan Shopee.
+      </p>
+    ) : null
 
-    const missingOrders = days.filter((d) => d.has_income && d.difference > 0)
-    if (missingOrders.length > 0) {
-      const amount = missingOrders.reduce((s, d) => s + Number(d.difference), 0)
-      alerts.push(
-        <Alert key={`mo-${m.month}`} tone="warning" title={`${label}: ada dana cair yang data pesanannya belum di-upload`}>
-          <p>
-            Dana senilai {formatRupiah(amount)} (subtotal pesanan) cair di tanggal{' '}
-            {missingOrders.map((d) => formatDate(d.day)).join(', ')}, tapi pesanannya tidak ditemukan. Modalnya belum
-            terhitung, jadi profit terlihat lebih besar.
-          </p>
-          <p className="mt-1">
-            Biasanya ini pesanan yang dibuat bulan sebelumnya — upload export pesanan{' '}
-            <strong>{formatMonth(addMonths(m.month, -1))}</strong>.
-          </p>
-        </Alert>,
-      )
-    }
-
-    const missingIncome = days.filter((d) => d.has_orders && !d.has_income)
-    if (missingIncome.length > 0) {
-      alerts.push(
-        <Alert key={`mi-${m.month}`} tone="warning" title={`${label}: ada pesanan selesai tanpa data penghasilan`}>
-          {formatNumber(missingIncome.reduce((s, d) => s + d.order_count, 0))} pesanan selesai di tanggal{' '}
-          {missingIncome.map((d) => formatDate(d.day)).join(', ')}, tapi penghasilannya belum ada. Upload laporan
-          penghasilan (PDF) {label} kalau sudah tersedia.
-        </Alert>,
-      )
-    }
-
-    const refunds = days.filter((d) => d.has_income && d.has_orders && d.difference < 0)
-    if (refunds.length > 0) {
-      const amount = refunds.reduce((s, d) => s + Number(d.difference), 0)
-      alerts.push(
-        <Alert key={`rf-${m.month}`} tone="info" title={`${label}: pengembalian dana / refund ${formatRupiah(amount)}`}>
-          Di tanggal {refunds.map((d) => formatDate(d.day)).join(', ')} dana yang cair lebih kecil dari nilai pesanan.
-          Ini wajar kalau ada retur/refund; penghasilan sudah memakai angka dari laporan Shopee.
-        </Alert>,
-      )
-    }
-
-    if (Number(m.total_income) === 0 && days.length === 0) {
-      alerts.push(
-        <Alert key={`ni-${m.month}`} tone="warning" title={`${label}: belum ada data penghasilan`}>
-          Upload laporan penghasilan (PDF) {label} supaya profit bisa dihitung.
-        </Alert>,
-      )
-    }
-  }
-
-  if (data.returned.length > 0) {
-    alerts.push(
-      <Alert key="returned" tone="info" title={`${data.returned.length} item dengan barang retur`}>
-        <p>Qty yang diretur tidak dihitung sebagai modal.</p>
-        <ul className="mt-2 list-disc pl-6 text-sm">
-          {data.returned.slice(0, 20).map((r) => (
-            <li key={r.order_no + r.sku}>
-              {formatDate(r.completed_at)} · {r.order_no} · {r.product_name}
-              {r.variant_name && ` — ${r.variant_name}`} · retur {r.returned_qty} dari {r.qty}
-              {r.return_status && ` (${r.return_status})`}
-            </li>
-          ))}
-        </ul>
-      </Alert>,
+  if (status.final) {
+    return (
+      <Alert tone="success" title={`${label}: angka final`}>
+        Semua data sudah lengkap. Profit bersih {label} di bawah adalah angka pasti.
+        {refundNote}
+      </Alert>
     )
   }
 
-  if (alerts.length === 0) return null
-  return <div className="space-y-3">{alerts}</div>
+  const todo: ReactNode[] = []
+  if (!status.hasIncome) {
+    todo.push(
+      <li key="income">
+        <strong>Laporan penghasilan belum di-upload.</strong> Upload PDF penghasilan {label} di halaman Upload.
+      </li>,
+    )
+  }
+  if (status.missingOrders.days.length > 0) {
+    todo.push(
+      <li key="orders">
+        <strong>Ada uang cair {formatRupiah(status.missingOrders.amount)} dari pesanan yang belum di-upload</strong>{' '}
+        (tanggal {dayList(status.missingOrders.days)}). Biasanya ini pesanan yang dibuat bulan lalu. Upload export
+        pesanan <strong>{prev}</strong> supaya modalnya ikut terhitung.
+      </li>,
+    )
+  }
+  if (status.hasIncome && status.ordersWithoutIncome.days.length > 0) {
+    todo.push(
+      <li key="noincome">
+        <strong>{formatNumber(status.ordersWithoutIncome.orders)} pesanan selesai tidak ada di laporan penghasilan</strong>{' '}
+        (tanggal {dayList(status.ordersWithoutIncome.days)}). Pastikan PDF yang di-upload adalah laporan {label} yang
+        lengkap.
+      </li>,
+    )
+  }
+  if (status.missingHpp > 0) {
+    todo.push(
+      <li key="hpp">
+        <strong>{formatNumber(status.missingHpp)} item belum punya HPP</strong>, jadi modalnya masih dihitung Rp0. Isi
+        HPP-nya, lalu tekan "Hitung ulang HPP" untuk {label}.
+        <div className="mt-2 flex flex-wrap gap-3">
+          <Button variant="secondary" onClick={() => navigate('hpp', { kosong: '1' })}>Isi HPP</Button>
+          <Button variant="secondary" onClick={() => onRecalc(month)}>Hitung ulang HPP</Button>
+        </div>
+      </li>,
+    )
+  }
+  if (!status.expensesFilled) {
+    todo.push(
+      <li key="expenses">
+        <strong>Biaya {label} belum diisi</strong> (iklan, packaging, dll.). Kalau memang tidak ada biaya, simpan saja
+        dengan Rp0.
+        <div className="mt-2">
+          <Button variant="secondary" onClick={() => navigate('biaya', { bulan: month })}>Isi biaya</Button>
+        </div>
+      </li>,
+    )
+  }
+
+  return (
+    <Alert tone="warning" title={`${label}: belum lengkap — profit belum pasti`}>
+      <ul className="mt-1 list-disc space-y-3 pl-5">{todo}</ul>
+      {refundNote}
+    </Alert>
+  )
+}
+
+function ReturnedItems({ items }: { items: ReturnedItem[] }) {
+  if (items.length === 0) return null
+  return (
+    <Card title={`Barang retur (${items.length} item)`}>
+      <p className="mb-2 text-slate-600">Qty yang diretur tidak dihitung sebagai modal.</p>
+      <ul className="list-disc pl-6">
+        {items.slice(0, 50).map((r) => (
+          <li key={r.order_no + r.sku}>
+            {formatDate(r.completed_at)} · {r.order_no} · {r.product_name}
+            {r.variant_name && ` — ${r.variant_name}`} · retur {r.returned_qty} dari {r.qty}
+            {r.return_status && ` (${r.return_status})`}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
 }
 
 function ProductTable({ products }: { products: ProductRecap[] }) {
