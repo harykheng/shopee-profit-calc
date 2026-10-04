@@ -44,6 +44,7 @@ membaca file di browser, Vitest untuk test.
    |---|---|---|
    | 1 | `20260930000000_init.sql` | Semua tabel, aturan keamanan (RLS), dua toko |
    | 2 | `20261004000000_income_adjustments.sql` | Biaya penyesuaian dari laporan penghasilan |
+   | 3 | `20261005000000_all_order_statuses.sql` | Semua status pesanan + tabel "Pesanan masuk" |
 
    Kalau muncul tulisan *NOTICE … skipping*, itu normal (artinya bagian itu sudah ada).
 4. **Matikan pendaftaran publik** (wajib):
@@ -67,6 +68,10 @@ menghapus data.
 > Sudah setup sebelum 4 Oktober 2026? Jalankan sekali file
 > `20261004000000_income_adjustments.sql`. Setelah itu upload ulang PDF penghasilan yang punya
 > "Biaya Penyesuaian" (mis. Juli) supaya penyesuaiannya ikut tersimpan. Data tidak akan dobel.
+
+> Sudah setup sebelum 5 Oktober 2026? Jalankan sekali file
+> `20261005000000_all_order_statuses.sql`. Setelah itu upload ulang export pesanan
+> (status **Semua**) supaya tabel "Pesanan masuk" di Rekap terisi. Angka profit tidak berubah.
 
 ## 2. Membuat akun pengguna
 
@@ -108,15 +113,23 @@ Kalau env var diubah, lakukan **Redeploy** supaya nilainya terpakai.
 Lakukan di awal bulan untuk menghitung bulan sebelumnya (contoh: awal September untuk Agustus).
 
 1. **Download dari Shopee Seller Centre** (per toko):
-   - **Export pesanan**: Pesanan Saya → Export (.xlsx). Ambil rentang yang agak lebar, misalnya
-     **dari pertengahan bulan sebelumnya sampai akhir bulan ini**, karena dana yang cair di awal
-     bulan sering berasal dari pesanan bulan sebelumnya. Data yang sama tidak akan dobel.
+   - **Export pesanan**: Pesanan Saya → Export (.xlsx), status **Semua**. Ambil rentang yang agak
+     lebar, misalnya **dari pertengahan bulan sebelumnya sampai akhir bulan ini**, karena dana yang
+     cair di awal bulan sering berasal dari pesanan bulan sebelumnya. Data yang sama tidak akan
+     dobel, dan pesanan yang tadinya "dikirim" otomatis berubah jadi selesai saat di-upload lagi.
    - **Laporan penghasilan**: Keuangan → Penghasilan Saya → laporan bulanan (.pdf).
 2. **Upload**: pilih toko → pilih file Excel dan/atau PDF → cek preview → **Simpan**.
 3. **HPP**: isi HPP untuk produk yang masih merah (produk baru otomatis masuk dari upload).
    Kalau HPP diisi *setelah* upload, buka **Rekap** dan tekan **Hitung ulang HPP** untuk bulan itu.
 4. **Biaya**: isi iklan Shopee, Meta Ads, packaging, lain-lain. Kalau tidak ada biaya, simpan Rp0.
-5. **Rekap**: pilih toko dan bulan. Kalau statusnya **✅ Angka final**, profit bersih adalah angka
+5. **Rekap**: pilih toko dan bulan. Ada dua bagian:
+   - **Profit** — dari pesanan yang *selesai & dananya cair* di bulan itu (berdasarkan tanggal
+     selesai). Ini angka untuk profit bersih.
+   - **Pesanan masuk** — *semua* pesanan yang *dibuat* di bulan itu, apa pun statusnya (selesai,
+     masih dikirim, batal), dengan qty, nilai penjualan, dan perkiraan modal. Angkanya bisa lebih
+     besar dari bagian Profit, karena pesanan akhir bulan sering baru selesai bulan berikutnya.
+
+   Kalau statusnya **✅ Angka final**, profit bersih adalah angka
    pasti. Kalau **⚠️ Belum lengkap**, ikuti daftar yang ditampilkan (mis. upload export pesanan
    bulan sebelumnya, isi HPP, isi biaya).
 

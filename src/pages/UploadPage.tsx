@@ -97,8 +97,7 @@ export function UploadPage({
       if (orders?.result) {
         const r = orders.result
         const counts = await saveOrderItems(store.id, r.items)
-        const skipped = Object.values(r.skipped.byStatus).reduce((a, b) => a + b, 0) + r.skipped.invalid
-        out.orders = { ...counts, skipped }
+        out.orders = { ...counts, skipped: r.invalid }
         const uploadedSkus = new Set(r.items.map((i) => i.sku))
         out.missingHpp = (await fetchProducts(store.id)).filter((p) => p.hpp === null && uploadedSkus.has(p.sku))
       }
@@ -213,14 +212,16 @@ function OrdersPreview({ parsed }: { parsed: Parsed<OrdersParseResult> | null })
   if (parsed.loading) return <Spinner label="Membaca file…" />
   if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} /></div>
   const r = parsed.result!
-  const skippedEntries = Object.entries(r.skipped.byStatus)
+  const statusEntries = Object.entries(r.byStatus).sort((a, b) => b[1] - a[1])
+  const notDone = r.items.filter((i) => i.status_group !== 'selesai').length
   const rows = showAll ? r.items : r.items.slice(0, PREVIEW_ROWS)
   return (
     <div className="mt-4">
       <Alert tone="success" title={parsed.fileName}>
-        {formatNumber(r.items.length)} item dari {formatNumber(r.orderCount)} pesanan selesai siap disimpan.
-        {skippedEntries.length > 0 && (
-          <> Dilewati: {skippedEntries.map(([s, n]) => `${s} (${n})`).join(', ')}.</>
+        {formatNumber(r.items.length)} item dari {formatNumber(r.orderCount)} pesanan siap disimpan
+        {' '}({statusEntries.map(([s, n]) => `${s}: ${formatNumber(n)}`).join(', ')}).
+        {notDone > 0 && (
+          <> Yang belum selesai / batal hanya masuk tabel "Pesanan masuk", tidak dihitung profit.</>
         )}
       </Alert>
       <Warnings warnings={r.warnings} />
@@ -356,7 +357,9 @@ function SaveSummaryCard({ summary, onAgain }: { summary: SaveSummary; onAgain: 
               <li>Baru: <strong>{formatNumber(orders.inserted)}</strong></li>
               <li>Diperbarui: <strong>{formatNumber(orders.updated)}</strong></li>
               <li>Sudah ada, tidak berubah: <strong>{formatNumber(orders.unchanged)}</strong></li>
-              <li>Dilewati (belum selesai / batal / data rusak): <strong>{formatNumber(orders.skipped)}</strong></li>
+              {orders.skipped > 0 && (
+                <li>Dilewati (data tidak lengkap): <strong>{formatNumber(orders.skipped)}</strong></li>
+              )}
             </ul>
           </div>
         )}

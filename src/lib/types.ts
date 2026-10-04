@@ -91,6 +91,21 @@ export interface ReturnedItem {
   completed_at: string
 }
 
+/** Pesanan masuk per bulan pesanan dibuat & kelompok status (view orders_by_created). */
+export interface OrdersByCreated {
+  store_id: number
+  month: string
+  status_group: 'selesai' | 'proses' | 'batal'
+  order_count: number
+  qty: number
+  qty_returned: number
+  subtotal: number
+  /** Perkiraan modal: HPP terkunci kalau ada, kalau belum pakai HPP saat ini. */
+  modal: number | null
+  modal_returned: number | null
+  items_missing_hpp: number
+}
+
 export interface UpsertCounts {
   inserted: number
   updated: number
