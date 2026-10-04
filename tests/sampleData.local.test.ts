@@ -14,17 +14,24 @@ import { pdfLinesFromFile } from './helpers/pdf'
 const DIR = path.join(import.meta.dirname, '../sample-data')
 const files = fs.existsSync(DIR) ? fs.readdirSync(DIR) : []
 const ordersFile = files.find((f) => f.toLowerCase().endsWith('.xlsx'))
-const incomeFile = files.find((f) => f.toLowerCase().endsWith('.pdf'))
+const incomeFiles = files.filter((f) => f.toLowerCase().endsWith('.pdf'))
 
-describe.skipIf(!ordersFile || !incomeFile)('real Shopee sample files (local only)', () => {
+describe.skipIf(!ordersFile || incomeFiles.length === 0)('real Shopee sample files (local only)', () => {
   let ordersData: Uint8Array
   let orders: OrdersParseResult
-  let income: IncomeParseResult
+  let incomes: IncomeParseResult[]
+  /** Laporan penghasilan untuk bulan yang paling banyak pesanan selesainya di export. */
+  let income: IncomeParseResult | undefined
 
   beforeAll(async () => {
     ordersData = new Uint8Array(fs.readFileSync(path.join(DIR, ordersFile!)))
     orders = parseOrdersFile(ordersData)
-    income = parseIncomeLines(await pdfLinesFromFile(path.join(DIR, incomeFile!)))
+    incomes = []
+    for (const f of incomeFiles) incomes.push(parseIncomeLines(await pdfLinesFromFile(path.join(DIR, f))))
+    const months = new Map<string, number>()
+    for (const i of orders.items) months.set(i.completed_at.slice(0, 7), (months.get(i.completed_at.slice(0, 7)) ?? 0) + 1)
+    const busiest = [...months.entries()].sort((a, b) => b[1] - a[1])[0][0]
+    income = incomes.find((r) => r.periodStart?.startsWith(busiest))
   })
 
   it('parses the order export', () => {
@@ -47,12 +54,20 @@ describe.skipIf(!ordersFile || !incomeFile)('real Shopee sample files (local onl
     expect(leaks).toBe(0)
   })
 
-  it('parses the income PDF without warnings', () => {
-    expect(income.days.length).toBeGreaterThan(0)
-    expect(income.warnings.map((w) => w.code)).toEqual([])
+  it('parses every income PDF (column layout may differ per month)', () => {
+    for (const r of incomes) {
+      expect(r.days.length).toBeGreaterThan(0)
+      expect(r.warnings.map((w) => w.code)).toEqual([])
+      for (const d of r.days) {
+        const parts = d.subtotal_pesanan + d.subtotal_ongkir + d.voucher_subsidi + d.biaya_platform +
+          d.biaya_gratis_ongkir + d.biaya_layanan_tambahan
+        expect(parts).toBe(d.total_income)
+      }
+    }
   })
 
   it('daily release subtotal matches completed orders, except refunds and previous-month orders', () => {
+    if (!income) return
     const byDay = new Map<string, number>()
     for (const i of orders.items) {
       const day = i.completed_at.slice(0, 10)

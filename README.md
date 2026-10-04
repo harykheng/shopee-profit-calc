@@ -7,7 +7,8 @@ Oraiste Beauty House) dari file export Shopee.
 Profit bersih = Penghasilan dilepas − Modal (qty × HPP) − Biaya
 ```
 
-- **Penghasilan** diambil dari PDF laporan penghasilan bulanan Shopee, per tanggal dana dilepas.
+- **Penghasilan** diambil dari PDF laporan penghasilan bulanan Shopee, per tanggal dana dilepas,
+  ditambah **biaya penyesuaian** di laporan yang sama (mis. kompensasi barang hilang/retur).
 - **Modal** dihitung dari export pesanan: item berstatus *Selesai* yang selesai di bulan itu
   (di Shopee, dana dilepas di hari yang sama dengan pesanan selesai). Qty retur tidak dihitung.
 - **Biaya** (iklan Shopee, Meta Ads, packaging, lain-lain) diisi manual.
@@ -35,9 +36,16 @@ membaca file di browser, Vitest untuk test.
    - Region: pilih **Southeast Asia (Singapore)** supaya cepat dari Indonesia.
    - Simpan *database password* di tempat aman (tidak dipakai aplikasi, tapi perlu untuk admin).
 2. Setelah project jadi, buka **SQL Editor** → **New query**.
-3. Buka file [`supabase/migrations/20260930000000_init.sql`](supabase/migrations/20260930000000_init.sql)
-   di GitHub, salin **seluruh** isinya, tempel di SQL Editor, lalu klik **Run**.
-   Harus muncul "Success". Ini membuat semua tabel, aturan keamanan (RLS), dan dua toko.
+3. Jalankan file SQL di folder [`supabase/migrations/`](supabase/migrations/) **satu per satu,
+   berurutan** (urut nama file). Untuk tiap file: buka di GitHub, salin **seluruh** isinya, tempel
+   di SQL Editor (query baru), lalu klik **Run**. Harus muncul "Success".
+
+   | Urutan | File | Isi |
+   |---|---|---|
+   | 1 | `20260930000000_init.sql` | Semua tabel, aturan keamanan (RLS), dua toko |
+   | 2 | `20261004000000_income_adjustments.sql` | Biaya penyesuaian dari laporan penghasilan |
+
+   Kalau muncul tulisan *NOTICE … skipping*, itu normal (artinya bagian itu sudah ada).
 4. **Matikan pendaftaran publik** (wajib):
    **Authentication → Sign In / Providers** → matikan **Allow new users to sign up** → **Save**.
    Pastikan provider **Email** tetap aktif.
@@ -49,6 +57,16 @@ membaca file di browser, Vitest untuk test.
 
 > ⚠️ Jangan pernah memakai **service_role / secret key** di aplikasi atau di Vercel.
 > Kunci anon/publishable aman terlihat di browser karena semua data dilindungi login + RLS.
+
+### Memperbarui database yang sudah berjalan
+
+Kalau nanti ada file SQL baru di `supabase/migrations/`, jalankan **hanya file yang baru** dengan
+cara yang sama (SQL Editor → tempel → Run). File-file ini aman dijalankan ulang dan tidak
+menghapus data.
+
+> Sudah setup sebelum 4 Oktober 2026? Jalankan sekali file
+> `20261004000000_income_adjustments.sql`. Setelah itu upload ulang PDF penghasilan yang punya
+> "Biaya Penyesuaian" (mis. Juli) supaya penyesuaiannya ikut tersimpan. Data tidak akan dobel.
 
 ## 2. Membuat akun pengguna
 
@@ -154,7 +172,8 @@ Semua nama kolom Excel dan label PDF ada di satu file: **`src/lib/shopeeColumns.
 
 - Kolom ganti nama → tambahkan nama baru ke daftar alias kolom tersebut (nama lama boleh tetap).
 - Status pesanan selesai ganti nama → ubah `COMPLETED_STATUSES`.
-- Susunan kolom tabel harian PDF berubah → ubah `INCOME_PDF.dailyColumns`.
+- Ada kolom biaya baru di tabel harian PDF → tambahkan labelnya ke `INCOME_PDF.feeColumns`
+  (kolom yang belum dikenal tetap aman: total penghasilan tetap benar, hanya rinciannya digabung).
 
 Kalau format berubah, aplikasi akan menolak file dengan pesan yang jelas (bukan diam-diam salah
 hitung). Setelah memperbaiki, jalankan `npm test`.
