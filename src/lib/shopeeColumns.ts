@@ -22,6 +22,8 @@ export const ORDER_COLUMNS = {
   returnedQty: ['Returned quantity', 'Jumlah Dikembalikan'],
   subtotal: ['Subtotal Pesanan'],
   completedAt: ['Waktu Pesanan Selesai'],
+  /** Opsional; dipakai untuk tabel "Pesanan masuk" (berdasarkan tanggal pesanan dibuat). */
+  createdAt: ['Waktu Pesanan Dibuat'],
 } as const
 
 export type OrderColumnKey = keyof typeof ORDER_COLUMNS
@@ -36,8 +38,25 @@ export const REQUIRED_ORDER_COLUMNS: OrderColumnKey[] = [
   'completedAt',
 ]
 
-/** Hanya item dengan status ini yang disimpan & dihitung modalnya. */
+/** Status pesanan selesai. Hanya item ini yang dihitung modal & profitnya. */
 export const COMPLETED_STATUSES = ['Selesai']
+
+/**
+ * Status yang dianggap batal / tidak jadi (dicocokkan sebagian, huruf besar/kecil
+ * diabaikan; mis. "batal" cocok dengan "Batal" dan "Dibatalkan").
+ * Status lain (mis. "Perlu Dikirim", "Sedang Dikirim") dianggap masih diproses.
+ */
+export const CANCELLED_STATUS_KEYWORDS = ['batal', 'belum bayar']
+
+/** Kelompok status: selesai (dihitung profit), proses (belum selesai), batal. */
+export type StatusGroup = 'selesai' | 'proses' | 'batal'
+
+export function statusGroup(status: string): StatusGroup {
+  const s = status.trim().toLowerCase()
+  if (COMPLETED_STATUSES.some((c) => c.toLowerCase() === s)) return 'selesai'
+  if (CANCELLED_STATUS_KEYWORDS.some((k) => s.includes(k))) return 'batal'
+  return 'proses'
+}
 
 /** Berapa baris teratas yang diperiksa untuk mencari baris header. */
 export const HEADER_SEARCH_ROWS = 20

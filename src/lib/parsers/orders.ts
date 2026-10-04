@@ -1,11 +1,12 @@
 import * as XLSX from 'xlsx'
 import {
-  COMPLETED_STATUSES,
   HEADER_SEARCH_ROWS,
   ORDER_COLUMNS,
   REQUIRED_ORDER_COLUMNS,
   SKU_KEY_SEPARATOR,
+  statusGroup,
   type OrderColumnKey,
+  type StatusGroup,
 } from '../shopeeColumns'
 import {
   ParseError,
@@ -29,26 +30,27 @@ export interface OrderItemRow {
   qty: number
   returned_qty: number
   status: string
+  /** selesai = dihitung profit; proses = belum selesai; batal = batal / belum bayar. */
+  status_group: StatusGroup
   return_status: string
-  /** ISO 8601 WIB, mis. "2026-08-03T14:22:00+07:00". */
-  completed_at: string
+  /** ISO 8601 WIB, mis. "2026-08-03T14:22:00+07:00". Kosong kalau belum selesai. */
+  completed_at: string | null
+  /** Waktu pesanan dibuat (WIB), untuk tabel "Pesanan masuk". */
+  created_at: string | null
   subtotal: number
 }
 
-export interface SkippedRows {
-  /** Jumlah baris yang dilewati per status (mis. { "Batal": 3 }). */
-  byStatus: Record<string, number>
-  /** Baris berstatus selesai tapi tanpa waktu selesai / data rusak. */
-  invalid: number
-}
-
 export interface OrdersParseResult {
+  /** Semua item (semua status). Hanya yang `status_group = 'selesai'` dihitung profit. */
   items: OrderItemRow[]
   /** Jumlah baris data di file (tanpa header). */
   totalRows: number
   /** Jumlah pesanan unik di `items`. */
   orderCount: number
-  skipped: SkippedRows
+  /** Jumlah item per status asli Shopee (mis. { "Selesai": 150, "Batal": 3 }). */
+  byStatus: Record<string, number>
+  /** Baris yang dilewati karena datanya rusak / tidak lengkap. */
+  invalid: number
   warnings: ParseWarning[]
 }
 
@@ -153,9 +155,7 @@ function parseRows(rows: unknown[][], headerIndex: number, columns: ColumnIndex)
     const idx = columns[key]
     return idx === undefined ? '' : row[idx]
   }
-  const completed = new Set(COMPLETED_STATUSES.map((s) => s.toLowerCase()))
-
-  const skipped: SkippedRows = { byStatus: {}, invalid: 0 }
+  let invalid = 0
   const invalidExamples: string[] = []
   const merged = new Map<string, OrderItemRow>()
   let duplicateRows = 0
@@ -166,12 +166,8 @@ function parseRows(rows: unknown[][], headerIndex: number, columns: ColumnIndex)
     if (!orderNo) continue // baris kosong / penutup
     totalRows++
 
-    const status = cleanText(cell(row, 'status'))
-    if (!completed.has(status.toLowerCase())) {
-      const label = status || '(status kosong)'
-      skipped.byStatus[label] = (skipped.byStatus[label] ?? 0) + 1
-      continue
-    }
+    const status = cleanText(cell(row, 'status')) || '(status kosong)'
+    const group = statusGroup(status)
 
     const productName = cleanText(cell(row, 'productName'))
     const variantName = cleanText(cell(row, 'variantName'))
@@ -179,9 +175,13 @@ function parseRows(rows: unknown[][], headerIndex: number, columns: ColumnIndex)
     const returnedQty = parseQty(cell(row, 'returnedQty'))
     const subtotal = parseRupiah(cell(row, 'subtotal'))
     const completedAt = parseShopeeDateTime(cell(row, 'completedAt'))
+    const createdAt = parseShopeeDateTime(cell(row, 'createdAt'))
 
-    if (!productName || qty === null || returnedQty === null || subtotal === null || !completedAt) {
-      skipped.invalid++
+    // Pesanan selesai wajib punya waktu selesai; status lain boleh kosong.
+    const badDates =
+      completedAt === undefined || createdAt === undefined || (group === 'selesai' && !completedAt)
+    if (!productName || qty === null || returnedQty === null || subtotal === null || badDates) {
+      invalid++
       if (invalidExamples.length < 5) invalidExamples.push(orderNo)
       continue
     }
@@ -201,8 +201,10 @@ function parseRows(rows: unknown[][], headerIndex: number, columns: ColumnIndex)
       qty,
       returned_qty: Math.min(returnedQty, qty),
       status,
+      status_group: group,
       return_status: cleanText(cell(row, 'returnStatus')),
-      completed_at: completedAt,
+      completed_at: completedAt ?? null,
+      created_at: createdAt ?? null,
       subtotal,
     }
 
@@ -224,12 +226,15 @@ function parseRows(rows: unknown[][], headerIndex: number, columns: ColumnIndex)
   }
 
   const items = [...merged.values()]
+  const byStatus: Record<string, number> = {}
+  for (const i of items) byStatus[i.status] = (byStatus[i.status] ?? 0) + 1
   return {
     items,
     totalRows,
     orderCount: new Set(items.map((i) => i.order_no)).size,
-    skipped,
-    warnings: buildWarnings(items, duplicateRows, skipped.invalid, invalidExamples),
+    byStatus,
+    invalid,
+    warnings: buildWarnings(items, duplicateRows, invalid, invalidExamples),
   }
 }
 
@@ -244,8 +249,10 @@ function buildWarnings(
   invalidExamples: string[],
 ): ParseWarning[] {
   const warnings: ParseWarning[] = []
+  // Produk dari pesanan batal tidak didaftarkan ke halaman HPP, jadi tidak diperingatkan.
+  const active = items.filter((i) => i.status_group !== 'batal')
 
-  const byName = uniqueSkus(items, 'nama')
+  const byName = uniqueSkus(active, 'nama')
   if (byName.length > 0) {
     warnings.push({
       code: 'sku_from_name',
@@ -257,7 +264,7 @@ function buildWarnings(
     })
   }
 
-  const byInduk = uniqueSkus(items, 'sku_induk')
+  const byInduk = uniqueSkus(active, 'sku_induk')
   if (byInduk.length > 0) {
     warnings.push({
       code: 'sku_from_parent',
@@ -267,7 +274,7 @@ function buildWarnings(
     })
   }
 
-  const returned = items.filter((i) => i.returned_qty > 0)
+  const returned = items.filter((i) => i.status_group === 'selesai' && i.returned_qty > 0)
   if (returned.length > 0) {
     warnings.push({
       code: 'returned_items',

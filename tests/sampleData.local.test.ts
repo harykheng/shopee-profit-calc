@@ -29,14 +29,17 @@ describe.skipIf(!ordersFile || incomeFiles.length === 0)('real Shopee sample fil
     incomes = []
     for (const f of incomeFiles) incomes.push(parseIncomeLines(await pdfLinesFromFile(path.join(DIR, f))))
     const months = new Map<string, number>()
-    for (const i of orders.items) months.set(i.completed_at.slice(0, 7), (months.get(i.completed_at.slice(0, 7)) ?? 0) + 1)
+    for (const i of orders.items) {
+      if (!i.completed_at) continue
+      months.set(i.completed_at.slice(0, 7), (months.get(i.completed_at.slice(0, 7)) ?? 0) + 1)
+    }
     const busiest = [...months.entries()].sort((a, b) => b[1] - a[1])[0][0]
     income = incomes.find((r) => r.periodStart?.startsWith(busiest))
   })
 
   it('parses the order export', () => {
     expect(orders.items.length).toBeGreaterThan(0)
-    expect(orders.skipped.invalid).toBe(0)
+    expect(orders.invalid).toBe(0)
     const itemRows = orders.items.length
     expect(itemRows).toBeLessThanOrEqual(orders.totalRows)
   })
@@ -70,6 +73,7 @@ describe.skipIf(!ordersFile || incomeFiles.length === 0)('real Shopee sample fil
     if (!income) return
     const byDay = new Map<string, number>()
     for (const i of orders.items) {
+      if (i.status_group !== 'selesai' || !i.completed_at) continue
       const day = i.completed_at.slice(0, 10)
       byDay.set(day, (byDay.get(day) ?? 0) + i.subtotal)
     }

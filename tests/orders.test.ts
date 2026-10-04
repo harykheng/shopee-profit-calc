@@ -23,13 +23,23 @@ describe('parseOrdersFile — dummy fixture', () => {
   const bySku = (order: string, sku: string) =>
     result.items.find((i) => i.order_no === order && i.sku === sku)
 
-  it('counts rows and keeps only completed items', () => {
+  it('keeps every status, grouped as selesai / proses / batal', () => {
     expect(result.totalRows).toBe(12)
-    expect(result.items).toHaveLength(7)
-    expect(result.orderCount).toBe(6)
-    expect(result.skipped.byStatus).toEqual({ Batal: 1, 'Belum Bayar': 1, 'Sedang Dikirim': 1 })
-    expect(result.skipped.invalid).toBe(1)
-    expect(result.items.every((i) => i.status === 'Selesai')).toBe(true)
+    expect(result.items).toHaveLength(10)
+    expect(result.orderCount).toBe(9)
+    expect(result.byStatus).toEqual({ Selesai: 7, Batal: 1, 'Belum Bayar': 1, 'Sedang Dikirim': 1 })
+    expect(result.invalid).toBe(1)
+    const group = (order: string) => result.items.find((i) => i.order_no === order)?.status_group
+    expect(group('260801DUMMY001')).toBe('selesai')
+    expect(group('260803DUMMY005')).toBe('batal')
+    expect(group('260803DUMMY006')).toBe('batal')
+    expect(group('260805DUMMY008')).toBe('proses')
+  })
+
+  it('reads the order-created time and allows no completed time for unfinished orders', () => {
+    expect(bySku('260801DUMMY001', 'DUM-POND')?.created_at).toBe('2026-08-01T08:00:00+07:00')
+    const shipping = result.items.find((i) => i.order_no === '260805DUMMY008')
+    expect(shipping).toMatchObject({ status: 'Sedang Dikirim', completed_at: null, qty: 1 })
   })
 
   it('uses Nomor Referensi SKU when present', () => {
@@ -105,20 +115,20 @@ describe('parseOrdersWorkbook — format variations', () => {
   it('finds the header even when it is not on row 1', () => {
     const rows = fixtureRows()
     const wb = workbookFromRows([['Laporan Pesanan'], [], ...rows])
-    expect(parseOrdersWorkbook(wb).items).toHaveLength(7)
+    expect(parseOrdersWorkbook(wb).items).toHaveLength(10)
   })
 
   it('matches headers regardless of case, spacing and column order', () => {
     const rows = fixtureRows()
     const header = (rows[0] as string[]).map((h) => `  ${h.toUpperCase()} `)
     const reversed = [header, ...rows.slice(1)].map((r) => [...(r as unknown[])].reverse())
-    expect(parseOrdersWorkbook(workbookFromRows(reversed)).items).toHaveLength(7)
+    expect(parseOrdersWorkbook(workbookFromRows(reversed)).items).toHaveLength(10)
   })
 
   it('recovers rows when the sheet size metadata is wrong (Shopee bug)', () => {
     const wb = XLSX.read(readFixture(), { type: 'array' })
     wb.Sheets[wb.SheetNames[0]]['!ref'] = 'A1'
-    expect(parseOrdersWorkbook(wb).items).toHaveLength(7)
+    expect(parseOrdersWorkbook(wb).items).toHaveLength(10)
   })
 
   it('rejects files that are not an order export, with a friendly message', () => {

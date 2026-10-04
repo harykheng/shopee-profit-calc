@@ -5,6 +5,7 @@ import { supabase } from './supabase'
 import { monthEnd } from './format'
 import type {
   DailyReconciliation,
+  OrdersByCreated,
   Expense,
   ExpenseCategory,
   MonthlyRecap,
@@ -167,6 +168,28 @@ export async function fetchReturnedItems(storeId: number, from: string, to: stri
       .lte('completed_at', `${monthEnd(to)}T23:59:59.999+07:00`)
       .order('completed_at'),
   ) as ReturnedItem[]
+}
+
+export async function fetchOrdersByCreated(storeId: number, from: string, to: string) {
+  return check(
+    await supabase
+      .from('orders_by_created')
+      .select('*')
+      .eq('store_id', storeId)
+      .gte('month', from)
+      .lte('month', to),
+  ) as OrdersByCreated[]
+}
+
+/** Jumlah item yang belum punya tanggal pesanan dibuat (di-upload sebelum fitur ini ada). */
+export async function countItemsWithoutCreatedAt(storeId: number): Promise<number> {
+  const res = await supabase
+    .from('order_items')
+    .select('id', { count: 'exact', head: true })
+    .eq('store_id', storeId)
+    .is('created_at', null)
+  if (res.error) throw res.error
+  return res.count ?? 0
 }
 
 export async function recalcHpp(storeId: number, month: string, onlyMissing: boolean) {

@@ -6,6 +6,8 @@ import {
   fetchProductRecap,
   fetchReconciliation,
   fetchReturnedItems,
+  fetchOrdersByCreated,
+  countItemsWithoutCreatedAt,
   recalcHpp,
 } from '../lib/api'
 import {
@@ -19,7 +21,16 @@ import {
 } from '../lib/format'
 import { navigate } from '../lib/router'
 import { monthStatus, type MonthStatus } from '../lib/monthStatus'
-import type { DailyReconciliation, MonthlyRecap, ProductRecap, ReturnedItem, Store } from '../lib/types'
+import type {
+  DailyReconciliation,
+  MonthlyRecap,
+  OrdersByCreated,
+  ProductRecap,
+  ReturnedItem,
+  Store,
+} from '../lib/types'
+
+type Incoming = { rows: OrdersByCreated[]; withoutCreatedAt: number } | { error: unknown }
 
 interface RecapData {
   months: MonthlyRecap[]
@@ -44,6 +55,7 @@ export function RecapPage({
   const [error, setError] = useState<unknown>(null)
   const [recalcMonth, setRecalcMonth] = useState<string | null>(null)
   const [recalcResult, setRecalcResult] = useState<string | null>(null)
+  const [incoming, setIncoming] = useState<Incoming | null>(null)
 
   const rangeValid = from <= to
 
@@ -51,6 +63,7 @@ export function RecapPage({
     if (!storeId || !rangeValid) return
     setData(null)
     setError(null)
+    setIncoming(null)
     try {
       const [months, products, reconciliation, returned] = await Promise.all([
         fetchMonthlyRecap(storeId, from, to),
@@ -61,6 +74,18 @@ export function RecapPage({
       setData({ months, products, reconciliation, returned })
     } catch (e) {
       setError(e)
+      return
+    }
+    // Tabel "Pesanan masuk" dimuat terpisah: kalau gagal (mis. SQL ke-3 belum
+    // dijalankan), bagian profit tetap tampil.
+    try {
+      const [rows, withoutCreatedAt] = await Promise.all([
+        fetchOrdersByCreated(storeId, from, to),
+        countItemsWithoutCreatedAt(storeId),
+      ])
+      setIncoming({ rows, withoutCreatedAt })
+    } catch (e) {
+      setIncoming({ error: e })
     }
   }, [storeId, from, to, rangeValid])
 
@@ -102,6 +127,12 @@ export function RecapPage({
         </Alert>
       ) : (
         <RecapContent data={data} onRecalc={setRecalcMonth} />
+      )}
+
+      {rangeValid && data && incoming && (
+        <div className="mt-6">
+          <IncomingOrdersCard incoming={incoming} from={from} to={to} />
+        </div>
       )}
 
       {recalcMonth && storeId && (
@@ -476,5 +507,151 @@ function RecalcDialog({
         </p>
       </div>
     </div>
+  )
+}
+
+const GROUP_LABEL: Record<OrdersByCreated['status_group'], string> = {
+  selesai: 'Selesai',
+  proses: 'Masih diproses / dikirim',
+  batal: 'Batal / belum bayar',
+}
+
+/** Tabel ke-2: semua pesanan berdasarkan tanggal pesanan DIBUAT, apa pun statusnya. */
+function IncomingOrdersCard({ incoming, from, to }: { incoming: Incoming; from: string; to: string }) {
+  const period = from === to ? formatMonth(from) : `${formatMonth(from)} – ${formatMonth(to)}`
+  const title = `Pesanan masuk — ${period}`
+
+  if ('error' in incoming) {
+    return (
+      <Card title={title}>
+        <Alert tone="warning" title="Tabel ini belum aktif">
+          Pengelola aplikasi perlu menjalankan file SQL <strong>20261005000000_all_order_statuses.sql</strong> di
+          Supabase (lihat README). Bagian profit di atas tidak terpengaruh.
+        </Alert>
+      </Card>
+    )
+  }
+
+  // Gabungkan semua bulan dalam rentang per kelompok status.
+  const groups = (['selesai', 'proses', 'batal'] as const).map((g) => {
+    const rows = incoming.rows.filter((r) => r.status_group === g)
+    const sum = (f: (r: OrdersByCreated) => number) => rows.reduce((s, r) => s + f(r), 0)
+    return {
+      group: g,
+      orders: sum((r) => Number(r.order_count)),
+      qty: sum((r) => Number(r.qty)),
+      returned: sum((r) => Number(r.qty_returned)),
+      subtotal: sum((r) => Number(r.subtotal)),
+      modal: sum((r) => Number(r.modal ?? 0)),
+      modalReturned: sum((r) => Number(r.modal_returned ?? 0)),
+      missingHpp: sum((r) => Number(r.items_missing_hpp)),
+    }
+  })
+  const total = groups.reduce(
+    (t, g) => ({
+      orders: t.orders + g.orders,
+      qty: t.qty + g.qty,
+      subtotal: t.subtotal + g.subtotal,
+      // Modal pesanan batal tidak dihitung: barangnya tidak keluar.
+      modal: t.modal + (g.group === 'batal' ? 0 : g.modal),
+      missingHpp: t.missingHpp + (g.group === 'batal' ? 0 : g.missingHpp),
+    }),
+    { orders: 0, qty: 0, subtotal: 0, modal: 0, missingHpp: 0 },
+  )
+  const selesai = groups[0]
+
+  return (
+    <Card title={title}>
+      <p className="mb-4 text-slate-600">
+        Semua pesanan yang <strong>dibuat</strong> di periode ini, apa pun statusnya. Ini untuk melihat penjualan;
+        angka profit di atas tetap hanya dari pesanan yang <strong>sudah selesai & dananya cair</strong>.
+      </p>
+
+      {total.qty === 0 ? (
+        <Alert tone="info">
+          Belum ada data pesanan masuk di periode ini. Upload export pesanan dengan status <strong>Semua</strong>.
+        </Alert>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="border-b text-sm text-slate-500">
+              <tr>
+                <th className="py-2 pr-3">Status</th>
+                <th className="py-2 pr-3 text-right">Pesanan</th>
+                <th className="py-2 pr-3 text-right">Qty</th>
+                <th className="py-2 pr-3 text-right">Nilai penjualan</th>
+                <th className="py-2 pr-3 text-right">Modal (perkiraan)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groups.map((g) => (
+                <tr key={g.group} className="border-b border-slate-100 tabular-nums">
+                  <td className="py-3 pr-3 font-medium">{GROUP_LABEL[g.group]}</td>
+                  <td className="py-3 pr-3 text-right">{formatNumber(g.orders)}</td>
+                  <td className="py-3 pr-3 text-right">
+                    {formatNumber(g.qty)} pcs
+                    {g.returned > 0 && (
+                      <span className="block text-xs text-slate-500">termasuk retur {formatNumber(g.returned)} pcs</span>
+                    )}
+                  </td>
+                  <td className="py-3 pr-3 text-right">{formatRupiah(g.subtotal)}</td>
+                  <td className="py-3 pr-3 text-right">
+                    {g.group === 'batal' ? (
+                      <span className="text-slate-400">tidak dihitung</span>
+                    ) : (
+                      <>
+                        {formatRupiah(g.modal)}
+                        {g.modalReturned > 0 && (
+                          <span className="block text-xs text-slate-500">
+                            termasuk retur {formatRupiah(g.modalReturned)}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-slate-300 font-bold tabular-nums">
+                <td className="py-3 pr-3">Total semua pesanan</td>
+                <td className="py-3 pr-3 text-right">{formatNumber(total.orders)}</td>
+                <td className="py-3 pr-3 text-right">{formatNumber(total.qty)} pcs</td>
+                <td className="py-3 pr-3 text-right">{formatRupiah(total.subtotal)}</td>
+                <td className="py-3 pr-3 text-right">{formatRupiah(total.modal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      <div className="mt-4 space-y-3 text-sm text-slate-600">
+        {selesai.returned > 0 && (
+          <p>
+            Retur dihitung di baris Selesai. Qty bersih (tanpa retur) yang selesai:{' '}
+            <strong>{formatNumber(selesai.qty - selesai.returned)} pcs</strong>.
+          </p>
+        )}
+        <p>
+          Modal pesanan batal tidak dihitung karena barangnya tidak keluar. Modal memakai HPP saat ini untuk pesanan
+          yang belum selesai, jadi sifatnya perkiraan.
+        </p>
+        {total.missingHpp > 0 && (
+          <Alert tone="warning">
+            {formatNumber(total.missingHpp)} item belum punya HPP, jadi modal di tabel ini belum lengkap.{' '}
+            <button type="button" className="underline" onClick={() => navigate('hpp', { kosong: '1' })}>
+              Isi HPP
+            </button>
+          </Alert>
+        )}
+        {incoming.withoutCreatedAt > 0 && (
+          <Alert tone="info">
+            {formatNumber(incoming.withoutCreatedAt)} item di-upload sebelum tabel ini ada, jadi belum punya tanggal
+            pesanan dibuat dan belum ikut terhitung di sini. Upload ulang export pesanannya (status <strong>Semua</strong>)
+            — data tidak akan dobel.
+          </Alert>
+        )}
+      </div>
+    </Card>
   )
 }
