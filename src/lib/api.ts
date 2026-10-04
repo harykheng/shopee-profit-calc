@@ -1,5 +1,5 @@
 // Semua akses ke Supabase ada di sini.
-import type { IncomeDayRow } from './parsers/income'
+import type { IncomeAdjustment, IncomeDayRow } from './parsers/income'
 import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
 import { monthEnd } from './format'
@@ -53,6 +53,16 @@ export async function saveOrderItems(storeId: number, items: OrderItemRow[]) {
 export async function saveIncome(storeId: number, days: IncomeDayRow[]): Promise<UpsertCounts> {
   const rows = check(
     await supabase.rpc('upsert_income', { p_store_id: storeId, p_rows: days }),
+  ) as UpsertCounts[]
+  return rows[0]
+}
+
+export async function saveAdjustments(storeId: number, adjustments: IncomeAdjustment[]): Promise<UpsertCounts> {
+  const rows = check(
+    await supabase.rpc('upsert_income_adjustments', {
+      p_store_id: storeId,
+      p_rows: adjustments.map((a) => ({ released_date: a.date, description: a.description, amount: a.amount })),
+    }),
   ) as UpsertCounts[]
   return rows[0]
 }

@@ -13,6 +13,12 @@ export function friendlyError(err: unknown): string {
   if (lower.includes('failed to fetch') || lower.includes('network') || lower.includes('load failed')) {
     return 'Tidak bisa terhubung ke server. Cek koneksi internet, lalu coba lagi.'
   }
+  if (lower.includes('upsert_income_adjustments') || lower.includes('income_adjustments')) {
+    return (
+      'Database belum diperbarui untuk biaya penyesuaian. Pengelola aplikasi perlu menjalankan file ' +
+      'SQL "20261004000000_income_adjustments.sql" di Supabase (lihat README), lalu upload ulang file ini.'
+    )
+  }
   if (lower.includes('permission denied') || lower.includes('row-level security')) {
     return 'Anda tidak punya akses untuk data ini. Coba login ulang.'
   }

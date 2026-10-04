@@ -128,7 +128,7 @@ describe('parseIncomeLines — edge cases', () => {
     expect(() => parse(conflicting)).toThrow(/muncul dua kali/)
   })
 
-  it('warns about adjustments and dates outside the period', () => {
+  it('warns about dates outside the period and still reads adjustments', () => {
     const lines = [
       ...base.slice(0, 6),
       '2026/09/01 1000 0 −100 −100 −50 0 750',
@@ -137,8 +137,14 @@ describe('parseIncomeLines — edge cases', () => {
       'Rincian Biaya Penyesuaian',
       '2026/08/10 Penyesuaian dummy −10000',
     ]
-    const codes = parse(lines).warnings.map((w) => w.code)
-    expect(codes).toEqual(['outside_period', 'adjustments_present'])
+    const r = parse(lines)
+    expect(r.warnings.map((w) => w.code)).toEqual(['outside_period'])
+    expect(r.adjustments).toEqual([{ date: '2026-08-10', description: 'Penyesuaian dummy', amount: -10000 }])
+  })
+
+  it('warns when the adjustments section has content it cannot read', () => {
+    const lines = [...base.slice(0, 9), 'Rincian Biaya Penyesuaian', 'Format baru yang aneh']
+    expect(parse(lines).warnings.map((w) => w.code)).toEqual(['adjustments_unreadable'])
   })
 
   it('handles an extra fee column (e.g. "Biaya Layanan" in July) by its summary label', () => {
@@ -200,6 +206,6 @@ describe('parseIncomeLines — edge cases', () => {
       { date: '2026-08-30', description: 'Penyesuaian/Kompensasi Pengembalian Barang/Dana', amount: 22881 },
     ])
     expect(r.totalIncome).toBe(2450)
-    expect(r.warnings.find((w) => w.code === 'adjustments_present')?.message).toContain('Rp22.881')
+    expect(r.warnings).toEqual([])
   })
 })

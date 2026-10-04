@@ -97,11 +97,15 @@ export function Stat({
   value,
   tone,
   note,
+  detail,
 }: {
   label: string
   value: string
   tone?: 'good' | 'bad' | 'warning'
+  /** Catatan peringatan (oranye). */
   note?: string
+  /** Keterangan netral (abu-abu). */
+  detail?: string
 }) {
   const color =
     tone === 'good' ? 'text-emerald-700' : tone === 'bad' ? 'text-red-700' : tone === 'warning' ? 'text-amber-700' : 'text-slate-900'
@@ -109,6 +113,7 @@ export function Stat({
     <div className="rounded-xl bg-slate-50 p-4">
       <p className="text-sm font-medium text-slate-500">{label}</p>
       <p className={`mt-1 break-words text-2xl font-bold tabular-nums ${color}`}>{value}</p>
+      {detail && <p className="mt-1 text-sm text-slate-500">{detail}</p>}
       {note && <p className="mt-1 text-sm font-semibold text-amber-700">{note}</p>}
     </div>
   )

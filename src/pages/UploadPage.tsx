@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent } from 'react'
 import { StorePicker } from '../components/pickers'
 import { Alert, Button, Card, ErrorBox, PageTitle, Spinner } from '../components/ui'
-import { fetchProducts, saveIncome, saveOrderItems } from '../lib/api'
+import { fetchProducts, saveAdjustments, saveIncome, saveOrderItems } from '../lib/api'
 import { navigate } from '../lib/router'
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from '../lib/format'
 import { ParseError, type ParseWarning } from '../lib/parsers/common'
@@ -14,7 +14,7 @@ type Parsed<T> = { fileName: string; result?: T; error?: unknown; loading?: bool
 interface SaveSummary {
   storeName: string
   orders?: { inserted: number; updated: number; unchanged: number; skipped: number; newProducts: number }
-  income?: UpsertCounts & { totalIncome: number }
+  income?: UpsertCounts & { totalIncome: number; adjustmentsTotal: number; adjustmentsSaved: number }
   missingHpp: Product[]
 }
 
@@ -103,8 +103,17 @@ export function UploadPage({
         out.missingHpp = (await fetchProducts(store.id)).filter((p) => p.hpp === null && uploadedSkus.has(p.sku))
       }
       if (income?.result) {
-        const counts = await saveIncome(store.id, income.result.days)
-        out.income = { ...counts, totalIncome: income.result.totalIncome }
+        const r = income.result
+        const counts = await saveIncome(store.id, r.days)
+        // Hanya panggil kalau ada penyesuaian, supaya laporan tanpa penyesuaian tetap bisa
+        // disimpan walau SQL tambahan belum dijalankan.
+        const adj = r.adjustments.length > 0 ? await saveAdjustments(store.id, r.adjustments) : null
+        out.income = {
+          ...counts,
+          totalIncome: r.totalIncome,
+          adjustmentsTotal: r.adjustments.reduce((s, a) => s + a.amount, 0),
+          adjustmentsSaved: adj ? adj.inserted + adj.updated + adj.unchanged : 0,
+        }
       }
       setSummary(out)
       setOrders(null)
@@ -261,6 +270,7 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
   if (parsed.loading) return <Spinner label="Membaca file…" />
   if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} /></div>
   const r = parsed.result!
+  const adjustmentsTotal = r.adjustments.reduce((s, a) => s + a.amount, 0)
   const shopMismatch =
     store &&
     r.shopName &&
@@ -270,13 +280,28 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
     <div className="mt-4">
       <Alert tone="success" title={parsed.fileName}>
         Periode {formatDate(r.periodStart)} – {formatDate(r.periodEnd)}: {r.days.length} hari dana dilepas, total
-        penghasilan <strong>{formatRupiah(r.totalIncome)}</strong>.
+        penghasilan <strong>{formatRupiah(r.totalIncome + adjustmentsTotal)}</strong>
+        {adjustmentsTotal !== 0 && <> (termasuk biaya penyesuaian {formatRupiah(adjustmentsTotal)})</>}.
       </Alert>
       {shopMismatch && (
         <div className="mt-4">
           <Alert tone="warning" title="Nama toko berbeda">
             Nama toko di PDF: <strong>{r.shopName}</strong>. Toko yang dipilih: <strong>{store!.name}</strong>. Pastikan
             toko yang dipilih sudah benar sebelum menyimpan.
+          </Alert>
+        </div>
+      )}
+      {r.adjustments.length > 0 && (
+        <div className="mt-4">
+          <Alert tone="info" title={`Biaya penyesuaian: ${formatRupiah(adjustmentsTotal)}`}>
+            <p>Dicatat Shopee terpisah dari tabel harian, dan otomatis ikut dihitung sebagai penghasilan.</p>
+            <ul className="mt-1 list-disc pl-6 text-sm">
+              {r.adjustments.map((a, i) => (
+                <li key={i}>
+                  {formatDate(a.date)} · {a.description} · {formatRupiah(a.amount)}
+                </li>
+              ))}
+            </ul>
           </Alert>
         </div>
       )}
@@ -342,7 +367,13 @@ function SaveSummaryCard({ summary, onAgain }: { summary: SaveSummary; onAgain: 
               <li>Baru: <strong>{formatNumber(income.inserted)}</strong></li>
               <li>Diperbarui: <strong>{formatNumber(income.updated)}</strong></li>
               <li>Sudah ada, tidak berubah: <strong>{formatNumber(income.unchanged)}</strong></li>
-              <li>Total penghasilan di file: <strong>{formatRupiah(income.totalIncome)}</strong></li>
+              <li>Total penghasilan di file: <strong>{formatRupiah(income.totalIncome + income.adjustmentsTotal)}</strong></li>
+              {income.adjustmentsSaved > 0 && (
+                <li>
+                  Termasuk {formatNumber(income.adjustmentsSaved)} biaya penyesuaian:{' '}
+                  <strong>{formatRupiah(income.adjustmentsTotal)}</strong>
+                </li>
+              )}
             </ul>
           </div>
         )}

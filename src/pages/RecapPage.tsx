@@ -128,11 +128,12 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
   const totals = data.months.reduce(
     (t, m) => ({
       income: t.income + Number(m.total_income),
+      adjustments: t.adjustments + Number(m.adjustments ?? 0),
       modal: t.modal + Number(m.total_modal),
       expenses: t.expenses + Number(m.total_expenses),
       profit: t.profit + Number(m.net_profit),
     }),
-    { income: 0, modal: 0, expenses: 0, profit: 0 },
+    { income: 0, adjustments: 0, modal: 0, expenses: 0, profit: 0 },
   )
   const margin = totals.income > 0 ? (totals.profit / totals.income) * 100 : null
   const statuses = new Map(data.months.map((m) => [m.month, monthStatus(m, data.reconciliation)]))
@@ -147,7 +148,11 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
 
       <Card title={data.months.length > 1 ? 'Total periode' : formatMonth(data.months[0].month)}>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Stat label="Penghasilan dilepas" value={formatRupiah(totals.income)} />
+          <Stat
+            label="Penghasilan dilepas"
+            value={formatRupiah(totals.income)}
+            detail={totals.adjustments !== 0 ? `termasuk penyesuaian ${formatRupiah(totals.adjustments)}` : undefined}
+          />
           <Stat label="Modal (HPP)" value={formatRupiah(totals.modal)} />
           <Stat label="Biaya" value={formatRupiah(totals.expenses)} />
           <Stat
@@ -181,7 +186,14 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
                     {formatMonth(m.month)}
                     <StatusBadge final={statuses.get(m.month)!.final} />
                   </td>
-                  <td className="py-3 pr-3 text-right">{formatRupiah(Number(m.total_income))}</td>
+                  <td className="py-3 pr-3 text-right">
+                    {formatRupiah(Number(m.total_income))}
+                    {Number(m.adjustments ?? 0) !== 0 && (
+                      <span className="block text-xs text-slate-500">
+                        termasuk penyesuaian {formatRupiah(Number(m.adjustments))}
+                      </span>
+                    )}
+                  </td>
                   <td className="py-3 pr-3 text-right">{formatRupiah(Number(m.total_modal))}</td>
                   <td className="py-3 pr-3 text-right">
                     {formatRupiah(Number(m.total_expenses))}

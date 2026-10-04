@@ -57,8 +57,7 @@ describe.skipIf(!ordersFile || incomeFiles.length === 0)('real Shopee sample fil
   it('parses every income PDF (column layout may differ per month)', () => {
     for (const r of incomes) {
       expect(r.days.length).toBeGreaterThan(0)
-      // Penyesuaian boleh ada; peringatan lain berarti format tidak terbaca sempurna.
-      expect(r.warnings.map((w) => w.code).filter((c) => c !== 'adjustments_present')).toEqual([])
+      expect(r.warnings.map((w) => w.code)).toEqual([])
       for (const d of r.days) {
         const parts = d.subtotal_pesanan + d.subtotal_ongkir + d.voucher_subsidi + d.biaya_platform +
           d.biaya_gratis_ongkir + d.biaya_layanan_tambahan

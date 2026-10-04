@@ -1,4 +1,3 @@
-import { formatDate, formatRupiah } from '../format'
 import { INCOME_COLUMNS, INCOME_PDF, type IncomeColumn } from '../shopeeColumns'
 import { ParseError, parseRupiah, type ParseWarning } from './common'
 
@@ -24,7 +23,7 @@ export interface IncomeParseResult {
     hargaProduk: number | null
     pengembalianDana: number | null
   }
-  /** Biaya penyesuaian (terpisah dari tabel harian; belum masuk totalIncome). */
+  /** Biaya penyesuaian (terpisah dari tabel harian; tidak termasuk di totalIncome). */
   adjustments: IncomeAdjustment[]
   warnings: ParseWarning[]
 }
@@ -210,18 +209,15 @@ export function parseIncomeLines(lines: string[]): IncomeParseResult {
       if (!m || amount === null) continue
       adjustments.push({ date: `${m[1]}-${m[2]}-${m[3]}`, description: m[4].trim(), amount })
     }
-    const sum = adjustments.reduce((s, a) => s + a.amount, 0)
-    warnings.push({
-      code: 'adjustments_present',
-      message:
-        adjustments.length > 0
-          ? `Ada ${adjustments.length} biaya penyesuaian dengan total ${formatRupiah(sum)} yang ` +
-            'tercatat terpisah dari tabel harian dan belum ikut dihitung di penghasilan.'
-          : 'Laporan ini berisi "Biaya Penyesuaian" yang tidak bisa dibaca otomatis. Cek bagian itu di PDF.',
-      examples: adjustments
-        .slice(0, 5)
-        .map((a) => `${formatDate(a.date)}: ${a.description} (${formatRupiah(a.amount)})`),
-    })
+    // Penyesuaian yang terbaca ikut disimpan & dihitung; hanya peringatkan kalau tidak terbaca.
+    if (adjustments.length === 0) {
+      warnings.push({
+        code: 'adjustments_unreadable',
+        message:
+          'Laporan ini berisi "Biaya Penyesuaian" yang tidak bisa dibaca otomatis, jadi belum ikut dihitung. ' +
+          'Cek bagian itu di PDF.',
+      })
+    }
   }
 
   return {

@@ -49,6 +49,10 @@ export interface MonthlyRecap {
   total_qty: number
   items_missing_hpp: number
   expense_entries: number
+  /** Dana dilepas dari tabel harian (tanpa penyesuaian). Kosong kalau SQL ke-2 belum dijalankan. */
+  income_released?: number
+  /** Total biaya penyesuaian bulan itu (sudah termasuk di total_income). */
+  adjustments?: number
 }
 
 export interface ProductRecap {
