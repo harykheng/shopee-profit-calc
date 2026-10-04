@@ -154,7 +154,8 @@ Semua nama kolom Excel dan label PDF ada di satu file: **`src/lib/shopeeColumns.
 
 - Kolom ganti nama → tambahkan nama baru ke daftar alias kolom tersebut (nama lama boleh tetap).
 - Status pesanan selesai ganti nama → ubah `COMPLETED_STATUSES`.
-- Susunan kolom tabel harian PDF berubah → ubah `INCOME_PDF.dailyColumns`.
+- Ada kolom biaya baru di tabel harian PDF → tambahkan labelnya ke `INCOME_PDF.feeColumns`
+  (kolom yang belum dikenal tetap aman: total penghasilan tetap benar, hanya rinciannya digabung).
 
 Kalau format berubah, aplikasi akan menolak file dengan pesan yang jelas (bukan diam-diam salah
 hitung). Setelah memperbaiki, jalankan `npm test`.

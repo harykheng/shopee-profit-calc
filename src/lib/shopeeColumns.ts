@@ -74,19 +74,26 @@ export const INCOME_PDF = {
   dailySection: 'Rincian Dana Dilepaskan',
   /** Kalimat periode, mis. "Catatan Transaksi untuk 2026-08-01 sampai 2026-08-31". */
   periodLabel: 'Catatan Transaksi untuk',
+  /** Judul bagian ringkasan bulanan (di atas tabel harian). */
+  summarySection: 'Ringkasan Dana yang Dilepaskan',
   /**
-   * Urutan kolom angka di tabel harian, setelah kolom tanggal.
-   * Nama di kanan = kolom di tabel `income`.
+   * Tabel harian: kolom pertama selalu Subtotal Pesanan, kolom terakhir selalu
+   * Total Penghasilan. Kolom biaya di antaranya MUNCUL/HILANG tergantung bulan
+   * (mis. "Biaya Layanan" hanya ada kalau ada biaya SPayLater), dengan urutan
+   * yang sama seperti di ringkasan. Kolom dikenali dari label di ringkasan,
+   * lalu dicek dengan baris total. Beberapa label boleh masuk ke kolom yang sama.
+   * Label baru dari Shopee cukup ditambahkan di sini.
    */
-  dailyColumns: [
-    'subtotal_pesanan', // Subtotal Pesanan
-    'subtotal_ongkir', // Subtotal Ongkos Kirim
-    'voucher_subsidi', // Voucher & Subsidi
-    'biaya_platform', // Biaya Platform
-    'biaya_gratis_ongkir', // Biaya Gratis Ongkir XTRA
-    'biaya_layanan_tambahan', // Subtotal Biaya Layanan Tambahan
-    'total_income', // Total Penghasilan (IDR)
+  feeColumns: [
+    { label: 'Subtotal Ongkos Kirim', column: 'subtotal_ongkir' },
+    { label: 'Voucher & Subsidi', column: 'voucher_subsidi' },
+    { label: 'Biaya Platform', column: 'biaya_platform' },
+    { label: 'Biaya Gratis Ongkir XTRA', column: 'biaya_gratis_ongkir' },
+    { label: 'Biaya Layanan', column: 'biaya_layanan_tambahan' },
+    { label: 'Subtotal Biaya Layanan Tambahan', column: 'biaya_layanan_tambahan' },
   ],
+  /** Kolom biaya yang tidak dikenali dijumlahkan ke sini (total tetap benar). */
+  fallbackFeeColumn: 'biaya_layanan_tambahan',
   /** Label baris total di bawah tabel harian. */
   totalLabel: 'Total Penghasilan',
   /** Label di ringkasan bulanan yang ditampilkan di preview. */
@@ -99,4 +106,15 @@ export const INCOME_PDF = {
   noAdjustmentsText: 'Tidak ada riwayat',
 } as const
 
-export type IncomeColumn = (typeof INCOME_PDF.dailyColumns)[number]
+/** Kolom angka di tabel `income` (satu baris per tanggal dana dilepas). */
+export const INCOME_COLUMNS = [
+  'subtotal_pesanan',
+  'subtotal_ongkir',
+  'voucher_subsidi',
+  'biaya_platform',
+  'biaya_gratis_ongkir',
+  'biaya_layanan_tambahan',
+  'total_income',
+] as const
+
+export type IncomeColumn = (typeof INCOME_COLUMNS)[number]
