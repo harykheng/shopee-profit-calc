@@ -132,9 +132,11 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
       modal: t.modal + Number(m.total_modal),
       expenses: t.expenses + Number(m.total_expenses),
       profit: t.profit + Number(m.net_profit),
+      qty: t.qty + Number(m.total_qty),
     }),
-    { income: 0, adjustments: 0, modal: 0, expenses: 0, profit: 0 },
+    { income: 0, adjustments: 0, modal: 0, expenses: 0, profit: 0, qty: 0 },
   )
+  const qtyReturned = data.products.reduce((s, p) => s + Number(p.qty_returned), 0)
   const margin = totals.income > 0 ? (totals.profit / totals.income) * 100 : null
   const statuses = new Map(data.months.map((m) => [m.month, monthStatus(m, data.reconciliation)]))
   const allFinal = [...statuses.values()].every((s) => s.final)
@@ -147,7 +149,7 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
       ))}
 
       <Card title={data.months.length > 1 ? 'Total periode' : formatMonth(data.months[0].month)}>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           <Stat
             label="Penghasilan dilepas"
             value={formatRupiah(totals.income)}
@@ -162,6 +164,11 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
             note={allFinal ? undefined : 'Belum final — lihat status di atas'}
           />
           <Stat label="Margin" value={formatPercent(margin)} tone={allFinal ? undefined : 'warning'} />
+          <Stat
+            label="Qty terjual"
+            value={`${formatNumber(totals.qty)} pcs`}
+            detail={qtyReturned > 0 ? `sudah dikurangi retur ${formatNumber(qtyReturned)} pcs` : undefined}
+          />
         </div>
       </Card>
 
@@ -171,6 +178,7 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
             <thead className="border-b text-sm text-slate-500">
               <tr>
                 <th className="py-2 pr-3">Bulan</th>
+                <th className="py-2 pr-3 text-right">Qty terjual</th>
                 <th className="py-2 pr-3 text-right">Penghasilan</th>
                 <th className="py-2 pr-3 text-right">Modal</th>
                 <th className="py-2 pr-3 text-right">Biaya</th>
@@ -186,6 +194,7 @@ function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: s
                     {formatMonth(m.month)}
                     <StatusBadge final={statuses.get(m.month)!.final} />
                   </td>
+                  <td className="py-3 pr-3 text-right">{formatNumber(Number(m.total_qty))} pcs</td>
                   <td className="py-3 pr-3 text-right">
                     {formatRupiah(Number(m.total_income))}
                     {Number(m.adjustments ?? 0) !== 0 && (
@@ -373,6 +382,11 @@ function ProductTable({ products }: { products: ProductRecap[] }) {
   }, [products])
 
   if (rows.length === 0) return null
+  const total = rows.reduce(
+    (t, r) => ({ qty: t.qty + r.qty, returned: t.returned + r.returned, modal: t.modal + r.modal }),
+    { qty: 0, returned: 0, modal: 0 },
+  )
+  const anyMissing = rows.some((r) => r.missing)
   return (
     <Card title="Per produk">
       <div className="overflow-x-auto">
@@ -400,6 +414,17 @@ function ProductTable({ products }: { products: ProductRecap[] }) {
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-slate-300 font-bold tabular-nums">
+              <td className="py-3 pr-3">Total ({formatNumber(rows.length)} produk)</td>
+              <td className="py-3 pr-3 text-right">{formatNumber(total.qty)} pcs</td>
+              <td className="py-3 pr-3 text-right">{total.returned > 0 ? `${formatNumber(total.returned)} pcs` : '-'}</td>
+              <td className="py-3 pr-3 text-right">
+                {formatRupiah(total.modal)}
+                {anyMissing && <span className="block text-xs font-semibold text-red-700">belum termasuk HPP kosong</span>}
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </Card>
