@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { parseRupiah } from '../lib/parsers/common'
-import { MONTH_NAMES, currentMonth, toMonth } from '../lib/format'
+import { MONTH_NAMES, addMonths, currentMonth, formatMonth, toMonth } from '../lib/format'
 import type { Store } from '../lib/types'
 import { selectClass } from './ui'
 
@@ -81,6 +81,36 @@ export function MonthPicker({
         ))}
       </select>
     </div>
+  )
+}
+
+/** Satu dropdown bulan (24 bulan terakhir s/d bulan ini). Nilai "YYYY-MM-01". */
+export function MonthSelect({
+  value,
+  onChange,
+  label,
+  className = '',
+}: {
+  value: string
+  onChange: (month: string) => void
+  label: string
+  className?: string
+}) {
+  const options: string[] = []
+  const now = currentMonth()
+  for (let i = 0; i < 24; i++) options.push(addMonths(now, -i))
+  if (!options.includes(value)) options.push(value)
+  return (
+    <label className="flex items-center gap-2">
+      <span className="text-lg text-slate-600">{label}</span>
+      <select value={value} onChange={(e) => onChange(e.target.value)} className={`${selectClass} font-bold ${className}`}>
+        {options.map((m) => (
+          <option key={m} value={m}>
+            {formatMonth(m)}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 

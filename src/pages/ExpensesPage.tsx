@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MonthPicker, RupiahInput, StorePicker } from '../components/pickers'
+import { MonthPicker, RupiahInput } from '../components/pickers'
 import { Alert, Button, Card, ErrorBox, PageTitle, Spinner } from '../components/ui'
 import { fetchExpenses, saveExpenses } from '../lib/api'
 import { addMonths, currentMonth, formatMonth, formatRupiah } from '../lib/format'
@@ -17,12 +17,10 @@ const emptyValues = (): Values => ({
 export function ExpensesPage({
   stores,
   storeId,
-  onStoreChange,
   initialMonth,
 }: {
   stores: Store[]
   storeId: number | null
-  onStoreChange: (id: number) => void
   /** Dari link "Isi biaya" di Rekap, mis. "2026-08-01". */
   initialMonth?: string | null
 }) {
@@ -97,12 +95,9 @@ export function ExpensesPage({
         Biaya
       </PageTitle>
 
-      <Card className="mb-6">
-        <div className="flex flex-col gap-4">
-          <StorePicker stores={stores} value={storeId} onChange={onStoreChange} />
-          <MonthPicker value={month} onChange={setMonth} label="Bulan:" />
-        </div>
-      </Card>
+      <div className="mb-6">
+        <MonthPicker value={month} onChange={setMonth} label="Bulan:" />
+      </div>
 
       {loadError ? (
         <ErrorBox error={loadError} />

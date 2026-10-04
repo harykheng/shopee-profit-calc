@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RupiahInput, StorePicker } from '../components/pickers'
+import { RupiahInput } from '../components/pickers'
 import { Alert, Card, ErrorBox, PageTitle, Spinner } from '../components/ui'
 import { fetchProducts, updateHpp } from '../lib/api'
 import { friendlyError } from '../lib/errors'
@@ -17,12 +17,10 @@ const SOURCE_LABEL: Record<Product['sku_source'], string | null> = {
 export function HppPage({
   stores,
   storeId,
-  onStoreChange,
   onlyMissingInitially,
 }: {
   stores: Store[]
   storeId: number | null
-  onStoreChange: (id: number) => void
   onlyMissingInitially: boolean
 }) {
   const [products, setProducts] = useState<Product[] | null>(null)
@@ -73,13 +71,10 @@ export function HppPage({
 
   return (
     <>
-      <PageTitle subtitle="Harga pokok (modal) per produk. Ketik angka lalu tekan Enter atau pindah kolom untuk menyimpan.">
-        HPP
+      <PageTitle subtitle="Harga pokok (modal) per 1 unit yang dijual di Shopee — untuk paket grosir, isi HPP per paket. Ketik angka lalu tekan Enter untuk menyimpan.">
+        HPP — {stores.find((s) => s.id === storeId)?.name}
       </PageTitle>
 
-      <Card className="mb-6">
-        <StorePicker stores={stores} value={storeId} onChange={onStoreChange} />
-      </Card>
 
       <div className="mb-6">
         <Alert tone="info">

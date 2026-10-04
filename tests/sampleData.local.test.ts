@@ -27,7 +27,12 @@ describe.skipIf(!ordersFile || incomeFiles.length === 0)('real Shopee sample fil
     ordersData = new Uint8Array(fs.readFileSync(path.join(DIR, ordersFile!)))
     orders = parseOrdersFile(ordersData)
     incomes = []
-    for (const f of incomeFiles) incomes.push(parseIncomeLines(await pdfLinesFromFile(path.join(DIR, f))))
+    for (const f of incomeFiles) {
+      const lines = await pdfLinesFromFile(path.join(DIR, f))
+      // sample-data/ juga boleh berisi PDF lain (mis. catatan manual); lewati yang bukan laporan Shopee.
+      if (!lines.some((l) => l.includes('Catatan Transaksi Penghasilan'))) continue
+      incomes.push(parseIncomeLines(lines))
+    }
     const months = new Map<string, number>()
     for (const i of orders.items) {
       if (!i.completed_at) continue
