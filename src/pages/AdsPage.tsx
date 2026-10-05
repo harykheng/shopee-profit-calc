@@ -30,12 +30,89 @@ import type { AdReport, Store } from '../lib/types'
 
 type ParsedFile = { fileName: string; result?: AdsParseResult; error?: unknown }
 
-interface SavedInfo {
-  period: string
+/** File-file yang dipilih, dikelompokkan per periode. */
+interface FileGroup {
+  key: string
+  start: string
+  end: string
+  files: AdsParseResult[]
+  /** "YYYY-MM-01" kalau periodenya tepat 1 bulan penuh. */
+  month: string | null
+  /** Periode melewati lebih dari 1 bulan (mis. 1 Agu – 30 Sep). */
+  multiMonth: boolean
+  keseluruhan: AdsParseResult | undefined
+  /** Jenis file yang dipilih dua kali untuk periode ini. */
+  duplicate: string | undefined
+}
+
+interface SavedPeriod {
+  key: string
   files: number
   replaced: number
   expense: { month: string; amount: number } | null
-  expenseSkipped: 'not_full_month' | 'no_keseluruhan' | null
+  skipped: 'weekly' | 'multi_month' | 'no_keseluruhan' | null
+}
+
+function groupFiles(results: AdsParseResult[]): FileGroup[] {
+  const map = new Map<string, AdsParseResult[]>()
+  for (const r of results) {
+    const key = periodKey(r.periodStart, r.periodEnd)
+    map.set(key, [...(map.get(key) ?? []), r])
+  }
+  return [...map.entries()]
+    .map(([key, files]) => {
+      const { periodStart: start, periodEnd: end } = files[0]
+      const sources = files.map((f) => f.source)
+      const dup = sources.find((x, i) => sources.indexOf(x) !== i)
+      return {
+        key,
+        start,
+        end,
+        files,
+        month: fullMonthOf(start, end),
+        multiMonth: start.slice(0, 7) !== end.slice(0, 7),
+        keseluruhan: files.find((f) => f.source === 'keseluruhan'),
+        duplicate: dup ? files.find((f) => f.source === dup)?.sourceLabel : undefined,
+      }
+    })
+    .sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end))
+}
+
+/** Apa yang terjadi dengan Biaya untuk satu kelompok file. */
+function expenseNote(g: FileGroup): { tone: 'info' | 'warning' | 'success'; text: ReactNode } {
+  if (g.month && g.keseluruhan) {
+    return {
+      tone: 'success',
+      text: (
+        <>
+          Biaya Iklan Shopee {formatMonth(g.month)} diisi otomatis: <strong>{formatRupiah(g.keseluruhan.totalSpend)}</strong>
+        </>
+      ),
+    }
+  }
+  if (g.multiMonth) {
+    return {
+      tone: 'warning',
+      text: (
+        <>
+          File ini berisi <strong>total beberapa bulan sekaligus</strong>. Shopee tidak memberi rincian per bulan, jadi
+          angkanya tidak bisa dipecah dan Biaya tidak diisi. Untuk hasil per bulan, download data iklan per bulan (tanggal 1
+          – akhir bulan), lalu pilih semua filenya sekaligus di sini.
+        </>
+      ),
+    }
+  }
+  if (g.month) {
+    return {
+      tone: 'warning',
+      text: (
+        <>
+          File <strong>Data Keseluruhan</strong> tidak ada, jadi Biaya Iklan Shopee {formatMonth(g.month)} belum diisi.
+        </>
+      ),
+    }
+  }
+  return { tone: 'info', text: 'Bukan 1 bulan penuh: hanya untuk analisis, Biaya tidak diubah.' }
 }
 
 interface Period {
@@ -183,19 +260,15 @@ function UploadCard({
   const [elsewhere, setElsewhere] = useState<{ shop: string; storeName: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<unknown>(null)
-  const [saved, setSaved] = useState<SavedInfo | null>(null)
+  const [saved, setSaved] = useState<SavedPeriod[] | null>(null)
 
   const ok = files.filter((f) => f.result).map((f) => f.result as AdsParseResult)
-  const periods = new Set(ok.map((r) => periodKey(r.periodStart, r.periodEnd)))
-  const sources = ok.map((r) => r.source)
-  const duplicateSource = sources.find((s, i) => sources.indexOf(s) !== i)
+  const groups = groupFiles(ok)
   const shopNames = new Set(ok.map((r) => r.shopName).filter(Boolean))
-  const problem =
-    periods.size > 1
-      ? 'Periode file-file ini berbeda. Upload file dengan periode yang sama sekaligus (atau satu per satu).'
-      : duplicateSource
-        ? `Ada 2 file jenis "${ok.find((r) => r.source === duplicateSource)?.sourceLabel}". Pilih salah satu saja.`
-        : null
+  const dup = groups.find((g) => g.duplicate)
+  const problem = dup
+    ? `Ada 2 file jenis "${dup.duplicate}" untuk periode ${formatPeriod(dup.start, dup.end)}. Pilih salah satu saja.`
+    : null
 
   const onFiles = async (e: ChangeEvent<HTMLInputElement>) => {
     const list = [...(e.target.files ?? [])]
@@ -235,36 +308,39 @@ function UploadCard({
   }
 
   const save = async () => {
-    if (!store || ok.length === 0 || problem) return
+    if (!store || groups.length === 0 || problem) return
     setSaving(true)
     setSaveError(null)
     try {
-      let replaced = 0
-      for (const r of ok) {
-        const res = await saveAdReport(store.id, r)
-        if (res.replaced) replaced++
+      const out: SavedPeriod[] = []
+      for (const g of groups) {
+        let replaced = 0
+        for (const r of g.files) {
+          const res = await saveAdReport(store.id, r)
+          if (res.replaced) replaced++
+        }
+        let expense: SavedPeriod['expense'] = null
+        if (g.month && g.keseluruhan) {
+          await saveAdsExpense(
+            store.id,
+            g.month,
+            g.keseluruhan.totalSpend,
+            `Otomatis dari data iklan (upload ${formatDate(new Date().toISOString())})`,
+          )
+          expense = { month: g.month, amount: g.keseluruhan.totalSpend }
+        }
+        out.push({
+          key: g.key,
+          files: g.files.length,
+          replaced,
+          expense,
+          skipped: expense ? null : g.multiMonth ? 'multi_month' : g.month ? 'no_keseluruhan' : 'weekly',
+        })
       }
-      const first = ok[0]
-      const month = fullMonthOf(first.periodStart, first.periodEnd)
-      const all = ok.find((r) => r.source === 'keseluruhan')
-      let expense: SavedInfo['expense'] = null
-      if (month && all) {
-        await saveAdsExpense(
-          store.id,
-          month,
-          all.totalSpend,
-          `Otomatis dari data iklan (upload ${formatDate(new Date().toISOString())})`,
-        )
-        expense = { month, amount: all.totalSpend }
-      }
-      setSaved({
-        period: formatPeriod(first.periodStart, first.periodEnd),
-        files: ok.length,
-        replaced,
-        expense,
-        expenseSkipped: expense ? null : !month ? 'not_full_month' : 'no_keseluruhan',
-      })
-      onSaved(periodKey(first.periodStart, first.periodEnd))
+      setSaved(out)
+      // Tampilkan periode yang paling baru.
+      const latest = [...groups].sort((a, b) => b.end.localeCompare(a.end) || b.start.localeCompare(a.start))[0]
+      onSaved(latest.key)
       reset()
     } catch (error) {
       setSaveError(error)
@@ -283,10 +359,11 @@ function UploadCard({
           </li>
           <li>
             Pilih periode: <strong>1 bulan penuh</strong> (tanggal 1 – akhir bulan) supaya Biaya iklan terisi otomatis,
-            atau <strong>7 hari</strong> untuk cek mingguan.
+            atau <strong>7 hari</strong> untuk cek mingguan. Mau beberapa bulan? Download <strong>per bulan</strong>{' '}
+            (file 2 bulan sekaligus tidak bisa dipecah per bulan), lalu pilih semua filenya sekaligus.
           </li>
           <li>
-            Download file ini (periode sama), lalu pilih semuanya sekaligus di bawah:
+            Untuk tiap periode, download file ini, lalu pilih semuanya sekaligus di bawah:
             <ul className="mt-1 list-disc pl-6">
               <li>
                 <strong>Data Keseluruhan</strong> — total semua iklan (untuk Biaya)
@@ -312,34 +389,51 @@ function UploadCard({
         <input key={inputKey} type="file" accept=".csv,text/csv" multiple className="sr-only" onChange={onFiles} />
       </label>
 
-      {files.length > 0 && (
+      {files.some((f) => f.error) && (
         <ul className="mt-4 space-y-3">
-          {files.map((f) => (
-            <li key={f.fileName} className="rounded-xl border border-slate-200 p-4">
-              <p className="break-all text-sm text-slate-500">{f.fileName}</p>
-              {f.error ? (
+          {files
+            .filter((f) => f.error)
+            .map((f) => (
+              <li key={f.fileName} className="rounded-xl border border-slate-200 p-4">
+                <p className="break-all text-sm text-slate-500">{f.fileName}</p>
                 <div className="mt-2">
                   <ErrorBox error={f.error} />
                 </div>
-              ) : f.result ? (
-                <>
-                  <p className="mt-1 text-lg font-semibold">✅ {f.result.sourceLabel}</p>
+              </li>
+            ))}
+        </ul>
+      )}
+
+      {groups.map((g) => {
+        const note = expenseNote(g)
+        return (
+          <section key={g.key} className="mt-4 rounded-xl border border-slate-200 p-4">
+            <h3 className="text-lg font-bold">
+              Periode {formatPeriod(g.start, g.end)}
+              {g.month && <span className="ml-2 text-base font-normal text-slate-500">(1 bulan penuh)</span>}
+            </h3>
+            <ul className="mt-2 space-y-2">
+              {g.files.map((r, i) => (
+                <li key={`${r.source}-${i}`}>
+                  <p className="font-semibold">✅ {r.sourceLabel}</p>
                   <p className="text-slate-700">
-                    Periode {formatPeriod(f.result.periodStart, f.result.periodEnd)} · Toko di file:{' '}
-                    {f.result.shopName || '-'} · Total biaya <strong>{formatRupiah(f.result.totalSpend)}</strong>
-                    {f.result.productCount > 0 && ` · ${f.result.productCount} produk dengan biaya`}
+                    Toko di file: {r.shopName || '-'} · Total biaya <strong>{formatRupiah(r.totalSpend)}</strong>
+                    {r.productCount > 0 && ` · ${r.productCount} produk dengan biaya`}
                   </p>
-                  {f.result.warnings.map((w) => (
+                  {r.warnings.map((w) => (
                     <p key={w.code} className="mt-1 text-amber-700">
                       ⚠️ {w.message}
                     </p>
                   ))}
-                </>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-3">
+              <Alert tone={note.tone}>{note.text}</Alert>
+            </div>
+          </section>
+        )
+      })}
 
       {problem && (
         <div className="mt-4">
@@ -362,12 +456,6 @@ function UploadCard({
 
       {ok.length > 0 && !problem && (
         <div className="mt-4">
-          {ok.some((r) => r.source === 'keseluruhan') && fullMonthOf(ok[0].periodStart, ok[0].periodEnd) && (
-            <p className="mb-3 text-lg">
-              Biaya Iklan Shopee {formatMonth(fullMonthOf(ok[0].periodStart, ok[0].periodEnd) as string)} akan diisi
-              otomatis: <strong>{formatRupiah(ok.find((r) => r.source === 'keseluruhan')?.totalSpend)}</strong>
-            </p>
-          )}
           {saveError ? (
             <div className="mb-3">
               <ErrorBox error={saveError} />
@@ -375,7 +463,9 @@ function UploadCard({
           ) : null}
           <div className="flex flex-wrap gap-3">
             <Button onClick={save} disabled={saving || !store}>
-              {saving ? 'Menyimpan…' : `Simpan ke ${store?.name ?? 'toko'}`}
+              {saving
+                ? 'Menyimpan…'
+                : `Simpan ${groups.length > 1 ? `${groups.length} periode ` : ''}ke ${store?.name ?? 'toko'}`}
             </Button>
             <Button variant="secondary" onClick={reset} disabled={saving}>
               Batal
@@ -385,25 +475,27 @@ function UploadCard({
       )}
 
       {saved && (
-        <div className="mt-4 space-y-3">
-          <Alert tone="success" title={`Data iklan ${saved.period} tersimpan (${saved.files} file).`}>
-            {saved.replaced > 0 && <p>{saved.replaced} file menggantikan upload sebelumnya (tidak dobel).</p>}
-            {saved.expense && (
-              <p>
-                Biaya Iklan Shopee {formatMonth(saved.expense.month)} diisi otomatis:{' '}
-                <strong>{formatRupiah(saved.expense.amount)}</strong>.
-              </p>
-            )}
+        <div className="mt-4">
+          <Alert tone="success" title={`Data iklan tersimpan (${saved.reduce((n, p) => n + p.files, 0)} file).`}>
+            <ul className="space-y-1">
+              {saved.map((p) => {
+                const [start, end] = p.key.split('|')
+                return (
+                  <li key={p.key}>
+                    <strong>{formatPeriod(start, end)}</strong>:{' '}
+                    {p.expense
+                      ? `Biaya Iklan Shopee ${formatMonth(p.expense.month)} diisi otomatis ${formatRupiah(p.expense.amount)}.`
+                      : p.skipped === 'multi_month'
+                        ? 'total beberapa bulan, hanya untuk analisis (Biaya tidak diisi).'
+                        : p.skipped === 'no_keseluruhan'
+                          ? 'Biaya belum diisi karena file Data Keseluruhan tidak ada.'
+                          : 'hanya untuk analisis (Biaya tidak diubah).'}
+                    {p.replaced > 0 && ` ${p.replaced} file menggantikan upload sebelumnya (tidak dobel).`}
+                  </li>
+                )
+              })}
+            </ul>
           </Alert>
-          {saved.expenseSkipped === 'not_full_month' && (
-            <Alert>Periode ini bukan 1 bulan penuh, jadi Biaya tidak diubah (hanya untuk analisis).</Alert>
-          )}
-          {saved.expenseSkipped === 'no_keseluruhan' && (
-            <Alert tone="warning">
-              File <strong>Data Keseluruhan</strong> tidak ikut di-upload, jadi Biaya Iklan Shopee belum diisi. Upload
-              file itu supaya total biaya iklan lengkap.
-            </Alert>
-          )}
         </div>
       )}
     </Card>

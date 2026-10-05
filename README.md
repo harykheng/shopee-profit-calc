@@ -126,7 +126,8 @@ Lakukan di awal bulan untuk menghitung bulan sebelumnya (contoh: awal September 
      dobel, dan pesanan yang tadinya "dikirim" otomatis berubah jadi selesai saat di-upload lagi.
    - **Laporan penghasilan**: Keuangan → Penghasilan Saya → laporan bulanan (.pdf).
    - **Data iklan**: Iklan Saya → Download Data, periode **1 bulan penuh** (tanggal 1 – akhir
-     bulan). Download *Data Keseluruhan*, *Rincian Data Iklan Produk Otomatis*, dan (kalau memakai
+     bulan). Mau beberapa bulan? Download **per bulan** — file 2 bulan sekaligus hanya berisi
+     totalnya dan tidak bisa dipecah per bulan. Download *Data Keseluruhan*, *Rincian Data Iklan Produk Otomatis*, dan (kalau memakai
      grup iklan) *Semua Data Grup Iklan* — semuanya .csv dengan periode yang sama.
 Toko dipilih di **menu kanan atas** dan berlaku untuk semua halaman.
 
@@ -135,7 +136,8 @@ Toko dipilih di **menu kanan atas** dan berlaku untuk semua halaman.
 3. **HPP**: isi HPP untuk produk yang masih merah (produk baru otomatis masuk dari upload).
    HPP diisi **per 1 unit yang dijual di Shopee** — untuk paket grosir, isi HPP per paket.
    Kalau HPP diisi *setelah* upload, buka **Rekap** dan tekan **Hitung ulang HPP** untuk bulan itu.
-4. **Iklan**: pilih semua file .csv iklan sekaligus → **Simpan ke …**. Biaya Iklan Shopee bulan itu
+4. **Iklan**: pilih semua file .csv iklan sekaligus (boleh beberapa bulan; dikelompokkan per periode
+   otomatis) → **Simpan ke …**. Biaya Iklan Shopee bulan itu
    terisi otomatis dari *Data Keseluruhan*. Untuk cek mingguan, upload data iklan 7 hari — periode
    yang bukan 1 bulan penuh hanya untuk analisis dan **tidak** mengubah Biaya.
    - Upload export pesanan untuk periode yang sama dulu: laporan iklan Shopee ikut menghitung
