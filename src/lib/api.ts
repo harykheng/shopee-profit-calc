@@ -297,7 +297,7 @@ export async function fetchAdReports(storeId: number) {
       .select('id, store_id, period_start, period_end, source, shop_name, uploaded_at')
       .eq('store_id', storeId)
       .order('period_end', { ascending: false })
-      .order('period_start'),
+      .order('period_start', { ascending: false }),
   ) as AdReport[]
 }
 
