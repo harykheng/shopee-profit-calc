@@ -118,18 +118,25 @@ Lakukan di awal bulan untuk menghitung bulan sebelumnya (contoh: awal September 
      cair di awal bulan sering berasal dari pesanan bulan sebelumnya. Data yang sama tidak akan
      dobel, dan pesanan yang tadinya "dikirim" otomatis berubah jadi selesai saat di-upload lagi.
    - **Laporan penghasilan**: Keuangan → Penghasilan Saya → laporan bulanan (.pdf).
-2. **Upload**: pilih toko → pilih file Excel dan/atau PDF → cek preview → **Simpan**.
+Toko dipilih di **menu kanan atas** dan berlaku untuk semua halaman.
+
+2. **Upload**: cek nama toko di kotak oranye → pilih file Excel dan/atau PDF → cek preview →
+   **Simpan ke …**.
 3. **HPP**: isi HPP untuk produk yang masih merah (produk baru otomatis masuk dari upload).
+   HPP diisi **per 1 unit yang dijual di Shopee** — untuk paket grosir, isi HPP per paket.
    Kalau HPP diisi *setelah* upload, buka **Rekap** dan tekan **Hitung ulang HPP** untuk bulan itu.
 4. **Biaya**: isi iklan Shopee, Meta Ads, packaging, lain-lain. Kalau tidak ada biaya, simpan Rp0.
-5. **Rekap**: pilih toko dan bulan. Ada dua bagian:
-   - **Profit** — dari pesanan yang *selesai & dananya cair* di bulan itu (berdasarkan tanggal
-     selesai). Ini angka untuk profit bersih.
-   - **Pesanan masuk** — *semua* pesanan yang *dibuat* di bulan itu, apa pun statusnya (selesai,
-     masih dikirim, batal), dengan qty, nilai penjualan, dan perkiraan modal. Angkanya bisa lebih
-     besar dari bagian Profit, karena pesanan akhir bulan sering baru selesai bulan berikutnya.
+5. **Rekap**: pilih bulan (atau "Lihat beberapa bulan").
+   - **Kotak untung bersih** dibaca seperti nota: uang masuk dari Shopee − modal barang terjual −
+     biaya = **untung bersih**. Ini dari barang yang *sudah sampai & uangnya cair* di bulan itu.
+     Tombol **ⓘ Kenapa …?** menjelaskan kenapa jumlah barang terjual beda dengan barang dipesan.
+   - Tab **Semua pesanan**: semua pesanan yang *dibuat* di bulan itu (selesai, masih dikirim,
+     batal), plus **perkiraan untung** dari pesanan yang selesai. Perkiraan, karena Shopee hanya
+     mencatat uang cair per hari, bukan per pesanan.
+   - Tab **Per produk**: barang terjual dan modal per produk, plus daftar barang retur.
+   - Tab **Per bulan** (kalau melihat beberapa bulan).
 
-   Kalau statusnya **✅ Angka final**, profit bersih adalah angka
+   Kalau statusnya **✅ Angka final**, untung bersih adalah angka
    pasti. Kalau **⚠️ Belum lengkap**, ikuti daftar yang ditampilkan (mis. upload export pesanan
    bulan sebelumnya, isi HPP, isi biaya).
 

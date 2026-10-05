@@ -1,5 +1,4 @@
 import { useState, type ChangeEvent } from 'react'
-import { StorePicker } from '../components/pickers'
 import { Alert, Button, Card, ErrorBox, PageTitle, Spinner } from '../components/ui'
 import { fetchProducts, saveAdjustments, saveIncome, saveOrderItems } from '../lib/api'
 import { navigate } from '../lib/router'
@@ -23,11 +22,9 @@ const PREVIEW_ROWS = 10
 export function UploadPage({
   stores,
   storeId,
-  onStoreChange,
 }: {
   stores: Store[]
   storeId: number | null
-  onStoreChange: (id: number) => void
 }) {
   const [orders, setOrders] = useState<Parsed<OrdersParseResult> | null>(null)
   const [income, setIncome] = useState<Parsed<IncomeParseResult> | null>(null)
@@ -129,17 +126,19 @@ export function UploadPage({
     <>
       <PageTitle subtitle="Upload export pesanan dan/atau laporan penghasilan dari Shopee.">Upload</PageTitle>
 
-      <Card title="1. Pilih toko" className="mb-6">
-        <StorePicker stores={stores} value={storeId} onChange={onStoreChange} />
-      </Card>
+      <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border-2 border-orange-200 bg-orange-50 px-5 py-4">
+        <span className="text-lg text-slate-700">Upload ke toko:</span>
+        <strong className="text-2xl text-orange-700">{store?.name ?? '-'}</strong>
+        <span className="text-sm text-slate-500">(ganti toko di menu kanan atas)</span>
+      </div>
 
       <div className="mb-6 grid gap-6 lg:grid-cols-2">
-        <Card title="2a. Export pesanan (Excel)">
-          <p className="mb-3 text-slate-600">Seller Centre → Pesanan Saya → Export. File .xlsx</p>
+        <Card title="1. Export pesanan (Excel)">
+          <p className="mb-3 text-slate-600">Seller Centre → Pesanan Saya → Export, status <strong>Semua</strong>. File .xlsx</p>
           <FileInput key={`o${inputKey}`} accept=".xlsx,.xls" onChange={onOrdersFile} />
           <OrdersPreview parsed={orders} />
         </Card>
-        <Card title="2b. Laporan penghasilan (PDF)">
+        <Card title="2. Laporan penghasilan (PDF)">
           <p className="mb-3 text-slate-600">Keuangan → Penghasilan Saya → laporan bulanan. File .pdf</p>
           <FileInput key={`i${inputKey}`} accept=".pdf,application/pdf" onChange={onIncomeFile} />
           <IncomePreview parsed={income} store={store} />

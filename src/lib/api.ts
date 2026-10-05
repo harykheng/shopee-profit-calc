@@ -2,7 +2,7 @@
 import type { IncomeAdjustment, IncomeDayRow } from './parsers/income'
 import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
-import { monthEnd } from './format'
+import { addMonths, monthEnd } from './format'
 import type {
   DailyReconciliation,
   OrdersByCreated,
@@ -190,6 +190,78 @@ export async function countItemsWithoutCreatedAt(storeId: number): Promise<numbe
     .is('created_at', null)
   if (res.error) throw res.error
   return res.count ?? 0
+}
+
+/** Ambil semua baris (Supabase membatasi 1000 baris per request). */
+async function fetchAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const all: T[] = []
+  for (let from = 0; ; from += 1000) {
+    const rows = check(await page(from, from + 999)) as T[]
+    all.push(...rows)
+    if (rows.length < 1000) return all
+  }
+}
+
+/** Awal bulan `from` dan awal bulan sesudah `to`, dalam WIB. */
+function wibRange(from: string, to: string) {
+  return { start: `${from}T00:00:00+07:00`, end: `${addMonths(to, 1)}T00:00:00+07:00` }
+}
+
+export interface CreatedItem {
+  sku: string
+  status_group: 'selesai' | 'proses' | 'batal'
+  qty: number
+  returned_qty: number
+  subtotal: number
+  completed_at: string | null
+  hpp_snapshot: number | null
+}
+
+/** Item dari pesanan yang DIBUAT di rentang bulan ini (semua status). */
+export async function fetchCreatedItems(storeId: number, from: string, to: string) {
+  const { start, end } = wibRange(from, to)
+  return fetchAllPages<CreatedItem>((a, b) =>
+    supabase
+      .from('order_items')
+      .select('sku, status_group, qty, returned_qty, subtotal, completed_at, hpp_snapshot')
+      .eq('store_id', storeId)
+      .gte('created_at', start)
+      .lt('created_at', end)
+      .order('id')
+      .range(a, b),
+  )
+}
+
+/** Item selesai di rentang ini yang pesanannya dibuat SEBELUM rentang ini. */
+export async function fetchEarlierOrdersCompleted(storeId: number, from: string, to: string) {
+  const { start, end } = wibRange(from, to)
+  return fetchAllPages<{ qty: number; returned_qty: number }>((a, b) =>
+    supabase
+      .from('order_items')
+      .select('qty, returned_qty')
+      .eq('store_id', storeId)
+      .eq('status_group', 'selesai')
+      .gte('completed_at', start)
+      .lt('completed_at', end)
+      .lt('created_at', start)
+      .order('id')
+      .range(a, b),
+  )
+}
+
+/** Penghasilan per tanggal dana dilepas, mulai `fromDay` (YYYY-MM-DD). */
+export async function fetchIncomeDays(storeId: number, fromDay: string) {
+  return fetchAllPages<{ released_date: string; total_income: number; subtotal_pesanan: number }>((a, b) =>
+    supabase
+      .from('income')
+      .select('released_date, total_income, subtotal_pesanan')
+      .eq('store_id', storeId)
+      .gte('released_date', fromDay)
+      .order('released_date')
+      .range(a, b),
+  )
 }
 
 export async function recalcHpp(storeId: number, month: string, onlyMissing: boolean) {

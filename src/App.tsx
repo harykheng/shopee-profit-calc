@@ -87,15 +87,15 @@ function MainApp({ email }: { email: string }) {
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
-          <span className="mr-2 text-xl font-bold text-orange-600">Profit Shopee</span>
-          <nav className="flex flex-1 flex-wrap gap-2">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3">
+          <span className="mr-1 text-lg font-bold text-orange-600 lg:mr-3 lg:text-xl">Profit Shopee</span>
+          <nav className="flex flex-1 flex-wrap gap-1">
             {ROUTES.map((n) => (
               <a
                 key={n.route}
                 href={`#/${n.route}`}
                 aria-current={route === n.route ? 'page' : undefined}
-                className={`flex min-h-12 items-center rounded-xl px-5 text-lg font-semibold ${
+                className={`flex min-h-12 items-center rounded-xl px-3 text-lg font-semibold lg:px-5 ${
                   route === n.route ? 'bg-orange-100 text-orange-800' : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
@@ -103,12 +103,28 @@ function MainApp({ email }: { email: string }) {
               </a>
             ))}
           </nav>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-500 md:inline">{email}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {stores && stores.length > 0 && (
+              <label className="flex items-center gap-2">
+                <span className="sr-only">Toko</span>
+                <select
+                  value={storeId ?? ''}
+                  onChange={(e) => setStoreId(Number(e.target.value))}
+                  className="min-h-12 max-w-[14rem] cursor-pointer rounded-xl border-2 border-orange-600 bg-white px-3 text-base font-bold text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-200 lg:text-lg"
+                >
+                  {stores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <span className="hidden text-sm text-slate-500 lg:inline">{email}</span>
             <button
               type="button"
               onClick={() => supabase.auth.signOut()}
-              className="min-h-12 rounded-xl px-4 text-lg text-slate-600 hover:bg-slate-100"
+              className="min-h-12 rounded-xl px-3 text-base text-slate-600 hover:bg-slate-100"
             >
               Keluar
             </button>
@@ -123,12 +139,12 @@ function MainApp({ email }: { email: string }) {
           <Spinner />
         ) : (
           <>
-            {route === 'upload' && <UploadPage stores={stores} storeId={storeId} onStoreChange={setStoreId} />}
+            {route === 'upload' && <UploadPage stores={stores} storeId={storeId} />}
             {route === 'hpp' && (
               <HppPage
                 stores={stores}
                 storeId={storeId}
-                onStoreChange={setStoreId}
+               
                 onlyMissingInitially={params.get('kosong') === '1'}
               />
             )}
@@ -136,11 +152,11 @@ function MainApp({ email }: { email: string }) {
               <ExpensesPage
                 stores={stores}
                 storeId={storeId}
-                onStoreChange={setStoreId}
+               
                 initialMonth={params.get('bulan')}
               />
             )}
-            {route === 'rekap' && <RecapPage stores={stores} storeId={storeId} onStoreChange={setStoreId} />}
+            {route === 'rekap' && <RecapPage stores={stores} storeId={storeId} />}
           </>
         )}
       </main>

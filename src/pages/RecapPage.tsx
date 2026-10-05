@@ -1,26 +1,24 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { MonthPicker, StorePicker } from '../components/pickers'
-import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, Stat } from '../components/ui'
+import { MonthSelect } from '../components/pickers'
+import { Alert, Button, ErrorBox, Spinner } from '../components/ui'
 import {
+  countItemsWithoutCreatedAt,
+  fetchCreatedItems,
+  fetchEarlierOrdersCompleted,
+  fetchIncomeDays,
   fetchMonthlyRecap,
+  fetchOrdersByCreated,
   fetchProductRecap,
+  fetchProducts,
   fetchReconciliation,
   fetchReturnedItems,
-  fetchOrdersByCreated,
-  countItemsWithoutCreatedAt,
   recalcHpp,
+  type CreatedItem,
 } from '../lib/api'
-import {
-  addMonths,
-  currentMonth,
-  formatDate,
-  formatMonth,
-  formatNumber,
-  formatPercent,
-  formatRupiah,
-} from '../lib/format'
-import { navigate } from '../lib/router'
+import { addMonths, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah } from '../lib/format'
 import { monthStatus, type MonthStatus } from '../lib/monthStatus'
+import { estimateProfit, soldFlow, type FlowStep, type ProfitEstimate } from '../lib/recapMath'
+import { navigate } from '../lib/router'
 import type {
   DailyReconciliation,
   MonthlyRecap,
@@ -30,8 +28,6 @@ import type {
   Store,
 } from '../lib/types'
 
-type Incoming = { rows: OrdersByCreated[]; withoutCreatedAt: number } | { error: unknown }
-
 interface RecapData {
   months: MonthlyRecap[]
   products: ProductRecap[]
@@ -39,80 +35,112 @@ interface RecapData {
   returned: ReturnedItem[]
 }
 
-export function RecapPage({
-  stores,
-  storeId,
-  onStoreChange,
-}: {
-  stores: Store[]
-  storeId: number | null
-  onStoreChange: (id: number) => void
-}) {
+/** Data untuk tab "Semua pesanan" & penjelasan barang terjual (butuh SQL ke-3). */
+interface OrdersData {
+  groups: OrdersByCreated[]
+  withoutCreatedAt: number
+  createdItems: CreatedItem[]
+  earlierCompleted: { qty: number; returned_qty: number }[]
+  estimate: ProfitEstimate | null
+}
+
+type Tab = 'pesanan' | 'produk' | 'bulan'
+
+export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: number | null }) {
   const lastMonth = addMonths(currentMonth(), -1)
   const [from, setFrom] = useState(lastMonth)
   const [to, setTo] = useState(lastMonth)
+  const [multi, setMulti] = useState(false)
   const [data, setData] = useState<RecapData | null>(null)
   const [error, setError] = useState<unknown>(null)
+  const [orders, setOrders] = useState<OrdersData | { error: unknown } | null>(null)
+  const [tab, setTab] = useState<Tab>('pesanan')
   const [recalcMonth, setRecalcMonth] = useState<string | null>(null)
   const [recalcResult, setRecalcResult] = useState<string | null>(null)
-  const [incoming, setIncoming] = useState<Incoming | null>(null)
 
-  const rangeValid = from <= to
+  const end = multi ? to : from
+  const rangeValid = from <= end
+  const period = from === end ? formatMonth(from) : `${formatMonth(from)} – ${formatMonth(end)}`
+  const storeName = stores.find((s) => s.id === storeId)?.name ?? ''
 
   const load = useCallback(async () => {
     if (!storeId || !rangeValid) return
     setData(null)
     setError(null)
-    setIncoming(null)
+    setOrders(null)
     try {
       const [months, products, reconciliation, returned] = await Promise.all([
-        fetchMonthlyRecap(storeId, from, to),
-        fetchProductRecap(storeId, from, to),
-        fetchReconciliation(storeId, from, to),
-        fetchReturnedItems(storeId, from, to),
+        fetchMonthlyRecap(storeId, from, end),
+        fetchProductRecap(storeId, from, end),
+        fetchReconciliation(storeId, from, end),
+        fetchReturnedItems(storeId, from, end),
       ])
       setData({ months, products, reconciliation, returned })
     } catch (e) {
       setError(e)
       return
     }
-    // Tabel "Pesanan masuk" dimuat terpisah: kalau gagal (mis. SQL ke-3 belum
-    // dijalankan), bagian profit tetap tampil.
+    // Dimuat terpisah: kalau gagal (mis. SQL ke-3 belum dijalankan), untung bersih tetap tampil.
     try {
-      const [rows, withoutCreatedAt] = await Promise.all([
-        fetchOrdersByCreated(storeId, from, to),
+      const [groups, withoutCreatedAt, createdItems, earlierCompleted, productList, incomeDays] = await Promise.all([
+        fetchOrdersByCreated(storeId, from, end),
         countItemsWithoutCreatedAt(storeId),
+        fetchCreatedItems(storeId, from, end),
+        fetchEarlierOrdersCompleted(storeId, from, end),
+        fetchProducts(storeId),
+        fetchIncomeDays(storeId, from),
       ])
-      setIncoming({ rows, withoutCreatedAt })
+      const hppBySku = new Map(productList.map((p) => [p.sku, p.hpp === null ? null : Number(p.hpp)]))
+      const estimate = estimateProfit(
+        createdItems
+          .filter((i) => i.status_group === 'selesai')
+          .map((i) => ({
+            subtotal: Number(i.subtotal),
+            qty: Number(i.qty),
+            returned_qty: Number(i.returned_qty),
+            completed_at: i.completed_at,
+            hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
+          })),
+        incomeDays.map((d) => ({
+          day: d.released_date,
+          total_income: Number(d.total_income),
+          subtotal_pesanan: Number(d.subtotal_pesanan),
+        })),
+      )
+      setOrders({ groups, withoutCreatedAt, createdItems, earlierCompleted, estimate })
     } catch (e) {
-      setIncoming({ error: e })
+      setOrders({ error: e })
     }
-  }, [storeId, from, to, rangeValid])
+  }, [storeId, from, end, rangeValid])
 
   useEffect(() => {
     setRecalcResult(null)
     load()
   }, [load])
 
-  const storeName = stores.find((s) => s.id === storeId)?.name ?? ''
+  const isEmpty =
+    data && data.months.length === 0 && orders && !('error' in orders) && orders.groups.length === 0
 
   return (
     <>
-      <PageTitle subtitle="Profit bersih = penghasilan dilepas − modal (HPP) − biaya.">Rekap</PageTitle>
-
-      <Card className="mb-6">
-        <div className="flex flex-col gap-4">
-          <StorePicker stores={stores} value={storeId} onChange={onStoreChange} />
-          <div className="flex flex-wrap gap-x-8 gap-y-3">
-            <MonthPicker value={from} onChange={setFrom} label="Dari" />
-            <MonthPicker value={to} onChange={setTo} label="Sampai" />
-          </div>
-          {!rangeValid && <p className="text-lg text-red-700">Bulan "Dari" harus sebelum atau sama dengan "Sampai".</p>}
-        </div>
-      </Card>
+      <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3">
+        <MonthSelect value={from} onChange={setFrom} label={multi ? 'Dari' : 'Bulan'} />
+        {multi && <MonthSelect value={to} onChange={setTo} label="Sampai" />}
+        <button
+          type="button"
+          onClick={() => {
+            setMulti((m) => !m)
+            setTo(from)
+          }}
+          className="min-h-12 rounded-xl px-3 text-orange-700 underline"
+        >
+          {multi ? 'Satu bulan saja' : 'Lihat beberapa bulan'}
+        </button>
+      </div>
+      {!rangeValid && <p className="mb-4 text-lg text-red-700">Bulan "Dari" harus sebelum atau sama dengan "Sampai".</p>}
 
       {recalcResult && (
-        <div className="mb-6">
+        <div className="mb-5">
           <Alert tone="success">{recalcResult}</Alert>
         </div>
       )}
@@ -121,17 +149,32 @@ export function RecapPage({
         <ErrorBox error={error} />
       ) : !data ? (
         <Spinner />
-      ) : data.months.length === 0 ? (
+      ) : isEmpty ? (
         <Alert tone="info" title="Belum ada data">
-          Belum ada penghasilan, pesanan, atau biaya untuk {storeName} di periode ini.
+          Belum ada penghasilan, pesanan, atau biaya untuk {storeName} di {period}.
         </Alert>
       ) : (
-        <RecapContent data={data} onRecalc={setRecalcMonth} />
-      )}
+        <div className="space-y-5">
+          <NotaCard
+            data={data}
+            orders={orders && !('error' in orders) ? orders : null}
+            period={period}
+            singleMonth={from === end ? from : null}
+            rangeEnd={end}
+            onRecalc={setRecalcMonth}
+          />
 
-      {rangeValid && data && incoming && (
-        <div className="mt-6">
-          <IncomingOrdersCard incoming={incoming} from={from} to={to} />
+          <div role="tablist" aria-label="Rincian" className="flex flex-wrap gap-1 border-b-2 border-slate-200">
+            <TabButton id="pesanan" tab={tab} setTab={setTab}>Semua pesanan</TabButton>
+            <TabButton id="produk" tab={tab} setTab={setTab}>Per produk</TabButton>
+            {data.months.length > 1 && <TabButton id="bulan" tab={tab} setTab={setTab}>Per bulan</TabButton>}
+          </div>
+
+          {tab === 'pesanan' && <OrdersTab orders={orders} period={period} />}
+          {tab === 'produk' && <ProductsTab products={data.products} returned={data.returned} period={period} />}
+          {tab === 'bulan' && data.months.length > 1 && (
+            <MonthsTab months={data.months} reconciliation={data.reconciliation} onRecalc={setRecalcMonth} />
+          )}
         </div>
       )}
 
@@ -144,8 +187,8 @@ export function RecapPage({
             setRecalcMonth(null)
             setRecalcResult(
               n === 0
-                ? `Tidak ada item di ${formatMonth(recalcMonth)} yang perlu diperbarui.`
-                : `HPP ${formatNumber(n)} item di ${formatMonth(recalcMonth)} sudah dihitung ulang.`,
+                ? `Tidak ada barang di ${formatMonth(recalcMonth)} yang perlu diperbarui.`
+                : `HPP ${formatNumber(n)} barang di ${formatMonth(recalcMonth)} sudah dihitung ulang.`,
             )
             await load()
           }}
@@ -155,250 +198,575 @@ export function RecapPage({
   )
 }
 
-function RecapContent({ data, onRecalc }: { data: RecapData; onRecalc: (month: string) => void }) {
-  const totals = data.months.reduce(
-    (t, m) => ({
-      income: t.income + Number(m.total_income),
-      adjustments: t.adjustments + Number(m.adjustments ?? 0),
-      modal: t.modal + Number(m.total_modal),
-      expenses: t.expenses + Number(m.total_expenses),
-      profit: t.profit + Number(m.net_profit),
-      qty: t.qty + Number(m.total_qty),
-    }),
-    { income: 0, adjustments: 0, modal: 0, expenses: 0, profit: 0, qty: 0 },
-  )
-  const qtyReturned = data.products.reduce((s, p) => s + Number(p.qty_returned), 0)
-  const margin = totals.income > 0 ? (totals.profit / totals.income) * 100 : null
-  const statuses = new Map(data.months.map((m) => [m.month, monthStatus(m, data.reconciliation)]))
-  const allFinal = [...statuses.values()].every((s) => s.final)
-  const profitTone = !allFinal ? 'warning' : totals.profit >= 0 ? 'good' : 'bad'
-
+function TabButton({ id, tab, setTab, children }: { id: Tab; tab: Tab; setTab: (t: Tab) => void; children: ReactNode }) {
+  const on = id === tab
   return (
-    <div className="space-y-6">
-      {data.months.map((m) => (
-        <MonthStatusCard key={m.month} month={m.month} status={statuses.get(m.month)!} onRecalc={onRecalc} />
-      ))}
+    <button
+      type="button"
+      role="tab"
+      aria-selected={on}
+      onClick={() => setTab(id)}
+      className={`-mb-0.5 min-h-12 border-b-4 px-4 text-lg font-bold ${
+        on ? 'border-orange-600 text-orange-700' : 'border-transparent text-slate-500 hover:text-slate-800'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
 
-      <Card title={data.months.length > 1 ? 'Total periode' : formatMonth(data.months[0].month)}>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <Stat
-            label="Penghasilan dilepas"
-            value={formatRupiah(totals.income)}
-            detail={totals.adjustments !== 0 ? `termasuk penyesuaian ${formatRupiah(totals.adjustments)}` : undefined}
-          />
-          <Stat label="Modal (HPP)" value={formatRupiah(totals.modal)} />
-          <Stat label="Biaya" value={formatRupiah(totals.expenses)} />
-          <Stat
-            label="Profit bersih"
-            value={formatRupiah(totals.profit)}
-            tone={profitTone}
-            note={allFinal ? undefined : 'Belum final — lihat status di atas'}
-          />
-          <Stat label="Margin" value={formatPercent(margin)} tone={allFinal ? undefined : 'warning'} />
-          <Stat
-            label="Qty terjual"
-            value={`${formatNumber(totals.qty)} pcs`}
-            detail={qtyReturned > 0 ? `sudah dikurangi retur ${formatNumber(qtyReturned)} pcs` : undefined}
-          />
-        </div>
-      </Card>
-
-      <Card title="Per bulan">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="border-b text-sm text-slate-500">
-              <tr>
-                <th className="py-2 pr-3">Bulan</th>
-                <th className="py-2 pr-3 text-right">Qty terjual</th>
-                <th className="py-2 pr-3 text-right">Penghasilan</th>
-                <th className="py-2 pr-3 text-right">Modal</th>
-                <th className="py-2 pr-3 text-right">Biaya</th>
-                <th className="py-2 pr-3 text-right">Profit bersih</th>
-                <th className="py-2 pr-3 text-right">Margin</th>
-                <th className="py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {data.months.map((m) => (
-                <tr key={m.month} className="border-b border-slate-100 tabular-nums">
-                  <td className="py-3 pr-3 font-medium">
-                    {formatMonth(m.month)}
-                    <StatusBadge final={statuses.get(m.month)!.final} />
-                  </td>
-                  <td className="py-3 pr-3 text-right">{formatNumber(Number(m.total_qty))} pcs</td>
-                  <td className="py-3 pr-3 text-right">
-                    {formatRupiah(Number(m.total_income))}
-                    {Number(m.adjustments ?? 0) !== 0 && (
-                      <span className="block text-xs text-slate-500">
-                        termasuk penyesuaian {formatRupiah(Number(m.adjustments))}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 pr-3 text-right">{formatRupiah(Number(m.total_modal))}</td>
-                  <td className="py-3 pr-3 text-right">
-                    {formatRupiah(Number(m.total_expenses))}
-                    <ExpenseBreakdown m={m} />
-                  </td>
-                  <td className={`py-3 pr-3 text-right font-semibold ${Number(m.net_profit) < 0 ? 'text-red-700' : ''}`}>
-                    {formatRupiah(Number(m.net_profit))}
-                  </td>
-                  <td className="py-3 pr-3 text-right">{formatPercent(m.margin_pct === null ? null : Number(m.margin_pct))}</td>
-                  <td className="py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onRecalc(m.month)}
-                      className="min-h-12 whitespace-nowrap rounded-xl px-3 text-orange-700 underline"
-                    >
-                      Hitung ulang HPP
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <ReturnedItems items={data.returned} />
-      <ProductTable products={data.products} />
+/** Tombol kecil "ⓘ ..." yang membuka penjelasan. */
+function Why({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="space-y-3">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="min-h-10 rounded-full border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+      >
+        ⓘ {label}
+      </button>
+      {open && <div className="space-y-2 border-l-4 border-orange-500 py-1 pl-4 text-slate-700">{children}</div>}
     </div>
   )
 }
 
-function StatusBadge({ final }: { final: boolean }) {
-  return final ? (
-    <span className="ml-2 whitespace-nowrap rounded-lg bg-emerald-100 px-2 py-0.5 text-sm text-emerald-800">✅ Final</span>
-  ) : (
-    <span className="ml-2 whitespace-nowrap rounded-lg bg-amber-100 px-2 py-0.5 text-sm text-amber-900">⚠️ Belum lengkap</span>
+// --- Nota: untung bersih ---------------------------------------------------------
+
+function NotaCard({
+  data,
+  orders,
+  period,
+  singleMonth,
+  rangeEnd,
+  onRecalc,
+}: {
+  data: RecapData
+  orders: OrdersData | null
+  period: string
+  singleMonth: string | null
+  rangeEnd: string
+  onRecalc: (month: string) => void
+}) {
+  const t = data.months.reduce(
+    (a, m) => ({
+      income: a.income + Number(m.total_income),
+      adjustments: a.adjustments + Number(m.adjustments ?? 0),
+      modal: a.modal + Number(m.total_modal),
+      expenses: a.expenses + Number(m.total_expenses),
+      profit: a.profit + Number(m.net_profit),
+      qty: a.qty + Number(m.total_qty),
+    }),
+    { income: 0, adjustments: 0, modal: 0, expenses: 0, profit: 0, qty: 0 },
+  )
+  const statuses = data.months.map((m) => ({ month: m.month, status: monthStatus(m, data.reconciliation) }))
+  const todoCount = statuses.reduce((n, s) => n + todos(s.status).length, 0)
+  const allFinal = statuses.length > 0 && todoCount === 0
+  const firstTodo = statuses.flatMap((s) => todos(s.status))[0]
+  const [showStatus, setShowStatus] = useState(false)
+
+  const releaseDays = data.reconciliation.filter((d) => d.has_income).length
+  const refund = statuses.reduce((n, s) => n + s.status.refunds.amount, 0)
+  const unfilledExpenses = data.months.filter((m) => Number(m.expense_entries) === 0)
+  const expenseParts = [
+    ['iklan Shopee', 'iklan_shopee'],
+    ['Meta Ads', 'meta_ads'],
+    ['packaging', 'packaging'],
+    ['lain-lain', 'lain_lain'],
+  ] as const
+  const expenseDetail = expenseParts
+    .map(([label, key]) => [label, data.months.reduce((n, m) => n + Number(m[key]), 0)] as const)
+    .filter(([, v]) => v > 0)
+    .map(([label, v]) => `${label} ${formatRupiah(v)}`)
+    .join(' · ')
+  const margin = t.income > 0 ? (t.profit / t.income) * 100 : null
+
+  const flow = orders ? buildFlow(orders, t.qty, rangeEnd) : null
+  const biayaMonth = unfilledExpenses[0]?.month ?? singleMonth ?? data.months[0]?.month
+
+  return (
+    <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-extrabold">Untung bersih {period}</h1>
+        {statuses.length > 0 && (
+          <button
+            type="button"
+            aria-expanded={showStatus}
+            onClick={() => setShowStatus((s) => !s)}
+            className={`rounded-full px-4 py-2 text-sm font-bold ${
+              allFinal ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
+            }`}
+          >
+            {allFinal ? '✅ Angka final' : `⚠️ Belum lengkap · ${todoCount} hal`} ▾
+          </button>
+        )}
+      </div>
+
+      {showStatus && (
+        <div className={`space-y-4 rounded-xl p-4 ${allFinal ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+          {statuses.map((s) => (
+            <Checklist
+              key={s.month}
+              month={s.month}
+              status={s.status}
+              showTitle={statuses.length > 1}
+              onRecalc={onRecalc}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="border-y-2 border-dashed border-slate-200">
+        <NotaLine
+          op="+"
+          label="Uang masuk dari Shopee"
+          detail={[
+            `Dana cair ${formatNumber(releaseDays)} hari`,
+            t.adjustments !== 0 ? `penyesuaian ${formatRupiah(t.adjustments)}` : null,
+            refund !== 0 ? `refund ${formatRupiah(-refund)} sudah dipotong` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+          amount={formatRupiah(t.income)}
+        />
+        <NotaLine
+          op="−"
+          label="Modal barang terjual"
+          detail={
+            <>
+              {formatNumber(t.qty)} barang × HPP masing-masing
+              {singleMonth && (
+                <>
+                  {' · '}
+                  <button type="button" className="underline" onClick={() => onRecalc(singleMonth)}>
+                    Hitung ulang HPP
+                  </button>
+                </>
+              )}
+            </>
+          }
+          amount={formatRupiah(t.modal)}
+        />
+        <NotaLine
+          op="−"
+          label="Biaya (iklan, packaging, dll.)"
+          detail={
+            <>
+              {expenseDetail || (unfilledExpenses.length > 0 ? 'Belum diisi' : 'Tidak ada biaya')}
+              {biayaMonth && (
+                <>
+                  {' · '}
+                  <button type="button" className="underline" onClick={() => navigate('biaya', { bulan: biayaMonth })}>
+                    {unfilledExpenses.length > 0 ? 'Isi biaya' : 'Ubah biaya'}
+                  </button>
+                </>
+              )}
+            </>
+          }
+          amount={
+            unfilledExpenses.length > 0 && t.expenses === 0 ? (
+              <span className="text-amber-700">belum diisi</span>
+            ) : (
+              formatRupiah(t.expenses)
+            )
+          }
+        />
+      </div>
+
+      <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2">
+        <span className="text-center text-xl font-extrabold">=</span>
+        <span>
+          <span className="block text-lg font-extrabold uppercase tracking-wide">Untung bersih</span>
+          {!allFinal && firstTodo && (
+            <span className="block text-sm font-semibold text-amber-700">Belum final: {firstTodo.short}</span>
+          )}
+        </span>
+        <span className="text-right">
+          <span className={`block text-3xl font-extrabold tabular-nums ${t.profit < 0 ? 'text-red-700' : ''}`}>
+            {formatRupiah(t.profit)}
+          </span>
+          {margin !== null && (
+            <span className="block text-sm font-semibold text-slate-500">{formatPercent(margin)} dari uang masuk</span>
+          )}
+        </span>
+      </div>
+
+      <div className="space-y-3 rounded-xl bg-slate-50 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="text-slate-600">Barang terjual</span>
+          <strong className="text-2xl tabular-nums">{formatNumber(t.qty)}</strong>
+        </div>
+        {flow && flow[0].value !== t.qty && (
+          <Why label={`Kenapa ${formatNumber(t.qty)}, bukan ${formatNumber(flow[0].value)}?`}>
+            <p>
+              Untung dihitung dari barang yang <strong>sudah sampai ke pembeli dan uangnya cair</strong> di {period}.
+            </p>
+            <FlowList steps={flow} />
+          </Why>
+        )}
+      </div>
+    </section>
   )
 }
 
-function ExpenseBreakdown({ m }: { m: MonthlyRecap }) {
-  const parts = [
-    ['Iklan Shopee', m.iklan_shopee],
-    ['Meta Ads', m.meta_ads],
-    ['Packaging', m.packaging],
-    ['Lain-lain', m.lain_lain],
-  ].filter(([, v]) => Number(v) > 0)
-  if (Number(m.expense_entries) === 0) return <span className="block text-xs text-amber-700">belum diisi</span>
-  if (parts.length === 0) return null
+function buildFlow(orders: OrdersData, sold: number, rangeEnd: string): FlowStep[] {
+  const sum = (g: OrdersByCreated['status_group'], f: (r: OrdersByCreated) => number) =>
+    orders.groups.filter((r) => r.status_group === g).reduce((n, r) => n + f(r), 0)
+  const ordered = orders.groups.reduce((n, r) => n + Number(r.qty), 0)
+  const after = new Date(`${addMonths(rangeEnd, 1)}T00:00:00+07:00`)
+  const completedLater = orders.createdItems
+    .filter((i) => i.status_group === 'selesai' && i.completed_at && new Date(i.completed_at) >= after)
+    .reduce((n, i) => n + Number(i.qty) - Number(i.returned_qty), 0)
+  return soldFlow({
+    ordered,
+    cancelled: sum('batal', (r) => Number(r.qty)),
+    inProcess: sum('proses', (r) => Number(r.qty)),
+    returned: sum('selesai', (r) => Number(r.qty_returned)),
+    completedLater,
+    fromEarlier: orders.earlierCompleted.reduce((n, i) => n + Number(i.qty) - Number(i.returned_qty), 0),
+    sold,
+  })
+}
+
+function FlowList({ steps }: { steps: FlowStep[] }) {
   return (
-    <span className="block text-xs text-slate-500">
-      {parts.map(([label, v]) => `${label} ${formatRupiah(Number(v))}`).join(' · ')}
-    </span>
+    <div className="space-y-1 tabular-nums">
+      {steps.map((s, i) => (
+        <div
+          key={i}
+          className={`grid grid-cols-[1fr_auto] gap-3 rounded-lg px-3 ${
+            s.kind === 'start'
+              ? 'bg-slate-100 py-2'
+              : s.kind === 'result'
+                ? 'bg-orange-100 py-2 font-extrabold text-orange-800'
+                : 'py-0.5 text-slate-600'
+          }`}
+        >
+          <span>
+            {s.kind === 'minus' ? '− ' : s.kind === 'plus' ? '+ ' : ''}
+            {s.label}
+          </span>
+          <span className="font-semibold">{formatNumber(s.value)}</span>
+        </div>
+      ))}
+    </div>
   )
+}
+
+function NotaLine({ op, label, detail, amount }: { op: string; label: string; detail: ReactNode; amount: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2 border-slate-100 py-3 [&+&]:border-t">
+      <span className="text-center font-extrabold text-slate-400">{op}</span>
+      <span className="min-w-0">
+        <span className="block font-semibold">{label}</span>
+        <span className="block text-sm text-slate-500">{detail}</span>
+      </span>
+      <span className="whitespace-nowrap text-right text-lg font-bold tabular-nums">{amount}</span>
+    </div>
+  )
+}
+
+// --- Daftar centang status bulan ---------------------------------------------
+
+interface Todo {
+  key: string
+  /** Alasan singkat untuk baris "Belum final: …". */
+  short: string
+}
+
+function todos(s: MonthStatus): Todo[] {
+  const out: Todo[] = []
+  if (!s.hasIncome) out.push({ key: 'income', short: 'laporan penghasilan belum di-upload' })
+  if (s.missingOrders.days.length > 0) out.push({ key: 'orders', short: 'ada uang cair yang pesanannya belum di-upload' })
+  if (s.hasIncome && s.ordersWithoutIncome.days.length > 0)
+    out.push({ key: 'noincome', short: 'ada pesanan yang tidak ada di laporan penghasilan' })
+  if (s.missingHpp > 0) out.push({ key: 'hpp', short: 'ada barang yang HPP-nya kosong' })
+  if (!s.expensesFilled) out.push({ key: 'expenses', short: 'biaya belum diisi' })
+  return out
 }
 
 const dayList = (days: string[]) => days.map((d) => formatDate(d)).join(', ')
 
-/** Status per bulan: ✅ Angka final, atau ⚠️ Belum lengkap + daftar yang kurang. */
-function MonthStatusCard({
+function CheckRow({ ok, children }: { ok: boolean; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[1.5rem_1fr] gap-2">
+      <span className={`font-extrabold ${ok ? 'text-emerald-700' : 'text-amber-700'}`}>{ok ? '✓' : '!'}</span>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+function Checklist({
   month,
-  status,
+  status: s,
+  showTitle,
   onRecalc,
 }: {
   month: string
   status: MonthStatus
+  showTitle: boolean
   onRecalc: (month: string) => void
 }) {
   const label = formatMonth(month)
-  const prev = formatMonth(addMonths(month, -1))
+  return (
+    <div className="space-y-2">
+      {showTitle && <p className="font-bold">{label}</p>}
+      <CheckRow ok={s.hasIncome}>
+        {s.hasIncome ? 'Laporan penghasilan sudah di-upload' : (
+          <><strong>Laporan penghasilan (PDF) {label} belum di-upload.</strong> Upload di halaman Upload.</>
+        )}
+      </CheckRow>
+      <CheckRow ok={s.missingOrders.days.length === 0}>
+        {s.missingOrders.days.length === 0 ? 'Semua uang yang cair sudah ketemu pesanannya' : (
+          <>
+            <strong>Ada uang cair {formatRupiah(s.missingOrders.amount)} dari pesanan yang belum di-upload</strong>{' '}
+            ({dayList(s.missingOrders.days)}). Upload export pesanan <strong>{formatMonth(addMonths(month, -1))}</strong>.
+          </>
+        )}
+      </CheckRow>
+      {s.hasIncome && s.ordersWithoutIncome.days.length > 0 && (
+        <CheckRow ok={false}>
+          <strong>{formatNumber(s.ordersWithoutIncome.orders)} pesanan selesai tidak ada di laporan penghasilan</strong>{' '}
+          ({dayList(s.ordersWithoutIncome.days)}). Pastikan PDF {label} yang di-upload lengkap.
+        </CheckRow>
+      )}
+      <CheckRow ok={s.missingHpp === 0}>
+        {s.missingHpp === 0 ? 'Semua barang sudah punya HPP' : (
+          <>
+            <strong>{formatNumber(s.missingHpp)} barang belum punya HPP</strong>, jadi modalnya masih Rp0.
+            <span className="mt-2 flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => navigate('hpp', { kosong: '1' })}>Isi HPP</Button>
+              <Button variant="secondary" onClick={() => onRecalc(month)}>Hitung ulang HPP</Button>
+            </span>
+          </>
+        )}
+      </CheckRow>
+      <CheckRow ok={s.expensesFilled}>
+        {s.expensesFilled ? 'Biaya sudah diisi' : (
+          <>
+            <strong>Biaya {label} belum diisi</strong> (iklan, packaging, dll.). Kalau memang tidak ada, simpan Rp0.{' '}
+            <button type="button" className="font-semibold underline" onClick={() => navigate('biaya', { bulan: month })}>
+              Isi biaya
+            </button>
+          </>
+        )}
+      </CheckRow>
+    </div>
+  )
+}
 
-  const refundNote =
-    status.refunds.days.length > 0 ? (
-      <p className="mt-2 text-sm">
-        ℹ️ Termasuk refund/pengembalian dana {formatRupiah(status.refunds.amount)} ({dayList(status.refunds.days)}) —
-        sudah dihitung dari laporan Shopee.
-      </p>
-    ) : null
+// --- Tab: semua pesanan -----------------------------------------------------------
 
-  if (status.final) {
+const GROUP_LABEL: Record<OrdersByCreated['status_group'], string> = {
+  selesai: 'Selesai',
+  proses: 'Masih diproses / dikirim',
+  batal: 'Batal / belum bayar',
+}
+
+function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown } | null; period: string }) {
+  if (!orders) return <Spinner />
+  if ('error' in orders) {
     return (
-      <Alert tone="success" title={`${label}: angka final`}>
-        Semua data sudah lengkap. Profit bersih {label} di bawah adalah angka pasti.
-        {refundNote}
+      <Alert tone="warning" title="Bagian ini belum aktif">
+        Pengelola aplikasi perlu menjalankan file SQL <strong>20261005000000_all_order_statuses.sql</strong> di
+        Supabase (lihat README). Untung bersih di atas tidak terpengaruh.
       </Alert>
     )
   }
 
-  const todo: ReactNode[] = []
-  if (!status.hasIncome) {
-    todo.push(
-      <li key="income">
-        <strong>Laporan penghasilan belum di-upload.</strong> Upload PDF penghasilan {label} di halaman Upload.
-      </li>,
-    )
+  const groups = (['selesai', 'proses', 'batal'] as const).map((g) => {
+    const rows = orders.groups.filter((r) => r.status_group === g)
+    const sum = (f: (r: OrdersByCreated) => number) => rows.reduce((n, r) => n + f(r), 0)
+    return {
+      group: g,
+      orders: sum((r) => Number(r.order_count)),
+      qty: sum((r) => Number(r.qty)),
+      returned: sum((r) => Number(r.qty_returned)),
+      subtotal: sum((r) => Number(r.subtotal)),
+      modal: sum((r) => Number(r.modal ?? 0)),
+    }
+  })
+  const [done, proses, batal] = groups
+  const total = {
+    orders: groups.reduce((n, g) => n + g.orders, 0),
+    qty: groups.reduce((n, g) => n + g.qty, 0),
+    subtotal: groups.reduce((n, g) => n + g.subtotal, 0),
+    modal: done.modal + proses.modal,
   }
-  if (status.missingOrders.days.length > 0) {
-    todo.push(
-      <li key="orders">
-        <strong>Ada uang cair {formatRupiah(status.missingOrders.amount)} dari pesanan yang belum di-upload</strong>{' '}
-        (tanggal {dayList(status.missingOrders.days)}). Biasanya ini pesanan yang dibuat bulan lalu. Upload export
-        pesanan <strong>{prev}</strong> supaya modalnya ikut terhitung.
-      </li>,
-    )
-  }
-  if (status.hasIncome && status.ordersWithoutIncome.days.length > 0) {
-    todo.push(
-      <li key="noincome">
-        <strong>{formatNumber(status.ordersWithoutIncome.orders)} pesanan selesai tidak ada di laporan penghasilan</strong>{' '}
-        (tanggal {dayList(status.ordersWithoutIncome.days)}). Pastikan PDF yang di-upload adalah laporan {label} yang
-        lengkap.
-      </li>,
-    )
-  }
-  if (status.missingHpp > 0) {
-    todo.push(
-      <li key="hpp">
-        <strong>{formatNumber(status.missingHpp)} item belum punya HPP</strong>, jadi modalnya masih dihitung Rp0. Isi
-        HPP-nya, lalu tekan "Hitung ulang HPP" untuk {label}.
-        <div className="mt-2 flex flex-wrap gap-3">
-          <Button variant="secondary" onClick={() => navigate('hpp', { kosong: '1' })}>Isi HPP</Button>
-          <Button variant="secondary" onClick={() => onRecalc(month)}>Hitung ulang HPP</Button>
-        </div>
-      </li>,
-    )
-  }
-  if (!status.expensesFilled) {
-    todo.push(
-      <li key="expenses">
-        <strong>Biaya {label} belum diisi</strong> (iklan, packaging, dll.). Kalau memang tidak ada biaya, simpan saja
-        dengan Rp0.
-        <div className="mt-2">
-          <Button variant="secondary" onClick={() => navigate('biaya', { bulan: month })}>Isi biaya</Button>
-        </div>
-      </li>,
-    )
-  }
+  const est = orders.estimate
+  const pct = (n: number) => (total.qty > 0 ? `${(n / total.qty) * 100}%` : '0%')
 
   return (
-    <Alert tone="warning" title={`${label}: belum lengkap — profit belum pasti`}>
-      <ul className="mt-1 list-disc space-y-3 pl-5">{todo}</ul>
-      {refundNote}
-    </Alert>
+    <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div>
+        <h2 className="text-xl font-extrabold">Semua pesanan yang masuk di {period}</h2>
+        <p className="mt-1 text-slate-600">
+          <strong className="text-2xl text-slate-900 tabular-nums">{formatNumber(total.orders)}</strong> pesanan ·{' '}
+          <strong className="text-2xl text-slate-900 tabular-nums">{formatNumber(total.qty)}</strong> barang
+        </p>
+      </div>
+
+      {total.qty === 0 ? (
+        <Alert tone="info">
+          Belum ada pesanan yang dibuat di {period}. Upload export pesanan dengan status <strong>Semua</strong>.
+        </Alert>
+      ) : (
+        <>
+          <div>
+            <div
+              className="flex h-4 overflow-hidden rounded-full bg-slate-200"
+              role="img"
+              aria-label={`${done.qty} barang selesai, ${proses.qty} diproses, ${batal.qty} batal`}
+            >
+              <div className="bg-orange-600" style={{ width: pct(done.qty) }} />
+              <div className="bg-amber-300" style={{ width: pct(proses.qty) }} />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-600">
+              <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-orange-600" />Selesai {formatNumber(done.qty)} barang</span>
+              {proses.qty > 0 && (
+                <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-amber-300" />Masih diproses {formatNumber(proses.qty)} barang</span>
+              )}
+              <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-slate-200" />Batal {formatNumber(batal.qty)} barang</span>
+            </div>
+          </div>
+
+          {est && done.qty > 0 && (
+            <div className="space-y-3 rounded-xl bg-slate-50 p-4">
+              <p className="font-extrabold">Perkiraan untung dari pesanan {period} yang selesai</p>
+              <div className="border-y-2 border-dashed border-slate-200">
+                <NotaLine
+                  op="+"
+                  label="Nilai penjualan"
+                  detail={`${formatNumber(done.orders)} pesanan selesai`}
+                  amount={formatRupiah(est.sales)}
+                />
+                <NotaLine
+                  op="−"
+                  label="Potongan Shopee"
+                  detail={`admin, ongkir XTRA, voucher, refund · ±${Math.round((est.fees / est.sales) * 100)}%`}
+                  amount={formatRupiah(est.fees)}
+                />
+                <NotaLine
+                  op="−"
+                  label="Modal barang"
+                  detail={`${formatNumber(done.qty - done.returned)} barang${done.returned > 0 ? ` (tanpa ${formatNumber(done.returned)} barang retur)` : ''}`}
+                  amount={formatRupiah(est.modal)}
+                />
+              </div>
+              <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2">
+                <span className="text-center text-xl font-extrabold">≈</span>
+                <span>
+                  <span className="block font-extrabold uppercase tracking-wide">Perkiraan untung</span>
+                  <span className="block text-sm font-semibold text-amber-700">Belum dikurangi biaya (iklan, packaging, dll.)</span>
+                </span>
+                <span className="text-right">
+                  <span className={`block text-2xl font-extrabold tabular-nums ${est.profit < 0 ? 'text-red-700' : ''}`}>
+                    {formatRupiah(est.profit)}
+                  </span>
+                  <span className="block text-sm font-semibold text-slate-500">
+                    {formatPercent((est.profit / est.sales) * 100)} dari nilai penjualan
+                  </span>
+                </span>
+              </div>
+              {est.missingHpp > 0 && (
+                <Alert tone="warning">
+                  {formatNumber(est.missingHpp)} barang belum punya HPP, jadi modal di perkiraan ini belum lengkap.{' '}
+                  <button type="button" className="underline" onClick={() => navigate('hpp', { kosong: '1' })}>Isi HPP</button>
+                </Alert>
+              )}
+              <Why label="Kenapa beda dengan untung bersih di atas?">
+                <p>Dua angka ini menghitung kelompok barang yang berbeda:</p>
+                <p>
+                  <strong>Untung bersih di atas</strong> = barang yang <strong>sampai & uangnya cair</strong> di {period}.
+                  Ini angka pasti dari laporan Shopee.
+                </p>
+                <p>
+                  <strong>Perkiraan di sini</strong> = semua pesanan yang <strong>dibuat</strong> di {period} dan sudah
+                  selesai, termasuk yang baru sampai bulan berikutnya. Shopee hanya mencatat uang cair per hari, jadi
+                  potongan untuk tiap pesanan dibagi sesuai nilai penjualannya. Karena itu disebut perkiraan.
+                </p>
+                {est.averaged > 0 && (
+                  <p>
+                    {formatNumber(est.averaged)} barang uangnya belum ada di laporan penghasilan yang di-upload, jadi
+                    memakai rata-rata potongan.
+                  </p>
+                )}
+                <p>Pesanan batal tidak dihitung: tidak ada uang masuk dan barangnya tidak keluar.</p>
+              </Why>
+            </div>
+          )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[32rem] text-left tabular-nums">
+              <thead className="border-b-2 text-xs uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th className="py-2 pr-3">Status</th>
+                  <th className="py-2 pr-3 text-right">Pesanan</th>
+                  <th className="py-2 pr-3 text-right">Barang</th>
+                  <th className="py-2 pr-3 text-right">Nilai penjualan</th>
+                  <th className="py-2 pr-3 text-right">Modal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groups
+                  .filter((g) => g.group !== 'proses' || g.qty > 0)
+                  .map((g) => (
+                    <tr key={g.group} className="border-b border-slate-100 align-top">
+                      <td className="py-3 pr-3 font-medium">
+                        {GROUP_LABEL[g.group]}
+                        {g.returned > 0 && (
+                          <span className="block text-xs font-normal text-slate-500">{formatNumber(g.returned)} barang diretur</span>
+                        )}
+                        {g.group === 'batal' && (
+                          <span className="block text-xs font-normal text-slate-500">tidak ada uang masuk</span>
+                        )}
+                      </td>
+                      <td className="py-3 pr-3 text-right">{formatNumber(g.orders)}</td>
+                      <td className="py-3 pr-3 text-right">{formatNumber(g.qty)}</td>
+                      <td className={`py-3 pr-3 text-right ${g.group === 'batal' ? 'text-slate-400' : ''}`}>
+                        {formatRupiah(g.subtotal)}
+                      </td>
+                      <td className="py-3 pr-3 text-right">
+                        {g.group === 'batal' ? <span className="text-slate-400">—</span> : formatRupiah(g.modal)}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-slate-300 font-extrabold">
+                  <td className="py-3 pr-3">Total</td>
+                  <td className="py-3 pr-3 text-right">{formatNumber(total.orders)}</td>
+                  <td className="py-3 pr-3 text-right">{formatNumber(total.qty)}</td>
+                  <td className="py-3 pr-3 text-right">{formatRupiah(total.subtotal)}</td>
+                  <td className="py-3 pr-3 text-right">{formatRupiah(total.modal)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p className="text-sm text-slate-500">
+            Dihitung dari <strong>tanggal pesanan dibuat</strong>, untuk melihat penjualan. Angka ini sama dengan
+            hitungan dari file export. Modal di tabel ini termasuk barang retur; pesanan yang masih diproses memakai HPP
+            saat ini.
+          </p>
+        </>
+      )}
+
+      {orders.withoutCreatedAt > 0 && (
+        <Alert tone="info">
+          {formatNumber(orders.withoutCreatedAt)} barang di-upload dengan versi lama dan belum punya tanggal pesanan
+          dibuat, jadi belum terhitung di sini. Upload ulang export pesanannya (status <strong>Semua</strong>), data
+          tidak akan dobel.
+        </Alert>
+      )}
+    </section>
   )
 }
 
-function ReturnedItems({ items }: { items: ReturnedItem[] }) {
-  if (items.length === 0) return null
-  return (
-    <Card title={`Barang retur (${items.length} item)`}>
-      <p className="mb-2 text-slate-600">Qty yang diretur tidak dihitung sebagai modal.</p>
-      <ul className="list-disc pl-6">
-        {items.slice(0, 50).map((r) => (
-          <li key={r.order_no + r.sku}>
-            {formatDate(r.completed_at)} · {r.order_no} · {r.product_name}
-            {r.variant_name && ` — ${r.variant_name}`} · retur {r.returned_qty} dari {r.qty}
-            {r.return_status && ` (${r.return_status})`}
-          </li>
-        ))}
-      </ul>
-    </Card>
-  )
-}
+// --- Tab: per produk -------------------------------------------------------------
 
-function ProductTable({ products }: { products: ProductRecap[] }) {
-  // Gabungkan semua bulan dalam rentang per SKU.
+function ProductsTab({ products, returned, period }: { products: ProductRecap[]; returned: ReturnedItem[]; period: string }) {
   const rows = useMemo(() => {
     const map = new Map<string, { sku: string; name: string; variant: string; qty: number; returned: number; modal: number; missing: boolean }>()
     for (const p of products) {
@@ -411,56 +779,141 @@ function ProductTable({ products }: { products: ProductRecap[] }) {
     }
     return [...map.values()].sort((a, b) => b.qty - a.qty)
   }, [products])
+  const max = Math.max(1, ...rows.map((r) => r.qty))
+  const totalQty = rows.reduce((n, r) => n + r.qty, 0)
+  const totalModal = rows.reduce((n, r) => n + r.modal, 0)
 
-  if (rows.length === 0) return null
-  const total = rows.reduce(
-    (t, r) => ({ qty: t.qty + r.qty, returned: t.returned + r.returned, modal: t.modal + r.modal }),
-    { qty: 0, returned: 0, modal: 0 },
-  )
-  const anyMissing = rows.some((r) => r.missing)
   return (
-    <Card title="Per produk">
+    <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div>
+        <h2 className="text-xl font-extrabold">Barang terjual per produk</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Barang yang sampai & uangnya cair di {period}. Paket grosir dihitung per paket, sama seperti di Shopee.
+        </p>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-slate-500">Belum ada barang terjual di {period}.</p>
+      ) : (
+        <div>
+          {rows.map((r) => (
+            <div key={r.sku} className="space-y-1.5 border-b border-slate-100 py-3">
+              <div className="grid grid-cols-[1fr_auto] items-baseline gap-3">
+                <span className="min-w-0">
+                  <span className="line-clamp-2 font-semibold">{r.name}</span>
+                  {r.variant && <span className="block text-sm text-slate-500">{r.variant}</span>}
+                </span>
+                <span className="whitespace-nowrap font-extrabold tabular-nums">{formatNumber(r.qty)} barang</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-orange-500" style={{ width: `${(r.qty / max) * 100}%` }} />
+              </div>
+              <p className="text-sm tabular-nums text-slate-500">
+                {r.missing ? <span className="font-semibold text-red-700">HPP belum diisi</span> : `Modal ${formatRupiah(r.modal)}`}
+                {r.returned > 0 && ` · ${formatNumber(r.returned)} diretur`}
+              </p>
+            </div>
+          ))}
+          <div className="flex flex-wrap justify-between gap-2 pt-3 font-extrabold tabular-nums">
+            <span>Total {formatNumber(rows.length)} produk</span>
+            <span>
+              {formatNumber(totalQty)} barang · Modal {formatRupiah(totalModal)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {returned.length > 0 && (
+        <details className="rounded-xl bg-slate-50 p-4">
+          <summary className="cursor-pointer font-semibold">Barang retur ({formatNumber(returned.length)})</summary>
+          <ul className="mt-2 list-disc space-y-1 pl-6 text-sm">
+            {returned.map((r) => (
+              <li key={r.order_no + r.sku}>
+                {formatDate(r.completed_at)} · {r.order_no} · {r.product_name}
+                {r.variant_name && ` — ${r.variant_name}`} · retur {r.returned_qty} dari {r.qty}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-sm text-slate-500">Barang retur tidak dihitung sebagai modal.</p>
+        </details>
+      )}
+    </section>
+  )
+}
+
+// --- Tab: per bulan (kalau melihat beberapa bulan) --------------------------------
+
+function MonthsTab({
+  months,
+  reconciliation,
+  onRecalc,
+}: {
+  months: MonthlyRecap[]
+  reconciliation: DailyReconciliation[]
+  onRecalc: (month: string) => void
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="border-b text-sm text-slate-500">
+        <table className="w-full min-w-[40rem] text-left tabular-nums">
+          <thead className="border-b-2 text-xs uppercase tracking-wider text-slate-500">
             <tr>
-              <th className="py-2 pr-3">Produk</th>
-              <th className="py-2 pr-3 text-right">Qty terjual</th>
-              <th className="py-2 pr-3 text-right">Retur</th>
-              <th className="py-2 pr-3 text-right">Total modal</th>
+              <th className="py-2 pr-3">Bulan</th>
+              <th className="py-2 pr-3 text-right">Uang masuk</th>
+              <th className="py-2 pr-3 text-right">Modal</th>
+              <th className="py-2 pr-3 text-right">Biaya</th>
+              <th className="py-2 pr-3 text-right">Untung bersih</th>
+              <th className="py-2 pr-3 text-right">Barang</th>
+              <th className="py-2" />
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.sku} className={`border-b border-slate-100 tabular-nums ${r.missing ? 'bg-red-50' : ''}`}>
-                <td className="py-3 pr-3">
-                  <p className="font-medium">{r.name}</p>
-                  {r.variant && <p className="text-sm text-slate-600">Variasi: {r.variant}</p>}
-                </td>
-                <td className="py-3 pr-3 text-right">{formatNumber(r.qty)}</td>
-                <td className="py-3 pr-3 text-right">{r.returned > 0 ? formatNumber(r.returned) : '-'}</td>
-                <td className="py-3 pr-3 text-right">
-                  {r.missing ? <span className="font-semibold text-red-700">HPP kosong</span> : formatRupiah(r.modal)}
-                </td>
-              </tr>
-            ))}
+            {months.map((m) => {
+              const final = monthStatus(m, reconciliation).final
+              return (
+                <tr key={m.month} className="border-b border-slate-100">
+                  <td className="py-3 pr-3 font-semibold">
+                    {formatMonth(m.month)}
+                    <span
+                      className={`ml-2 whitespace-nowrap rounded-lg px-2 py-0.5 text-xs ${
+                        final ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
+                      }`}
+                    >
+                      {final ? '✅ Final' : '⚠️ Belum lengkap'}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-3 text-right">{formatRupiah(Number(m.total_income))}</td>
+                  <td className="py-3 pr-3 text-right">{formatRupiah(Number(m.total_modal))}</td>
+                  <td className="py-3 pr-3 text-right">
+                    {Number(m.expense_entries) === 0 ? (
+                      <span className="text-amber-700">belum diisi</span>
+                    ) : (
+                      formatRupiah(Number(m.total_expenses))
+                    )}
+                  </td>
+                  <td className={`py-3 pr-3 text-right font-bold ${Number(m.net_profit) < 0 ? 'text-red-700' : ''}`}>
+                    {formatRupiah(Number(m.net_profit))}
+                  </td>
+                  <td className="py-3 pr-3 text-right">{formatNumber(Number(m.total_qty))}</td>
+                  <td className="py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => onRecalc(m.month)}
+                      className="min-h-12 whitespace-nowrap px-2 text-sm text-orange-700 underline"
+                    >
+                      Hitung ulang HPP
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
-          <tfoot>
-            <tr className="border-t-2 border-slate-300 font-bold tabular-nums">
-              <td className="py-3 pr-3">Total ({formatNumber(rows.length)} produk)</td>
-              <td className="py-3 pr-3 text-right">{formatNumber(total.qty)} pcs</td>
-              <td className="py-3 pr-3 text-right">{total.returned > 0 ? `${formatNumber(total.returned)} pcs` : '-'}</td>
-              <td className="py-3 pr-3 text-right">
-                {formatRupiah(total.modal)}
-                {anyMissing && <span className="block text-xs font-semibold text-red-700">belum termasuk HPP kosong</span>}
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
-    </Card>
+    </section>
   )
 }
+
+// --- Dialog hitung ulang HPP -------------------------------------------------------
 
 function RecalcDialog({
   month,
@@ -488,7 +941,7 @@ function RecalcDialog({
       <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
         <h2 className="text-2xl font-bold">Hitung ulang HPP — {formatMonth(month)}</h2>
         <p className="mt-3 text-lg">
-          Modal bulan ini dihitung dari HPP yang tersimpan saat upload. Pilih cara menghitung ulang:
+          Modal bulan ini memakai HPP yang terkunci saat pesanan selesai. Pilih cara menghitung ulang:
         </p>
         {error ? <div className="mt-4"><ErrorBox error={error} /></div> : null}
         <div className="mt-5 flex flex-col gap-3">
@@ -496,162 +949,17 @@ function RecalcDialog({
             Isi yang HPP-nya kosong saja (disarankan)
           </Button>
           <Button variant="secondary" onClick={() => run(false)} disabled={busy}>
-            Semua item pakai HPP terbaru
+            Semua barang pakai HPP saat ini
           </Button>
           <Button variant="secondary" onClick={onCancel} disabled={busy}>
             Batal
           </Button>
         </div>
         <p className="mt-4 text-sm text-slate-500">
-          "Semua item" akan mengganti HPP lama dengan HPP saat ini, sehingga profit {formatMonth(month)} bisa berubah.
+          "Semua barang" mengganti HPP lama dengan HPP yang sekarang tercatat di halaman HPP, sehingga untung{' '}
+          {formatMonth(month)} bisa berubah.
         </p>
       </div>
     </div>
-  )
-}
-
-const GROUP_LABEL: Record<OrdersByCreated['status_group'], string> = {
-  selesai: 'Selesai',
-  proses: 'Masih diproses / dikirim',
-  batal: 'Batal / belum bayar',
-}
-
-/** Tabel ke-2: semua pesanan berdasarkan tanggal pesanan DIBUAT, apa pun statusnya. */
-function IncomingOrdersCard({ incoming, from, to }: { incoming: Incoming; from: string; to: string }) {
-  const period = from === to ? formatMonth(from) : `${formatMonth(from)} – ${formatMonth(to)}`
-  const title = `Pesanan masuk — ${period}`
-
-  if ('error' in incoming) {
-    return (
-      <Card title={title}>
-        <Alert tone="warning" title="Tabel ini belum aktif">
-          Pengelola aplikasi perlu menjalankan file SQL <strong>20261005000000_all_order_statuses.sql</strong> di
-          Supabase (lihat README). Bagian profit di atas tidak terpengaruh.
-        </Alert>
-      </Card>
-    )
-  }
-
-  // Gabungkan semua bulan dalam rentang per kelompok status.
-  const groups = (['selesai', 'proses', 'batal'] as const).map((g) => {
-    const rows = incoming.rows.filter((r) => r.status_group === g)
-    const sum = (f: (r: OrdersByCreated) => number) => rows.reduce((s, r) => s + f(r), 0)
-    return {
-      group: g,
-      orders: sum((r) => Number(r.order_count)),
-      qty: sum((r) => Number(r.qty)),
-      returned: sum((r) => Number(r.qty_returned)),
-      subtotal: sum((r) => Number(r.subtotal)),
-      modal: sum((r) => Number(r.modal ?? 0)),
-      modalReturned: sum((r) => Number(r.modal_returned ?? 0)),
-      missingHpp: sum((r) => Number(r.items_missing_hpp)),
-    }
-  })
-  const total = groups.reduce(
-    (t, g) => ({
-      orders: t.orders + g.orders,
-      qty: t.qty + g.qty,
-      subtotal: t.subtotal + g.subtotal,
-      // Modal pesanan batal tidak dihitung: barangnya tidak keluar.
-      modal: t.modal + (g.group === 'batal' ? 0 : g.modal),
-      missingHpp: t.missingHpp + (g.group === 'batal' ? 0 : g.missingHpp),
-    }),
-    { orders: 0, qty: 0, subtotal: 0, modal: 0, missingHpp: 0 },
-  )
-  const selesai = groups[0]
-
-  return (
-    <Card title={title}>
-      <p className="mb-4 text-slate-600">
-        Semua pesanan yang <strong>dibuat</strong> di periode ini, apa pun statusnya. Ini untuk melihat penjualan;
-        angka profit di atas tetap hanya dari pesanan yang <strong>sudah selesai & dananya cair</strong>.
-      </p>
-
-      {total.qty === 0 ? (
-        <Alert tone="info">
-          Belum ada data pesanan masuk di periode ini. Upload export pesanan dengan status <strong>Semua</strong>.
-        </Alert>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="border-b text-sm text-slate-500">
-              <tr>
-                <th className="py-2 pr-3">Status</th>
-                <th className="py-2 pr-3 text-right">Pesanan</th>
-                <th className="py-2 pr-3 text-right">Qty</th>
-                <th className="py-2 pr-3 text-right">Nilai penjualan</th>
-                <th className="py-2 pr-3 text-right">Modal (perkiraan)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groups.map((g) => (
-                <tr key={g.group} className="border-b border-slate-100 tabular-nums">
-                  <td className="py-3 pr-3 font-medium">{GROUP_LABEL[g.group]}</td>
-                  <td className="py-3 pr-3 text-right">{formatNumber(g.orders)}</td>
-                  <td className="py-3 pr-3 text-right">
-                    {formatNumber(g.qty)} pcs
-                    {g.returned > 0 && (
-                      <span className="block text-xs text-slate-500">termasuk retur {formatNumber(g.returned)} pcs</span>
-                    )}
-                  </td>
-                  <td className="py-3 pr-3 text-right">{formatRupiah(g.subtotal)}</td>
-                  <td className="py-3 pr-3 text-right">
-                    {g.group === 'batal' ? (
-                      <span className="text-slate-400">tidak dihitung</span>
-                    ) : (
-                      <>
-                        {formatRupiah(g.modal)}
-                        {g.modalReturned > 0 && (
-                          <span className="block text-xs text-slate-500">
-                            termasuk retur {formatRupiah(g.modalReturned)}
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-slate-300 font-bold tabular-nums">
-                <td className="py-3 pr-3">Total semua pesanan</td>
-                <td className="py-3 pr-3 text-right">{formatNumber(total.orders)}</td>
-                <td className="py-3 pr-3 text-right">{formatNumber(total.qty)} pcs</td>
-                <td className="py-3 pr-3 text-right">{formatRupiah(total.subtotal)}</td>
-                <td className="py-3 pr-3 text-right">{formatRupiah(total.modal)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
-
-      <div className="mt-4 space-y-3 text-sm text-slate-600">
-        {selesai.returned > 0 && (
-          <p>
-            Retur dihitung di baris Selesai. Qty bersih (tanpa retur) yang selesai:{' '}
-            <strong>{formatNumber(selesai.qty - selesai.returned)} pcs</strong>.
-          </p>
-        )}
-        <p>
-          Modal pesanan batal tidak dihitung karena barangnya tidak keluar. Modal memakai HPP saat ini untuk pesanan
-          yang belum selesai, jadi sifatnya perkiraan.
-        </p>
-        {total.missingHpp > 0 && (
-          <Alert tone="warning">
-            {formatNumber(total.missingHpp)} item belum punya HPP, jadi modal di tabel ini belum lengkap.{' '}
-            <button type="button" className="underline" onClick={() => navigate('hpp', { kosong: '1' })}>
-              Isi HPP
-            </button>
-          </Alert>
-        )}
-        {incoming.withoutCreatedAt > 0 && (
-          <Alert tone="info">
-            {formatNumber(incoming.withoutCreatedAt)} item di-upload sebelum tabel ini ada, jadi belum punya tanggal
-            pesanan dibuat dan belum ikut terhitung di sini. Upload ulang export pesanannya (status <strong>Semua</strong>)
-            — data tidak akan dobel.
-          </Alert>
-        )}
-      </div>
-    </Card>
   )
 }

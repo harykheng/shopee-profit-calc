@@ -50,6 +50,12 @@ export function formatMonth(month: string): string {
   return `${MONTH_NAMES[m - 1]} ${y}`
 }
 
+/** Tanggal (WIB) dari ISO timestamp, "YYYY-MM-DD". */
+export function wibDay(value: string): string {
+  const [y, m, d] = wibDateParts(value)
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
 function wibDateParts(value: string): [number, number, number] {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const [y, m, d] = value.split('-').map(Number)
