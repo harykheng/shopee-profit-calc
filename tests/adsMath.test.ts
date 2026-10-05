@@ -93,6 +93,18 @@ describe('analyzeAds', () => {
     expect(b.shopeeTargetRoas).toBeCloseTo(10 / (42 / 48))
   })
 
+  it('ROAS saran di atas 50 dianggap tidak mungkin', () => {
+    // margin 5,5% → target 1 / 0,005 = 200
+    const r = analyzeAds({
+      reports: [{ source: 'otomatis', rows: [row({ product_code: 'X', product_name: 'X', sold: 10, gmv: 1_000_000, spend: 10_000 })] }],
+      orders: orders('X', 10, 0, 100_000, 79_500),
+      feeRate: 0.15,
+    })
+    expect(r.products[0].margin).toBeCloseTo(0.055)
+    expect(r.products[0].targetRoas).toBeNull()
+    expect(r.products[0].shopeeTargetRoas).toBeNull()
+  })
+
   it('label untuk tiap kasus', () => {
     expect(byCode.T.verdict).toBe('hero')
     expect(byCode.S.verdict).toBe('belum_cukup')
@@ -104,6 +116,22 @@ describe('analyzeAds', () => {
     const before = 23 * 5_000 + 42 * 4_500 + 10 * (25_000 * 0.85 - 15_000)
     expect(a.profitBeforeAds).toBeCloseTo(before)
     expect(a.profitAfterAds).toBeCloseTo(before - 325_000)
+  })
+
+  it('gabungan beberapa bulan: biaya dijumlah per periode, rincian hanya menutupi bulannya sendiri', () => {
+    const jul = reports.map((r) => ({ ...r, period: '2026-07-01|2026-07-31' }))
+    // Agustus: hanya Data Keseluruhan (rincian otomatis belum di-upload).
+    const aug = [{ ...reports[0], period: '2026-08-01|2026-08-31' }]
+    const r = analyzeAds({ reports: [...jul, ...aug], orders: [], feeRate: 0.15 })
+    expect(r.totalSpend).toBe(325_000 * 2)
+    expect(r.unallocated).toEqual([
+      { adName: 'Grup Iklan 1', spend: 5_000, need: 'grup', period: '2026-07-01|2026-07-31' },
+      { adName: 'Iklan Produk Otomatis', spend: 300_000, need: 'otomatis', period: '2026-08-01|2026-08-31' },
+      { adName: 'Grup Iklan 1', spend: 5_000, need: 'grup', period: '2026-08-01|2026-08-31' },
+    ])
+    // Produk yang sama di dua bulan dijumlahkan.
+    expect(r.products.find((p) => p.code === 'D')?.spend).toBe(200_000 + 20_000 * 2)
+    expect(r.periodsWithoutKeseluruhan).toEqual([])
   })
 
   it('tanpa Data Keseluruhan: total dari baris total file rincian', () => {

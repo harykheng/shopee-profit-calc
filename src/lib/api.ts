@@ -328,7 +328,9 @@ export async function findAdShopElsewhere(shopName: string, storeId: number): Pr
   return rows[0]?.store_id ?? null
 }
 
-export async function fetchAdRows(reports: { id: number; source: AdSource }[]) {
+export async function fetchAdRows(
+  reports: { id: number; source: AdSource; period_start?: string; period_end?: string }[],
+) {
   if (reports.length === 0) return []
   const rows = await fetchAllPages<AdRow & { report_id: number }>((a, b) =>
     supabase
@@ -344,6 +346,7 @@ export async function fetchAdRows(reports: { id: number; source: AdSource }[]) {
   )
   return reports.map((rep) => ({
     source: rep.source,
+    period: rep.period_start ? `${rep.period_start}|${rep.period_end}` : undefined,
     rows: rows
       .filter((r) => r.report_id === rep.id)
       .map((r) => ({
@@ -364,6 +367,7 @@ export interface PeriodItem {
   qty: number
   subtotal: number
   hpp_snapshot: number | null
+  created_at: string | null
 }
 
 /** Item dari pesanan yang DIBUAT antara dua tanggal (YYYY-MM-DD, termasuk), semua status. */
@@ -373,7 +377,7 @@ export async function fetchItemsCreatedBetween(storeId: number, fromDay: string,
   return fetchAllPages<PeriodItem>((a, b) =>
     supabase
       .from('order_items')
-      .select('sku, product_name, status_group, qty, subtotal, hpp_snapshot')
+      .select('sku, product_name, status_group, qty, subtotal, hpp_snapshot, created_at')
       .eq('store_id', storeId)
       .gte('created_at', `${fromDay}T00:00:00+07:00`)
       .lt('created_at', `${end.toISOString().slice(0, 10)}T00:00:00+07:00`)
