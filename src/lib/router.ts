@@ -1,11 +1,12 @@
 // Navigasi sederhana berbasis hash: "#/hpp?kosong=1".
-export type Route = 'upload' | 'hpp' | 'biaya' | 'rekap'
+export type Route = 'upload' | 'hpp' | 'biaya' | 'rekap' | 'iklan'
 
 export const ROUTES: { route: Route; label: string }[] = [
   { route: 'upload', label: 'Upload' },
   { route: 'hpp', label: 'HPP' },
   { route: 'biaya', label: 'Biaya' },
   { route: 'rekap', label: 'Rekap' },
+  { route: 'iklan', label: 'Iklan' },
 ]
 
 export function readHash(): { route: Route; params: URLSearchParams } {

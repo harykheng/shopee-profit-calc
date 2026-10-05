@@ -111,3 +111,14 @@ export interface UpsertCounts {
   updated: number
   unchanged: number
 }
+
+/** Satu file iklan yang sudah di-upload (tabel ad_reports). */
+export interface AdReport {
+  id: number
+  store_id: number
+  period_start: string
+  period_end: string
+  source: 'keseluruhan' | 'otomatis' | 'grup'
+  shop_name: string
+  uploaded_at: string
+}

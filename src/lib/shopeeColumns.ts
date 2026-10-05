@@ -137,3 +137,41 @@ export const INCOME_COLUMNS = [
 ] as const
 
 export type IncomeColumn = (typeof INCOME_COLUMNS)[number]
+
+// ---------------------------------------------------------------------------
+// Data iklan (Iklan Saya → Download Data), file .csv
+// Ada beberapa jenis file; jenisnya dikenali dari kolom nama di header.
+// ---------------------------------------------------------------------------
+
+export const ADS_CSV = {
+  /** Label baris info di atas tabel (kolom pertama → isi di kolom kedua). */
+  shopNameLabel: 'Nama Toko',
+  /** Isi mis. "01/07/2026 - 31/07/2026" (tanggal/bulan/tahun). */
+  periodLabel: 'Periode',
+  /**
+   * Jenis file, dicek berurutan: header yang punya kolom `nameColumn` ini.
+   * - keseluruhan: satu baris per iklan (total semua iklan → dipakai untuk Biaya).
+   * - otomatis: rincian per produk dari "Iklan Produk Otomatis".
+   * - grup: baris grup iklan, diikuti baris produk di dalam grup itu.
+   */
+  kinds: [
+    { source: 'grup', nameColumn: 'Nama Iklan/Produk', label: 'Semua Data Grup Iklan' },
+    { source: 'keseluruhan', nameColumn: 'Nama Iklan', label: 'Data Keseluruhan (semua iklan)' },
+    { source: 'otomatis', nameColumn: 'Nama Produk', label: 'Rincian Iklan Produk Otomatis' },
+  ],
+  columns: {
+    productCode: ['Kode Produk'],
+    views: ['Dilihat'],
+    clicks: ['Jumlah Klik'],
+    /** Versi Shopee: ikut menghitung pesanan yang kemudian batal. */
+    sold: ['Produk Terjual'],
+    gmv: ['Omzet Penjualan'],
+    spend: ['Biaya'],
+  },
+  /** Nama iklan untuk Iklan Produk Otomatis (baris total di file otomatis & keseluruhan). */
+  autoAdName: 'Iklan Produk Otomatis',
+  /** Isi "Kode Produk" untuk baris yang bukan satu produk (total iklan / grup). */
+  noProductCode: '-',
+} as const
+
+export type AdSource = (typeof ADS_CSV.kinds)[number]['source']

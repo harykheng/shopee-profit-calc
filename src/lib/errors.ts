@@ -19,6 +19,12 @@ export function friendlyError(err: unknown): string {
       'SQL "20261004000000_income_adjustments.sql" di Supabase (lihat README), lalu upload ulang file ini.'
     )
   }
+  if (lower.includes('save_ad_report') || lower.includes('ad_reports') || lower.includes('ad_rows')) {
+    return (
+      'Database belum diperbarui untuk data iklan. Pengelola aplikasi perlu menjalankan file ' +
+      'SQL "20261006000000_ads.sql" di Supabase (lihat README).'
+    )
+  }
   if (lower.includes('permission denied') || lower.includes('row-level security')) {
     return 'Anda tidak punya akses untuk data ini. Coba login ulang.'
   }
