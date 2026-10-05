@@ -9,6 +9,7 @@ import { UploadPage } from './pages/UploadPage'
 import { HppPage } from './pages/HppPage'
 import { ExpensesPage } from './pages/ExpensesPage'
 import { RecapPage } from './pages/RecapPage'
+import { AdsPage } from './pages/AdsPage'
 import { ROUTES, readHash } from './lib/router'
 
 const STORE_KEY = 'profit-shopee:store'
@@ -88,14 +89,16 @@ function MainApp({ email }: { email: string }) {
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3">
-          <span className="mr-1 text-lg font-bold text-orange-600 lg:mr-3 lg:text-xl">Profit Shopee</span>
+          <span className="mr-1 text-lg font-bold leading-tight text-orange-600 lg:mr-3 lg:text-xl">
+            Profit<span className="hidden xl:inline"> Shopee</span>
+          </span>
           <nav className="flex flex-1 flex-wrap gap-1">
             {ROUTES.map((n) => (
               <a
                 key={n.route}
                 href={`#/${n.route}`}
                 aria-current={route === n.route ? 'page' : undefined}
-                className={`flex min-h-12 items-center rounded-xl px-3 text-lg font-semibold lg:px-5 ${
+                className={`flex min-h-12 items-center rounded-xl px-2.5 text-lg font-semibold lg:px-4 ${
                   route === n.route ? 'bg-orange-100 text-orange-800' : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
@@ -110,7 +113,7 @@ function MainApp({ email }: { email: string }) {
                 <select
                   value={storeId ?? ''}
                   onChange={(e) => setStoreId(Number(e.target.value))}
-                  className="min-h-12 max-w-[14rem] cursor-pointer rounded-xl border-2 border-orange-600 bg-white px-3 text-base font-bold text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-200 lg:text-lg"
+                  className="min-h-12 max-w-[11rem] cursor-pointer lg:max-w-[14rem] rounded-xl border-2 border-orange-600 bg-white px-3 text-base font-bold text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-200 lg:text-lg"
                 >
                   {stores.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -157,6 +160,7 @@ function MainApp({ email }: { email: string }) {
               />
             )}
             {route === 'rekap' && <RecapPage stores={stores} storeId={storeId} />}
+            {route === 'iklan' && <AdsPage key={storeId} stores={stores} storeId={storeId} />}
           </>
         )}
       </main>

@@ -1,9 +1,12 @@
 // Semua akses ke Supabase ada di sini.
+import type { AdRow, AdsParseResult } from './parsers/ads'
 import type { IncomeAdjustment, IncomeDayRow } from './parsers/income'
 import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
 import { addMonths, monthEnd } from './format'
+import type { AdSource } from './shopeeColumns'
 import type {
+  AdReport,
   DailyReconciliation,
   OrdersByCreated,
   Expense,
@@ -251,21 +254,129 @@ export async function fetchEarlierOrdersCompleted(storeId: number, from: string,
   )
 }
 
-/** Penghasilan per tanggal dana dilepas, mulai `fromDay` (YYYY-MM-DD). */
-export async function fetchIncomeDays(storeId: number, fromDay: string) {
-  return fetchAllPages<{ released_date: string; total_income: number; subtotal_pesanan: number }>((a, b) =>
-    supabase
+/** Penghasilan per tanggal dana dilepas, mulai `fromDay` (YYYY-MM-DD), opsional sampai `toDay`. */
+export async function fetchIncomeDays(storeId: number, fromDay: string, toDay?: string) {
+  return fetchAllPages<{ released_date: string; total_income: number; subtotal_pesanan: number }>((a, b) => {
+    let q = supabase
       .from('income')
       .select('released_date, total_income, subtotal_pesanan')
       .eq('store_id', storeId)
       .gte('released_date', fromDay)
-      .order('released_date')
-      .range(a, b),
-  )
+    if (toDay) q = q.lte('released_date', toDay)
+    return q.order('released_date').range(a, b)
+  })
 }
 
 export async function recalcHpp(storeId: number, month: string, onlyMissing: boolean) {
   return check(
     await supabase.rpc('recalc_hpp', { p_store_id: storeId, p_month: month, p_only_missing: onlyMissing }),
   ) as number
+}
+
+// --- Iklan ------------------------------------------------------------------
+
+/** Simpan satu file iklan. Upload ulang (toko + periode + jenis sama) mengganti isinya. */
+export async function saveAdReport(storeId: number, r: AdsParseResult) {
+  const rows = check(
+    await supabase.rpc('save_ad_report', {
+      p_store_id: storeId,
+      p_period_start: r.periodStart,
+      p_period_end: r.periodEnd,
+      p_source: r.source,
+      p_shop_name: r.shopName,
+      p_rows: r.rows,
+    }),
+  ) as { report_id: number; replaced: boolean }[]
+  return rows[0]
+}
+
+export async function fetchAdReports(storeId: number) {
+  return check(
+    await supabase
+      .from('ad_reports')
+      .select('id, store_id, period_start, period_end, source, shop_name, uploaded_at')
+      .eq('store_id', storeId)
+      .order('period_end', { ascending: false })
+      .order('period_start'),
+  ) as AdReport[]
+}
+
+/** Toko lain yang pernah menerima file iklan dengan "Nama Toko" ini (untuk peringatan salah toko). */
+export async function findAdShopElsewhere(shopName: string, storeId: number): Promise<number | null> {
+  if (!shopName) return null
+  const rows = check(
+    await supabase
+      .from('ad_reports')
+      .select('store_id')
+      .eq('shop_name', shopName)
+      .neq('store_id', storeId)
+      .limit(1),
+  ) as { store_id: number }[]
+  return rows[0]?.store_id ?? null
+}
+
+export async function fetchAdRows(reports: { id: number; source: AdSource }[]) {
+  if (reports.length === 0) return []
+  const rows = await fetchAllPages<AdRow & { report_id: number }>((a, b) =>
+    supabase
+      .from('ad_rows')
+      .select('report_id, ad_name, product_code, product_name, views, clicks, sold, gmv, spend')
+      .in(
+        'report_id',
+        reports.map((r) => r.id),
+      )
+      .order('report_id')
+      .order('seq')
+      .range(a, b),
+  )
+  return reports.map((rep) => ({
+    source: rep.source,
+    rows: rows
+      .filter((r) => r.report_id === rep.id)
+      .map((r) => ({
+        ...r,
+        views: Number(r.views),
+        clicks: Number(r.clicks),
+        sold: Number(r.sold),
+        gmv: Number(r.gmv),
+        spend: Number(r.spend),
+      })),
+  }))
+}
+
+export interface PeriodItem {
+  sku: string
+  product_name: string
+  status_group: 'selesai' | 'proses' | 'batal'
+  qty: number
+  subtotal: number
+  hpp_snapshot: number | null
+}
+
+/** Item dari pesanan yang DIBUAT antara dua tanggal (YYYY-MM-DD, termasuk), semua status. */
+export async function fetchItemsCreatedBetween(storeId: number, fromDay: string, toDay: string) {
+  const end = new Date(`${toDay}T00:00:00Z`)
+  end.setUTCDate(end.getUTCDate() + 1)
+  return fetchAllPages<PeriodItem>((a, b) =>
+    supabase
+      .from('order_items')
+      .select('sku, product_name, status_group, qty, subtotal, hpp_snapshot')
+      .eq('store_id', storeId)
+      .gte('created_at', `${fromDay}T00:00:00+07:00`)
+      .lt('created_at', `${end.toISOString().slice(0, 10)}T00:00:00+07:00`)
+      .order('id')
+      .range(a, b),
+  )
+}
+
+/** Isi Biaya → Iklan Shopee untuk satu bulan dari total data iklan. */
+export async function saveAdsExpense(storeId: number, month: string, amount: number, note: string) {
+  check(
+    await supabase
+      .from('expenses')
+      .upsert(
+        { store_id: storeId, month, category: 'iklan_shopee', amount, note },
+        { onConflict: 'store_id,month,category' },
+      ),
+  )
 }
