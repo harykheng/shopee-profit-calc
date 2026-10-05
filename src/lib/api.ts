@@ -4,6 +4,7 @@ import type { IncomeAdjustment, IncomeDayRow } from './parsers/income'
 import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
 import { addMonths, monthEnd } from './format'
+import { MAX_SHIFT_DAYS } from './monthStatus'
 import type { AdSource } from './shopeeColumns'
 import type {
   AdReport,
@@ -147,14 +148,26 @@ export async function fetchProductRecap(storeId: number, from: string, to: strin
   ) as ProductRecap[]
 }
 
+/** Tambah/kurangi hari: ("2026-08-01", -3) → "2026-07-29". */
+function shiftDay(day: string, delta: number): string {
+  const d = new Date(`${day}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + delta)
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Cocokkan uang cair vs pesanan selesai per hari. Ikut mengambil beberapa hari di luar
+ * rentang supaya pesanan yang cair 1–2 hari kemudian (melewati pergantian bulan) tetap cocok;
+ * saring dengan `month` kalau hanya butuh bulan di rentang.
+ */
 export async function fetchReconciliation(storeId: number, from: string, to: string) {
   return check(
     await supabase
       .from('daily_reconciliation')
       .select('*')
       .eq('store_id', storeId)
-      .gte('day', from)
-      .lte('day', monthEnd(to))
+      .gte('day', shiftDay(from, -MAX_SHIFT_DAYS))
+      .lte('day', shiftDay(monthEnd(to), MAX_SHIFT_DAYS))
       .order('day'),
   ) as DailyReconciliation[]
 }

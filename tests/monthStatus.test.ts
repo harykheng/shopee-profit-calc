@@ -54,4 +54,47 @@ describe('monthStatus', () => {
     const s = monthStatus(recap(), [day('2026-08-05'), day('2026-07-31', { difference: 999 })])
     expect(s.final).toBe(true)
   })
+
+  it('uang yang cair sehari setelah pesanan selesai bukan data hilang (3 → 4 Agu)', () => {
+    const s = monthStatus(recap(), [
+      day('2026-08-03', { income_subtotal: 735000, orders_subtotal: 933200, difference: -198200 }),
+      day('2026-08-04', { income_subtotal: 303400, orders_subtotal: 105200, difference: 198200 }),
+      day('2026-08-17', { difference: -130666 }),
+    ])
+    expect(s.final).toBe(true)
+    expect(s.missingOrders.days).toEqual([])
+    expect(s.shifted).toEqual({ amount: 198200, days: ['2026-08-04'] })
+    // 3 Agu tidak lagi dianggap pengembalian dana; 17 Agu tetap.
+    expect(s.refunds).toEqual({ amount: -130666, days: ['2026-08-17'] })
+  })
+
+  it('kelebihan pesanan tetangga yang lebih besar ikut menutupi; sisanya tetap pengembalian', () => {
+    const s = monthStatus(recap(), [
+      day('2026-08-10', { difference: -250000 }),
+      day('2026-08-11', { difference: 198200 }),
+    ])
+    expect(s.missingOrders.days).toEqual([])
+    expect(s.refunds).toEqual({ amount: -51800, days: ['2026-08-10'] })
+  })
+
+  it('tidak dipasangkan kalau harinya terlalu jauh atau kelebihannya kurang', () => {
+    const far = monthStatus(recap(), [day('2026-08-01', { difference: -198200 }), day('2026-08-05', { difference: 198200 })])
+    expect(far.missingOrders.days).toEqual(['2026-08-05'])
+    const small = monthStatus(recap(), [day('2026-08-03', { difference: -100000 }), day('2026-08-04', { difference: 198200 })])
+    expect(small.missingOrders).toEqual({ amount: 198200, days: ['2026-08-04'] })
+  })
+
+  it('pergantian bulan: selesai 31 Jul malam (tanpa uang cair), cair 1 Agu', () => {
+    const s = monthStatus(recap(), [
+      day('2026-07-31', { has_income: false, income_subtotal: 0, orders_subtotal: 198200, difference: -198200 }),
+      day('2026-08-01', { orders_subtotal: 0, has_orders: false, difference: 198200 }),
+    ])
+    expect(s.missingOrders.days).toEqual([])
+    expect(s.final).toBe(true)
+    const july = monthStatus(recap({ month: '2026-07-01' }), [
+      day('2026-07-31', { has_income: false, income_subtotal: 0, orders_subtotal: 198200, difference: -198200 }),
+      day('2026-08-01', { orders_subtotal: 0, has_orders: false, difference: 198200 }),
+    ])
+    expect(july.ordersWithoutIncome.days).toEqual([])
+  })
 })

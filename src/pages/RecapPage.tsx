@@ -267,7 +267,9 @@ function NotaCard({
   const firstTodo = statuses.flatMap((s) => todos(s.status))[0]
   const [showStatus, setShowStatus] = useState(false)
 
-  const releaseDays = data.reconciliation.filter((d) => d.has_income).length
+  const releaseDays = data.reconciliation.filter(
+    (d) => d.has_income && data.months.some((m) => m.month === d.month),
+  ).length
   const refund = statuses.reduce((n, s) => n + s.status.refunds.amount, 0)
   const unfilledExpenses = data.months.filter((m) => Number(m.expense_entries) === 0)
   const expenseParts = [
@@ -526,6 +528,12 @@ function Checklist({
           </>
         )}
       </CheckRow>
+      {s.shifted.days.length > 0 && (
+        <p className="pl-8 text-sm text-slate-600">
+          ℹ️ {formatRupiah(s.shifted.amount)} cair 1–2 hari setelah tanggal pesanan selesai di export (
+          {dayList(s.shifted.days)}). Normal — datanya sudah cocok.
+        </p>
+      )}
       {s.hasIncome && s.ordersWithoutIncome.days.length > 0 && (
         <CheckRow ok={false}>
           <strong>{formatNumber(s.ordersWithoutIncome.orders)} pesanan selesai tidak ada di laporan penghasilan</strong>{' '}
