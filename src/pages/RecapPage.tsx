@@ -383,7 +383,7 @@ function NotaCard({
         />
       </div>
 
-      <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2">
+      <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-x-2 gap-y-1">
         <span className="num text-center text-xl font-bold text-ink-muted">=</span>
         <span>
           <span className="block text-lg font-bold uppercase tracking-wide">Untung bersih</span>
@@ -391,7 +391,7 @@ function NotaCard({
             <span className="block text-sm font-medium text-warn">Belum final: {firstTodo.short}</span>
           )}
         </span>
-        <span className="text-right">
+        <span className="col-span-full text-right sm:col-span-1">
           <span className={`num block text-3xl font-bold sm:text-4xl ${t.profit < 0 ? 'text-loss' : 'text-ink'}`}>
             {formatRupiah(t.profit)}
           </span>
@@ -676,13 +676,13 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
                   amount={formatRupiah(est.modal)}
                 />
               </div>
-              <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2">
+              <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-x-2 gap-y-1">
                 <span className="num text-center text-xl font-bold text-ink-muted">≈</span>
                 <span>
                   <span className="block font-bold uppercase tracking-wide">Perkiraan untung</span>
                   <span className="block text-sm font-semibold text-warn">Belum dikurangi biaya (iklan, packaging, dll.)</span>
                 </span>
-                <span className="text-right">
+                <span className="col-span-full text-right sm:col-span-1">
                   <span className={`block text-2xl font-semibold tracking-tight num ${est.profit < 0 ? 'text-loss' : ''}`}>
                     {formatRupiah(est.profit)}
                   </span>
