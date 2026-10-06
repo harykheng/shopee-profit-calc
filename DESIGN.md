@@ -167,7 +167,7 @@ A restrained receipt palette: cool neutrals, one stamp-ink accent, and four stat
 **Character:** A plain, administrative sans for words, like a printed form; a tabular mono for every figure, like a cash-register printout. Both are self-hosted from `public/fonts` (OFL).
 
 ### Hierarchy
-- **Headline** (600, 1.875rem on ≥640px / 1.5rem below, 1.2): page titles and the nota title ("Untung bersih Agustus 2026").
+- **Headline** (600, 1.875rem on ≥640px / 1.5rem below, 1.2): page titles. On Rekap the nota title ("Untung bersih Agustus 2026") steps down to a 1.125–1.25rem Soft Ink label because the figure under it is the headline.
 - **Title** (600, 1.125rem, 1.4): sheet titles.
 - **Body** (400, 1rem, 1.5): all copy; subtitles capped at 70ch.
 - **Small** (400, 0.875rem): line details under each nota line, hints, table headers.
@@ -181,7 +181,7 @@ A restrained receipt palette: cool neutrals, one stamp-ink accent, and four stat
 
 ## Layout
 
-- **Shell:** at ≥1024px a fixed-width rail (15.5rem) on the left with brand, store picker, two nav groups ("Lihat hasil": Rekap, Iklan, Simulasi Harga; "Input bulanan": Upload, HPP, Biaya) and the account at the bottom; the rail is sticky and its colour runs the full page height. Below 1024px a sticky ink top bar with brand, store picker and logout (icon only under 640px), and a horizontally scrolling single-row nav.
+- **Shell:** at ≥1024px a fixed-width rail (15.5rem) on the left with brand, store picker, two nav groups ("Lihat hasil": Rekap, Iklan, Simulasi Harga; "Input bulanan": Upload, HPP, Biaya) and the account at the bottom; the rail is sticky and its colour runs the full page height. Below 1024px a sticky ink top bar with brand, store picker and logout (icon only under 640px), and a fixed ink bottom bar holding all six nav items so they are in thumb reach and never scroll out of view; the page gets bottom padding (plus the safe-area inset) so the bar never covers the last control.
 - **Content:** max width 72rem, padding 16px → 24px (≥640px) → 40px (≥1024px). Rekap's nota and its tabs share a 56rem column so the receipt reads as one strip.
 - **Grids:** product cards in two columns at ≥1024px; Simulasi Harga puts inputs (22rem) beside the results.
 - **Rhythm:** 4px base; 12–20px between related rows, 24px between sheets; more space above a heading than below it.
@@ -233,10 +233,11 @@ Small, practical radii: 3px for stamps, 6px for controls (buttons, inputs, chips
 ### Navigation
 - **Rail item:** 44px, 6px radius, 18px line icon + label, Rail Text on Rail Ink; hover lightens to white on a 5% white wash.
 - **Active:** Paper White pill with Receipt Ink text and a Stamp Ink icon.
-- **Mobile:** same items in one scrolling row inside the ink top bar, short labels ("Simulasi").
+- **Mobile / iPad:** six equal cells in the ink bottom bar: 18px icon above a short label ("Simulasi"); the active cell puts the icon in a small Paper White pill with Stamp Ink, its label turns white.
 
 ### Nota (signature)
 - A sheet whose body is a three-column grid: operator (`+ − = ≈`, muted mono), label with a small detail line, amount (figure font, right-aligned). Rows divided by hairlines; a dashed tear rule above the first line and before the total; the total row uses the uppercase label and Figure Total. Used for Untung bersih (Rekap), Perkiraan untung, ad summaries, each ad product card, and Rincian per order (Simulasi Harga).
+- **Answer first (Rekap):** the Untung bersih sheet opens with the figure itself (Figure font, 2.25rem / 3rem from 640px) under a small title, with the margin and any "Belum final" note beneath it, so the answer is read before any line item, also on a phone without scrolling. The nota lines follow, and the closing "= UNTUNG BERSIH" row repeats the amount at line-item scale only to close the arithmetic. Below 640px the large totals elsewhere (Perkiraan untung) drop under their label instead of squeezing it.
 
 ### Stamp (signature)
 - Uppercase Public Sans 700, 0.875rem, 0.1em tracking, 3px double border in the state ink, translucent paper fill, tilted −2° (upright when used inline in explanations or tables). Tones: final/gain = Gain Green, warn = Warn Amber, loss = Loss Red, neutral = Muted Ink. It is text, readable by screen readers, never an image or texture.

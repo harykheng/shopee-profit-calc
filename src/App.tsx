@@ -28,10 +28,30 @@ const NAV_ICONS: Record<Route, typeof IconUpload> = {
   biaya: IconWallet,
 }
 
-function NavLink({ route, current, variant }: { route: Route; current: boolean; variant: 'rail' | 'bar' }) {
+function NavLink({ route, current, variant }: { route: Route; current: boolean; variant: 'rail' | 'bottom' }) {
   const r = ROUTES.find((x) => x.route === route)
   const Icon = NAV_ICONS[route]
   if (!r) return null
+  if (variant === 'bottom') {
+    return (
+      <a
+        href={`#/${route}`}
+        aria-current={current ? 'page' : undefined}
+        className={`flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors duration-150 ${
+          current ? 'text-white' : 'text-rail-text hover:text-white'
+        }`}
+      >
+        <span
+          className={`flex h-7 w-12 items-center justify-center rounded-md transition-colors duration-150 ${
+            current ? 'bg-paper text-stamp' : ''
+          }`}
+        >
+          <Icon size={18} />
+        </span>
+        {r.short ?? r.label}
+      </a>
+    )
+  }
   return (
     <a
       href={`#/${route}`}
@@ -41,7 +61,7 @@ function NavLink({ route, current, variant }: { route: Route; current: boolean; 
       }`}
     >
       <Icon size={18} className={current ? 'text-stamp' : ''} />
-      {variant === 'bar' ? (r.short ?? r.label) : r.label}
+      {r.label}
     </a>
   )
 }
@@ -161,7 +181,7 @@ function MainApp({ email }: { email: string }) {
   )
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)]">
+    <div className="min-h-screen pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:pb-0">
       {/* Laptop: rel samping (latar penuh setinggi halaman, isinya menempel di atas). */}
       <div className="hidden bg-rail lg:block">
         <aside className="sticky top-0 flex h-screen flex-col px-4 py-5 text-rail-text">
@@ -194,9 +214,9 @@ function MainApp({ email }: { email: string }) {
       </div>
 
       <div className="min-w-0">
-        {/* HP & iPad: bar atas, menu bisa digeser ke samping. */}
+        {/* HP & iPad: bar atas untuk toko & keluar, menu di bawah layar (mudah dijangkau jempol). */}
         <header className="sticky top-0 z-10 bg-rail text-rail-text lg:hidden">
-          <div className="flex items-center gap-3 px-4 pt-3">
+          <div className="flex items-center gap-3 px-4 py-2.5">
             <a href="#/rekap" className="flex shrink-0 items-center gap-2 text-white">
               <IconReceipt size={20} />
               <span className="font-semibold tracking-tight">Profit</span>
@@ -206,16 +226,19 @@ function MainApp({ email }: { email: string }) {
               {logout}
             </div>
           </div>
-          <nav aria-label="Menu utama" className="overflow-x-auto px-2 pb-2 pt-2 [scrollbar-width:none]">
-            <ul className="flex w-max gap-1">
-              {NAV_GROUPS.flatMap((g) => g.routes).map((r) => (
-                <li key={r}>
-                  <NavLink route={r} current={route === r} variant="bar" />
-                </li>
-              ))}
-            </ul>
-          </nav>
         </header>
+        <nav
+          aria-label="Menu utama"
+          className="fixed inset-x-0 bottom-0 z-10 bg-rail pb-[env(safe-area-inset-bottom)] lg:hidden"
+        >
+          <ul className="mx-auto grid max-w-2xl grid-cols-6 px-1">
+            {NAV_GROUPS.flatMap((g) => g.routes).map((r) => (
+              <li key={r}>
+                <NavLink route={r} current={route === r} variant="bottom" />
+              </li>
+            ))}
+          </ul>
+        </nav>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
         {storesError ? (

@@ -42,10 +42,11 @@ Hal penting yang perlu diingat:
   hari yang sama dengan pesanan selesai.
 - **Modal hanya dari barang yang selesai** di bulan itu. Barang batal dan barang retur tidak
   dihitung.
-- **Toko dipilih di pilihan Toko pada menu** (menu samping di laptop, bagian atas di HP/iPad) dan
+- **Toko dipilih di pilihan Toko pada menu** (menu samping di laptop, bar atas di HP/iPad) dan
   berlaku untuk semua halaman. Selalu cek nama toko sebelum upload.
 - **Menu dibagi dua:** *Lihat hasil* (Rekap, Iklan, Simulasi Harga) dan *Input bulanan* (Upload, HPP,
-  Biaya). Aplikasi langsung terbuka di **Rekap**.
+  Biaya). Di HP/iPad keenam menu ada di **bawah layar**. Aplikasi langsung terbuka di **Rekap**,
+  dan angka **untung bersih** tampil paling atas.
 
 ---
 
