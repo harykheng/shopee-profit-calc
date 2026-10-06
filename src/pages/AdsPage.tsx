@@ -658,6 +658,13 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
   const counts = new Map<AdVerdict, number>()
   for (const p of main) counts.set(p.verdict, (counts.get(p.verdict) ?? 0) + 1)
   const shown = filter === 'semua' ? main : main.filter((p) => p.verdict === filter)
+  // Gabungan: angka tiap produk per bulan (mis. Juli baru jalan sebentar, Agustus penuh).
+  const productMonths = new Map<string, MonthFigure[]>()
+  for (const { month, analysis } of data.perMonth ?? []) {
+    for (const p of analysis.products) {
+      productMonths.set(p.code, [...(productMonths.get(p.code) ?? []), { month, p }])
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -723,7 +730,7 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {shown.map((p) => (
-          <ProductCard key={p.code} p={p} />
+          <ProductCard key={p.code} p={p} months={data.perMonth ? (productMonths.get(p.code) ?? []) : undefined} />
         ))}
       </div>
 
@@ -901,7 +908,9 @@ function advice(p: AdProductResult): string {
   }
 }
 
-function ProductCard({ p }: { p: AdProductResult }) {
+type MonthFigure = { month: string; p: AdProductResult }
+
+function ProductCard({ p, months }: { p: AdProductResult; months?: MonthFigure[] }) {
   const v = VERDICTS[p.verdict]
   const sold = Math.round(p.netSold)
   return (
@@ -957,6 +966,21 @@ function ProductCard({ p }: { p: AdProductResult }) {
         </p>
       )}
       {p.hppIncomplete && <p className="mt-2 text-amber-800">⚠️ Sebagian variasi belum ada HPP-nya.</p>}
+
+      {months && (
+        <div className="mt-3 border-t border-slate-100 pt-2 text-sm text-slate-600">
+          <p className="font-semibold text-slate-700">Per bulan:</p>
+          {months.length <= 1 && <p>Hanya diiklankan di 1 bulan.</p>}
+          <ul>
+            {months.map(({ month, p: m }) => (
+              <li key={month} className="tabular-nums">
+                {formatMonth(month)}: biaya {formatRupiah(m.spend)} · terjual {formatNumber(Math.round(m.netSold))} · ROAS{' '}
+                {formatRoas(m.realRoas)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <p className="mt-3 rounded-xl bg-slate-50 p-3 text-base text-slate-800">{advice(p)}</p>
       {p.verdict === 'hpp_kosong' && (
