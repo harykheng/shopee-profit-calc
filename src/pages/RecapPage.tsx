@@ -4,6 +4,7 @@ import { Alert, Button, ErrorBox, Spinner, Stamp } from '../components/ui'
 import { IconAlertCircle, IconCheck, IconChevronDown, IconInfo } from '../components/icons'
 import {
   countItemsWithoutCreatedAt,
+  fetchAdReports,
   fetchCreatedItems,
   fetchEarlierOrdersCompleted,
   fetchIncomeDays,
@@ -16,11 +17,13 @@ import {
   recalcHpp,
   type CreatedItem,
 } from '../lib/api'
-import { addMonths, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah } from '../lib/format'
+import { addMonths, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '../lib/format'
 import { monthStatus, type MonthStatus } from '../lib/monthStatus'
 import { estimateProfit, soldFlow, type FlowStep, type ProfitEstimate } from '../lib/recapMath'
 import { navigate } from '../lib/router'
-import { Confetti, useCelebrateOnce, useCountUp } from '../components/motion'
+import { fullMonthOf } from '../lib/adsMath'
+import { loadAdsAnalysis, type Period as AdsPeriod } from './AdsPage'
+import { Confetti, WordsRise, useCelebrateOnce, useCountUp } from '../components/motion'
 import type {
   DailyReconciliation,
   MonthlyRecap,
@@ -125,7 +128,7 @@ export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: numbe
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3">
+      <div className="on-field mb-8 flex flex-wrap items-center gap-x-4 gap-y-3">
         <MonthSelect value={from} onChange={setFrom} label={multi ? 'Dari' : 'Bulan'} />
         {multi && <MonthSelect value={to} onChange={setTo} label="Sampai" />}
         <button
@@ -134,12 +137,12 @@ export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: numbe
             setMulti((m) => !m)
             setTo(from)
           }}
-          className="min-h-11 rounded-md px-3 font-medium text-stamp underline decoration-stamp/40 hover:decoration-stamp"
+          className="min-h-11 rounded-full px-4 font-semibold text-on-field-muted underline decoration-on-field/40 underline-offset-4 transition-colors hover:text-on-field hover:decoration-on-field"
         >
           {multi ? 'Satu bulan saja' : 'Lihat beberapa bulan'}
         </button>
       </div>
-      {!rangeValid && <p className="mb-4 text-loss">Bulan "Dari" harus sebelum atau sama dengan "Sampai".</p>}
+      {!rangeValid && <p className="mb-4 font-semibold text-[#ffcf5c]">Bulan "Dari" harus sebelum atau sama dengan "Sampai".</p>}
 
       {recalcResult && (
         <div className="mb-5">
@@ -156,7 +159,7 @@ export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: numbe
           Belum ada penghasilan, pesanan, atau biaya untuk {storeName} di {period}.
         </Alert>
       ) : (
-        <div className="max-w-4xl space-y-5">
+        <div className="space-y-14">
           <NotaCard
             data={data}
             orders={orders && !('error' in orders) ? orders : null}
@@ -165,21 +168,28 @@ export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: numbe
             rangeEnd={end}
             onRecalc={setRecalcMonth}
             storeId={storeId}
+            storeName={storeName}
           />
 
-          <div role="tablist" aria-label="Rincian" className="flex flex-wrap gap-1 border-b border-line">
-            <TabButton id="pesanan" tab={tab} setTab={setTab}>Semua pesanan</TabButton>
-            <TabButton id="produk" tab={tab} setTab={setTab}>Per produk</TabButton>
-            {data.months.length > 1 && <TabButton id="bulan" tab={tab} setTab={setTab}>Per bulan</TabButton>}
-          </div>
+          {from === end && storeId && <AdsChapter storeId={storeId} month={from} />}
 
-          <div key={tab} className="page-in">
-            {tab === 'pesanan' && <OrdersTab orders={orders} period={period} />}
-            {tab === 'produk' && <ProductsTab products={data.products} returned={data.returned} period={period} />}
-            {tab === 'bulan' && data.months.length > 1 && (
-              <MonthsTab months={data.months} reconciliation={data.reconciliation} onRecalc={setRecalcMonth} />
-            )}
-          </div>
+          <section className="space-y-4">
+            <ChapterTitle n={from === end ? 4 : 3} kicker="Rinciannya">
+              Pesanan & produk
+            </ChapterTitle>
+            <div role="tablist" aria-label="Rincian" className="on-field flex w-fit max-w-full flex-wrap gap-1 rounded-full bg-white/10 p-1">
+              <TabButton id="pesanan" tab={tab} setTab={setTab}>Semua pesanan</TabButton>
+              <TabButton id="produk" tab={tab} setTab={setTab}>Per produk</TabButton>
+              {data.months.length > 1 && <TabButton id="bulan" tab={tab} setTab={setTab}>Per bulan</TabButton>}
+            </div>
+            <div key={tab} className="page-in">
+              {tab === 'pesanan' && <OrdersTab orders={orders} period={period} />}
+              {tab === 'produk' && <ProductsTab products={data.products} returned={data.returned} period={period} />}
+              {tab === 'bulan' && data.months.length > 1 && (
+                <MonthsTab months={data.months} reconciliation={data.reconciliation} onRecalc={setRecalcMonth} />
+              )}
+            </div>
+          </section>
         </div>
       )}
 
@@ -211,8 +221,8 @@ function TabButton({ id, tab, setTab, children }: { id: Tab; tab: Tab; setTab: (
       role="tab"
       aria-selected={on}
       onClick={() => setTab(id)}
-      className={`-mb-px min-h-11 border-b-2 px-4 font-semibold transition-colors duration-150 ${
-        on ? 'border-stamp text-ink' : 'border-transparent text-ink-muted hover:text-ink'
+      className={`min-h-10 rounded-full px-4 font-semibold transition-colors duration-150 ${
+        on ? 'bg-on-field text-field' : 'text-on-field-muted hover:text-on-field'
       }`}
     >
       {children}
@@ -250,6 +260,7 @@ function NotaCard({
   rangeEnd,
   onRecalc,
   storeId,
+  storeName,
 }: {
   data: RecapData
   orders: OrdersData | null
@@ -258,6 +269,7 @@ function NotaCard({
   rangeEnd: string
   onRecalc: (month: string) => void
   storeId: number | null
+  storeName: string
 }) {
   const t = data.months.reduce(
     (a, m) => ({
@@ -297,140 +309,313 @@ function NotaCard({
   const flow = orders ? buildFlow(orders, t.qty, rangeEnd) : null
   const biayaMonth = unfilledExpenses[0]?.month ?? singleMonth ?? data.months[0]?.month
 
-  // Angka berputar naik, baris nota tercetak, lalu cap dicapkan; konfeti sekali per bulan yang final.
+  // Kalimat naik, angka berputar naik, stiker ditempel; konfeti sekali per bulan yang final.
   const shownProfit = useCountUp(t.profit)
   const stampRef = useRef<HTMLButtonElement>(null)
-  const celebrate = useCelebrateOnce(allFinal && singleMonth && storeId ? `final:${storeId}:${singleMonth}` : null, 750)
+  const celebrate = useCelebrateOnce(allFinal && singleMonth && storeId ? `final:${storeId}:${singleMonth}` : null, 900)
+  const loss = t.profit < 0
 
   return (
-    <section className="space-y-5 rounded-lg border border-line bg-paper p-5 shadow-sheet sm:p-7">
-      {/* Jawaban dulu: angka untung bersih paling atas, rinciannya di nota di bawah. */}
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+    <>
+      {/* Bab 1: jawabannya, ditulis seperti kalimat. */}
+      <section className="on-field grid gap-10 text-on-field lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.6fr)] lg:items-end">
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold tracking-tight text-ink-soft sm:text-xl">Untung bersih {period}</h1>
+          <p className="font-display text-lg font-bold text-lime">Bab 1 · Untung</p>
+          <h1 className="mt-3 font-display text-4xl font-bold leading-[1.04] tracking-tight sm:text-6xl">
+            <WordsRise text={`${period}, ${storeName} ${loss ? 'rugi' : 'untung'}`} />
+          </h1>
           <p
-            className={`num mt-1 text-4xl font-bold tracking-tight sm:text-5xl ${t.profit < 0 ? 'text-loss' : 'text-ink'}`}
+            className={`num mt-3 font-display text-7xl font-extrabold leading-[0.9] tracking-tighter sm:text-[8.5rem] ${
+              loss ? 'text-coral-soft' : 'text-lime'
+            }`}
           >
-            {formatRupiah(Math.round(shownProfit))}
+            {formatRupiahShort(Math.abs(shownProfit))}
           </p>
-          {margin !== null && <p className="num mt-1 text-sm text-ink-muted">{formatPercent(margin)} dari uang masuk</p>}
-          {!allFinal && firstTodo && (
-            <p className="mt-1 text-sm font-medium text-warn">Belum final: {firstTodo.short}</p>
-          )}
+          <p className="mt-5 max-w-2xl text-lg text-on-field-muted">
+            Tepatnya <b className="num text-on-field">{formatRupiah(t.profit)}</b>
+            {margin !== null && <> ({formatPercent(margin)} dari uang masuk)</>}, dari{' '}
+            <b className="text-on-field">{formatNumber(t.qty)} barang</b> yang sudah sampai ke pembeli dan uangnya cair.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
+            <Confetti anchor={stampRef} fireKey={celebrate} />
+            {statuses.length > 0 && (
+              <button
+                ref={stampRef}
+                type="button"
+                aria-expanded={showStatus}
+                onClick={() => setShowStatus((s) => !s)}
+                className="group inline-flex min-h-11 items-center gap-1.5 rounded-full px-1"
+              >
+                <Stamp tone={allFinal ? 'final' : 'warn'} delay={650} className="!text-base">
+                  {allFinal ? <IconCheck size={16} /> : <IconAlertCircle size={16} />}
+                  {allFinal ? 'Angka final' : `Belum lengkap · ${todoCount} hal`}
+                </Stamp>
+                <IconChevronDown
+                  size={18}
+                  className={`text-on-field-muted transition-transform duration-150 group-hover:text-on-field ${showStatus ? 'rotate-180' : ''}`}
+                />
+                <span className="sr-only">{showStatus ? 'Tutup' : 'Lihat'} rincian status</span>
+              </button>
+            )}
+            {!allFinal && firstTodo && <span className="font-semibold text-[#ffcf5c]">Belum final: {firstTodo.short}</span>}
+          </div>
         </div>
-        <Confetti anchor={stampRef} fireKey={celebrate} />
-        {statuses.length > 0 && (
-          <button
-            ref={stampRef}
-            type="button"
-            aria-expanded={showStatus}
-            onClick={() => setShowStatus((s) => !s)}
-            className="group inline-flex min-h-11 items-center gap-1.5 rounded-md px-1"
-          >
-            <Stamp tone={allFinal ? 'final' : 'warn'} delay={450}>{allFinal ? 'Angka final' : `Belum lengkap · ${todoCount} hal`}</Stamp>
-            <IconChevronDown
-              size={18}
-              className={`text-ink-muted transition-transform duration-150 group-hover:text-ink ${showStatus ? 'rotate-180' : ''}`}
-            />
-            <span className="sr-only">{showStatus ? 'Tutup' : 'Lihat'} rincian status</span>
-          </button>
-        )}
-      </div>
+        <MoneySplit income={t.modal + t.expenses + t.profit} modal={t.modal} expenses={t.expenses} profit={t.profit} />
+      </section>
 
       {showStatus && (
-        <div className={`reveal space-y-4 rounded-md p-4 ${allFinal ? 'bg-gain-tint' : 'bg-warn-tint'}`}>
+        <div className={`reveal space-y-4 rounded-3xl p-5 shadow-sheet sm:p-6 ${allFinal ? 'bg-gain-tint' : 'bg-warn-tint'}`}>
           {statuses.map((s) => (
-            <Checklist
-              key={s.month}
-              month={s.month}
-              status={s.status}
-              showTitle={statuses.length > 1}
-              onRecalc={onRecalc}
-            />
+            <Checklist key={s.month} month={s.month} status={s.status} showTitle={statuses.length > 1} onRecalc={onRecalc} />
           ))}
         </div>
       )}
 
-      <div className="print-in border-y-2 border-dashed border-rule">
-        <NotaLine
-          op="+"
-          label="Uang masuk dari Shopee"
-          detail={[
-            `Dana cair ${formatNumber(releaseDays)} hari`,
-            t.adjustments !== 0 ? `penyesuaian ${formatRupiah(t.adjustments)}` : null,
-            refund !== 0 ? `refund ${formatRupiah(-refund)} sudah dipotong` : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-          amount={formatRupiah(t.income)}
-        />
-        <NotaLine
-          op="−"
-          label="Modal barang terjual"
-          detail={
-            <>
-              {formatNumber(t.qty)} barang × HPP masing-masing
-              {singleMonth && (
+      {/* Bab 2: dari mana angkanya. */}
+      <section className="space-y-4">
+        <ChapterTitle n={2} kicker="Hitungannya">
+          Dari mana angkanya
+        </ChapterTitle>
+        <div className="space-y-5 rounded-3xl bg-paper p-5 shadow-sheet sm:p-7">
+          <div className="print-in">
+            <NotaLine
+              op="+"
+              label="Uang masuk dari Shopee"
+              detail={[
+                `Dana cair ${formatNumber(releaseDays)} hari`,
+                t.adjustments !== 0 ? `penyesuaian ${formatRupiah(t.adjustments)}` : null,
+                refund !== 0 ? `refund ${formatRupiah(-refund)} sudah dipotong` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              amount={formatRupiah(t.income)}
+            />
+            <NotaLine
+              op="−"
+              label="Modal barang terjual"
+              detail={
                 <>
-                  {' · '}
-                  <button type="button" className="underline" onClick={() => onRecalc(singleMonth)}>
-                    Hitung ulang HPP
-                  </button>
+                  {formatNumber(t.qty)} barang × HPP masing-masing
+                  {singleMonth && (
+                    <>
+                      {' · '}
+                      <button type="button" className="font-semibold text-stamp underline-offset-2 hover:underline" onClick={() => onRecalc(singleMonth)}>
+                        Hitung ulang HPP
+                      </button>
+                    </>
+                  )}
                 </>
-              )}
-            </>
-          }
-          amount={formatRupiah(t.modal)}
-        />
-        <NotaLine
-          op="−"
-          label="Biaya (iklan, packaging, dll.)"
-          detail={
-            <>
-              {expenseDetail || (unfilledExpenses.length > 0 ? 'Belum diisi' : 'Tidak ada biaya')}
-              {biayaMonth && (
+              }
+              amount={formatRupiah(t.modal)}
+            />
+            <NotaLine
+              op="−"
+              label="Biaya (iklan, packaging, dll.)"
+              detail={
                 <>
-                  {' · '}
-                  <button type="button" className="underline" onClick={() => navigate('biaya', { bulan: biayaMonth })}>
-                    {unfilledExpenses.length > 0 ? 'Isi biaya' : 'Ubah biaya'}
-                  </button>
+                  {expenseDetail || (unfilledExpenses.length > 0 ? 'Belum diisi' : 'Tidak ada biaya')}
+                  {biayaMonth && (
+                    <>
+                      {' · '}
+                      <button
+                        type="button"
+                        className="font-semibold text-stamp underline-offset-2 hover:underline"
+                        onClick={() => navigate('biaya', { bulan: biayaMonth })}
+                      >
+                        {unfilledExpenses.length > 0 ? 'Isi biaya' : 'Ubah biaya'}
+                      </button>
+                    </>
+                  )}
                 </>
-              )}
-            </>
-          }
-          amount={
-            unfilledExpenses.length > 0 && t.expenses === 0 ? (
-              <span className="font-sans font-medium text-warn">belum diisi</span>
-            ) : (
-              formatRupiah(t.expenses)
-            )
-          }
-        />
-      </div>
-
-      {/* Baris total nota: menutup hitungan di atasnya, tercetak paling akhir. */}
-      <div className="print-last grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2">
-        <span className="num text-center text-xl font-bold text-ink-muted">=</span>
-        <span className="font-bold uppercase tracking-wide">Untung bersih</span>
-        <span className={`num whitespace-nowrap text-right text-xl font-bold ${t.profit < 0 ? 'text-loss' : 'text-ink'}`}>
-          {formatRupiah(t.profit)}
-        </span>
-      </div>
-
-      <div className="space-y-3 border-t border-line pt-4">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
-          <span className="text-ink-soft">Barang terjual</span>
-          <strong className="num text-2xl">{formatNumber(t.qty)}</strong>
+              }
+              amount={
+                unfilledExpenses.length > 0 && t.expenses === 0 ? (
+                  <span className="font-sans text-base font-semibold text-warn">belum diisi</span>
+                ) : (
+                  formatRupiah(t.expenses)
+                )
+              }
+            />
+          </div>
+          <div className="print-last flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-2xl bg-stamp-tint px-4 py-3">
+            <span className="font-display text-lg font-bold">= Untung bersih</span>
+            <span className={`num font-display text-2xl font-bold ${loss ? 'text-loss' : 'text-ink'}`}>{formatRupiah(t.profit)}</span>
+          </div>
+          {flow && flow[0].value !== t.qty && (
+            <Why label={`Kenapa ${formatNumber(t.qty)} barang, bukan ${formatNumber(flow[0].value)}?`}>
+              <p>
+                Untung dihitung dari barang yang <strong>sudah sampai ke pembeli dan uangnya cair</strong> di {period}.
+              </p>
+              <FlowList steps={flow} />
+            </Why>
+          )}
         </div>
-        {flow && flow[0].value !== t.qty && (
-          <Why label={`Kenapa ${formatNumber(t.qty)}, bukan ${formatNumber(flow[0].value)}?`}>
-            <p>
-              Untung dihitung dari barang yang <strong>sudah sampai ke pembeli dan uangnya cair</strong> di {period}.
-            </p>
-            <FlowList steps={flow} />
-          </Why>
-        )}
+      </section>
+    </>
+  )
+}
+
+/** Judul bab di atas bidang biru: nomor bab + kata kunci kecil, lalu judul besar. */
+function ChapterTitle({ n, kicker, children }: { n: number; kicker: string; children: ReactNode }) {
+  return (
+    <div className="on-field text-on-field">
+      <p className="font-display text-lg font-bold text-lime">
+        Bab {n} · {kicker}
+      </p>
+      <h2 className="mt-1 font-display text-3xl font-bold tracking-tight sm:text-4xl">{children}</h2>
+    </div>
+  )
+}
+
+/**
+ * "Dari setiap Rp100 yang masuk": satu batang bagian-dari-keseluruhan (modal, biaya, untung).
+ * Tegak di laptop, mendatar di HP. Tidak ditampilkan kalau rugi (bagiannya tidak lagi menjumlah ke 100).
+ */
+function MoneySplit({ income, modal, expenses, profit }: { income: number; modal: number; expenses: number; profit: number }) {
+  if (income <= 0 || profit < 0) {
+    return (
+      <div className="on-field rounded-3xl bg-white/8 p-5 text-on-field-muted">
+        Modal dan biaya bulan ini lebih besar dari uang yang masuk, jadi tidak ada sisa untung.
       </div>
+    )
+  }
+  const modalPer100 = Math.round((modal / income) * 100)
+  const biayaPer100 = Math.round((expenses / income) * 100)
+  const untungPer100 = 100 - modalPer100 - biayaPer100
+  const segs = [
+    { key: 'modal', label: 'modal barang', per100: modalPer100, share: modal / income, cls: 'bg-white/15 text-on-field' },
+    { key: 'biaya', label: 'biaya', per100: biayaPer100, share: expenses / income, cls: 'bg-white/35 text-on-field' },
+    { key: 'untung', label: 'untung', per100: untungPer100, share: profit / income, cls: 'bg-lime text-field-deep' },
+  ]
+  const big = (share: number) => share >= 0.12
+  return (
+    <figure className="on-field min-w-0 text-on-field">
+      <figcaption className="font-display text-2xl font-bold leading-tight tracking-tight">Dari setiap Rp100 yang masuk</figcaption>
+      <div
+        role="img"
+        aria-label={`Rp${modalPer100} untuk modal barang, Rp${biayaPer100} untuk biaya, Rp${untungPer100} jadi untung`}
+        className="mt-4 flex h-24 gap-[3px] lg:h-[22rem] lg:flex-col"
+      >
+        {segs.map((sg, i) => (
+          <div
+            key={sg.key}
+            title={`${sg.label}: Rp${sg.per100} dari setiap Rp100`}
+            style={{ flexGrow: Math.max(sg.share, 0.004), animationDelay: `${300 + i * 140}ms` }}
+            className={`grow-split flex min-h-0 min-w-0 basis-0 flex-col items-start justify-end overflow-hidden rounded-xl font-semibold lg:flex-row lg:items-end lg:justify-between lg:gap-2 ${
+              big(sg.share) ? 'px-3 py-2 lg:px-4 lg:py-3' : ''
+            } ${sg.cls}`}
+          >
+            {big(sg.share) && (
+              <>
+                <span className="max-w-full truncate text-sm lg:text-base">{sg.label}</span>
+                <span className="num font-display text-xl font-bold lg:text-3xl">Rp{sg.per100}</span>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-sm text-on-field-muted">
+        {segs
+          .filter((sg) => !big(sg.share))
+          .map((sg) => `${sg.label} Rp${sg.per100}`)
+          .join(' · ')}
+        {segs.some((sg) => !big(sg.share)) && ' · '}
+        uang masuk {formatRupiahShort(income)}, modal {formatRupiahShort(modal)}, biaya {formatRupiahShort(expenses)}.
+      </p>
+    </figure>
+  )
+}
+
+// --- Bab Iklan -----------------------------------------------------------------
+
+type AdsState =
+  | { kind: 'loading' }
+  | { kind: 'none' }
+  | { kind: 'error' }
+  | { kind: 'ok'; profitAfterAds: number; spend: number; takedown: { name: string; profit: number | null }[]; takedownCount: number }
+
+/** Bab 3: iklan bulan yang sama (kalau ada data iklan 1 bulan penuh), dengan tautan ke halaman Iklan. */
+function AdsChapter({ storeId, month }: { storeId: number; month: string }) {
+  const [state, setState] = useState<AdsState>({ kind: 'loading' })
+
+  useEffect(() => {
+    let cancelled = false
+    setState({ kind: 'loading' })
+    ;(async () => {
+      const reports = (await fetchAdReports(storeId)).filter((r) => fullMonthOf(r.period_start, r.period_end) === month)
+      if (reports.length === 0) return { kind: 'none' } as const
+      const period: AdsPeriod = {
+        key: `${reports[0].period_start}|${reports[0].period_end}`,
+        start: reports[0].period_start,
+        end: reports[0].period_end,
+        reports,
+      }
+      const { analysis } = await loadAdsAnalysis(storeId, period)
+      const takedown = analysis.products.filter((p) => p.verdict === 'takedown')
+      return {
+        kind: 'ok',
+        profitAfterAds: analysis.profitAfterAds,
+        spend: analysis.totalSpend,
+        takedownCount: takedown.length,
+        takedown: takedown
+          .sort((a, b) => (a.profitAfterAds ?? 0) - (b.profitAfterAds ?? 0))
+          .slice(0, 3)
+          .map((p) => ({ name: p.name, profit: p.profitAfterAds })),
+      } as const
+    })()
+      .then((st) => !cancelled && setState(st))
+      .catch(() => !cancelled && setState({ kind: 'error' }))
+    return () => {
+      cancelled = true
+    }
+  }, [storeId, month])
+
+  return (
+    <section className="on-field rounded-[2rem] bg-coral p-6 text-white shadow-sheet sm:p-9">
+      <p className="font-display text-lg font-bold text-[#ffe4dc]">Bab 3 · Iklan {formatMonth(month)}</p>
+      {state.kind === 'loading' && <p className="mt-3 text-white">Menghitung iklan…</p>}
+      {(state.kind === 'none' || state.kind === 'error') && (
+        <>
+          <h2 className="mt-2 font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+            {state.kind === 'none' ? `Belum ada data iklan ${formatMonth(month)}.` : 'Data iklan belum bisa dihitung di sini.'}
+          </h2>
+          <p className="mt-2 max-w-2xl text-lg text-white">
+            {state.kind === 'none'
+              ? 'Upload file iklan Shopee 1 bulan penuh untuk melihat iklan mana yang untung dan mana yang bikin rugi.'
+              : 'Buka halaman Iklan untuk melihat rinciannya.'}
+          </p>
+        </>
+      )}
+      {state.kind === 'ok' && (
+        <>
+          <h2 className="mt-2 font-display text-3xl font-bold leading-tight tracking-tight sm:text-5xl">
+            Iklan {state.profitAfterAds < 0 ? 'rugi' : 'untung'} {formatRupiahShort(Math.abs(state.profitAfterAds))}.{' '}
+            {state.takedownCount > 0 ? `${formatNumber(state.takedownCount)} iklan sebaiknya dimatikan.` : 'Tidak ada iklan yang perlu dimatikan.'}
+          </h2>
+          <p className="mt-2 text-lg text-white">
+            Setelah biaya iklan <span className="num">{formatRupiah(state.spend)}</span>, untungnya{' '}
+            <b className="num text-white">{formatRupiah(state.profitAfterAds)}</b>.
+          </p>
+          {state.takedown.length > 0 && (
+            <ul className="mt-5 grid gap-2 sm:grid-cols-3">
+              {state.takedown.map((p) => (
+                <li key={p.name} className="min-w-0 rounded-2xl bg-white/14 px-4 py-3">
+                  <span className="line-clamp-2 font-semibold">{p.name}</span>
+                  <span className="num mt-1 block font-display text-xl font-bold">
+                    {p.profit === null ? 'HPP belum lengkap' : formatRupiah(p.profit)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+      <a
+        href="#/iklan"
+        className="mt-6 inline-flex min-h-11 items-center rounded-full bg-white px-5 font-semibold text-coral transition active:scale-[0.97]"
+      >
+        Buka halaman Iklan →
+      </a>
     </section>
   )
 }
@@ -481,13 +666,16 @@ function FlowList({ steps }: { steps: FlowStep[] }) {
 
 export function NotaLine({ op, label, detail, amount }: { op: string; label: string; detail: ReactNode; amount: ReactNode }) {
   return (
-    <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2 border-line/70 py-3 [&+&]:border-t">
+    <div className="grid grid-cols-[1.5rem_1fr] items-baseline gap-x-2 border-line/70 py-3 sm:grid-cols-[1.5rem_1fr_auto] [&+&]:border-t">
       <span className="num text-center font-bold text-ink-muted">{op}</span>
       <span className="min-w-0">
-        <span className="block font-medium">{label}</span>
+        <span className="block font-semibold">{label}</span>
         <span className="block text-sm text-ink-muted">{detail}</span>
       </span>
-      <span className="num whitespace-nowrap text-right text-lg font-semibold">{amount}</span>
+      {/* HP: angka turun ke bawah labelnya supaya label tidak terjepit. */}
+      <span className="num col-start-2 mt-1 whitespace-nowrap text-lg font-semibold sm:col-start-auto sm:mt-0 sm:text-right">
+        {amount}
+      </span>
     </div>
   )
 }
@@ -636,7 +824,7 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
   const pct = (n: number) => (total.qty > 0 ? `${(n / total.qty) * 100}%` : '0%')
 
   return (
-    <section className="space-y-5 rounded-lg border border-line bg-paper p-5 shadow-sheet sm:p-6">
+    <section className="space-y-5 rounded-3xl bg-paper p-5 shadow-sheet sm:p-6">
       <div>
         <h2 className="text-lg font-semibold tracking-tight">Semua pesanan yang masuk di {period}</h2>
         <p className="mt-1 text-ink-soft">
@@ -692,14 +880,13 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
                   amount={formatRupiah(est.modal)}
                 />
               </div>
-              <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-x-2 gap-y-1">
-                <span className="num text-center text-xl font-bold text-ink-muted">≈</span>
+              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 rounded-2xl bg-stamp-tint px-4 py-3">
                 <span>
-                  <span className="block font-bold uppercase tracking-wide">Perkiraan untung</span>
+                  <span className="block font-display text-lg font-bold">≈ Perkiraan untung</span>
                   <span className="block text-sm font-semibold text-warn">Belum dikurangi biaya (iklan, packaging, dll.)</span>
                 </span>
-                <span className="col-span-full text-right sm:col-span-1">
-                  <span className={`block text-2xl font-semibold tracking-tight num ${est.profit < 0 ? 'text-loss' : ''}`}>
+                <span className="sm:text-right">
+                  <span className={`block font-display text-2xl font-bold tracking-tight num ${est.profit < 0 ? 'text-loss' : ''}`}>
                     {formatRupiah(est.profit)}
                   </span>
                   <span className="block text-sm font-semibold text-ink-muted">
@@ -821,7 +1008,7 @@ function ProductsTab({ products, returned, period }: { products: ProductRecap[];
   const totalModal = rows.reduce((n, r) => n + r.modal, 0)
 
   return (
-    <section className="space-y-4 rounded-lg border border-line bg-paper p-5 shadow-sheet sm:p-6">
+    <section className="space-y-4 rounded-3xl bg-paper p-5 shadow-sheet sm:p-6">
       <div>
         <h2 className="text-lg font-semibold tracking-tight">Barang terjual per produk</h2>
         <p className="mt-1 text-sm text-ink-muted">
@@ -889,7 +1076,7 @@ function MonthsTab({
   onRecalc: (month: string) => void
 }) {
   return (
-    <section className="rounded-lg border border-line bg-paper p-5 shadow-sheet sm:p-6">
+    <section className="rounded-3xl bg-paper p-5 shadow-sheet sm:p-6">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[40rem] text-left">
           <thead className="border-b border-rule text-sm font-medium text-ink-muted">
@@ -971,7 +1158,7 @@ function RecalcDialog({
   }
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-ink/40 p-4" role="dialog" aria-modal="true">
-      <div className="w-full max-w-lg rounded-lg border border-line bg-paper p-6 shadow-xl">
+      <div className="w-full max-w-lg rounded-3xl bg-paper p-6 shadow-xl">
         <h2 className="text-xl font-semibold tracking-tight">Hitung ulang HPP — {formatMonth(month)}</h2>
         <p className="mt-3 text-ink-soft">
           Modal bulan ini memakai HPP yang terkunci saat pesanan selesai. Pilih cara menghitung ulang:

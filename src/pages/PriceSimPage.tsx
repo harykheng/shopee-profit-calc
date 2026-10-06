@@ -185,6 +185,33 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
         )}
       </Card>
 
+      {/* Jawabannya dulu, ikut berubah begitu angka diubah. */}
+      <div className="on-field mb-8 text-on-field" aria-live="polite">
+        {r && price !== null ? (
+          <>
+            <h2 className="font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+              Dijual <span className="num">{formatRupiah(price)}</span>, {r.profitable ? 'untung' : 'rugi'}{' '}
+              <span className={`num ${r.profitable ? 'text-lime' : 'text-coral-soft'}`}>{formatRupiah(Math.abs(r.profit))}</span> per order.
+            </h2>
+            <p className="mt-3 text-lg text-on-field-muted">
+              {r.actual ? (
+                <>
+                  Dengan iklan (ROAS {decimal(actualRoas ?? 0)}),{' '}
+                  <b className={r.actual.profitAfterAds >= 0 ? 'text-lime' : 'text-coral-soft'}>
+                    {r.actual.profitAfterAds >= 0 ? 'untung' : 'rugi'} {formatRupiah(Math.abs(r.actual.profitAfterAds))}
+                  </b>{' '}
+                  per order.
+                </>
+              ) : (
+                'Sebelum iklan. Isi ROAS aktual untuk melihat hasil setelah iklan.'
+              )}
+            </p>
+          </>
+        ) : (
+          <p className="font-display text-2xl font-bold text-on-field-muted">Isi HPP dan harga jual untuk melihat untungnya.</p>
+        )}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <Card title="Isi angka" className="self-start">
           <div className="space-y-4">
@@ -300,20 +327,20 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                   />
                   <NotaLine op="−" label="HPP" detail="modal per unit jual" amount={formatRupiah(hpp)} />
                 </div>
-                <div className="mt-1 grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2 border-t-2 border-dashed border-rule pt-3">
-                  <span className="num text-center text-xl font-bold text-ink-muted">=</span>
-                  <span className="font-bold uppercase tracking-wide">Untung per order</span>
-                  <span
-                    className={`num whitespace-nowrap text-right text-3xl font-bold ${
-                      r.profitable ? 'text-gain' : 'text-loss'
-                    }`}
-                  >
-                    {formatRupiah(r.profit)}
+                <div
+                  className={`mt-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1 rounded-2xl px-4 py-3 ${
+                    r.profitable ? 'bg-gain-tint' : 'bg-loss-tint'
+                  }`}
+                >
+                  <span>
+                    <span className="block font-display text-lg font-bold">= Untung per order</span>
+                    <span className="block text-sm text-ink-muted">sebelum iklan</span>
                   </span>
-                  <span />
-                  <span className="text-sm text-ink-muted">sebelum iklan</span>
-                  <span className={`num text-right font-medium ${r.profitable ? 'text-gain' : 'text-loss'}`}>
-                    {formatPercent(r.margin * 100)}
+                  <span className={`sm:text-right ${r.profitable ? 'text-gain' : 'text-loss'}`}>
+                    <span className="num block whitespace-nowrap font-display text-3xl font-bold tracking-tight">
+                      {formatRupiah(r.profit)}
+                    </span>
+                    <span className="num block text-sm font-semibold">{formatPercent(r.margin * 100)} dari harga jual</span>
                   </span>
                 </div>
                 {!r.profitable && (
@@ -324,26 +351,22 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
               </Card>
 
               {r.actual && (
+                // key: kartunya muncul ulang setiap kali vonisnya berubah (untung ↔ rugi).
                 <div
-                  className={`rounded-lg border p-5 shadow-sheet ${
-                    r.actual.profitAfterAds >= 0 ? 'border-gain/30 bg-gain-tint' : 'border-loss/30 bg-loss-tint'
+                  key={r.actual.profitAfterAds >= 0 ? 'gain' : 'loss'}
+                  className={`reveal rounded-3xl p-6 shadow-sheet sm:p-7 ${
+                    r.actual.profitAfterAds >= 0 ? 'bg-lime text-field-deep' : 'on-field bg-coral text-white'
                   }`}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p
-                      className={`num text-2xl font-bold ${
-                        r.actual.profitAfterAds >= 0 ? 'text-gain' : 'text-loss'
-                      }`}
-                    >
-                      {formatRupiah(Math.abs(r.actual.profitAfterAds))}
-                      <span className="ml-1.5 font-sans text-base font-medium">per order</span>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <p className="font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+                      Dengan iklan, {r.actual.profitAfterAds >= 0 ? 'untung' : 'rugi'}{' '}
+                      <span className="num">{formatRupiah(Math.abs(r.actual.profitAfterAds))}</span>
+                      <span className="ml-1.5 font-sans text-lg font-semibold">per order</span>
                     </p>
-                    {/* key: cap baru dicapkan setiap kali vonisnya berubah. */}
-                    <Stamp key={r.actual.profitAfterAds >= 0 ? 'gain' : 'loss'} tone={r.actual.profitAfterAds >= 0 ? 'gain' : 'loss'}>
-                      {r.actual.profitAfterAds >= 0 ? 'Iklan untung' : 'Iklan rugi'}
-                    </Stamp>
+                    <Stamp tone="neutral">{r.actual.profitAfterAds >= 0 ? 'Iklan untung' : 'Iklan rugi'}</Stamp>
                   </div>
-                  <p className="mt-2 text-ink-soft">
+                  <p className="mt-2">
                     Biaya iklan per order {formatRupiah(r.actual.adCost)} (harga jual ÷ ROAS aktual{' '}
                     {decimal(actualRoas ?? 0)}). Untung setelah iklan = {formatRupiah(r.profit)} −{' '}
                     {formatRupiah(r.actual.adCost)}.

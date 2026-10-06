@@ -128,11 +128,11 @@ export function UploadPage({
     <>
       <PageTitle subtitle="Upload export pesanan dan/atau laporan penghasilan dari Shopee.">Upload</PageTitle>
 
-      <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-stamp/25 bg-stamp-tint px-5 py-4">
-        <IconStore size={22} className="text-stamp" />
-        <span className="text-ink-soft">Upload ke toko:</span>
-        <strong className="text-xl font-semibold text-ink">{store?.name ?? '-'}</strong>
-        <span className="text-sm text-ink-muted">(ganti toko di pilihan Toko pada menu)</span>
+      <div className="on-field mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-3xl bg-white/10 px-5 py-4 text-on-field">
+        <IconStore size={22} className="text-lime" />
+        <span className="text-on-field-muted">Upload ke toko</span>
+        <strong className="font-display text-2xl font-bold">{store?.name ?? '-'}</strong>
+        <span className="text-sm text-on-field-muted">(ganti toko di pilihan Toko pada menu)</span>
       </div>
 
       <div className="mb-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">

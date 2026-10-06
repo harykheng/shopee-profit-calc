@@ -20,48 +20,56 @@
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Azeret Mono';
+  font-family: 'Bricolage Grotesque';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400 800;
   font-display: swap;
-  src: url('/fonts/azeret-mono-latin.woff2') format('woff2');
+  src: url('/fonts/bricolage-grotesque-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Azeret Mono';
+  font-family: 'Bricolage Grotesque';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400 800;
   font-display: swap;
-  src: url('/fonts/azeret-mono-latin-ext.woff2') format('woff2');
+  src: url('/fonts/bricolage-grotesque-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 /*
- * Dunia "nota kasir": lembar kertas putih di atas meja kasir abu-abu dingin,
- * tinta biru-hitam, tinta stempel ungu-biru untuk aksi & pilihan,
- * merah = rugi, hijau = untung, kuning tua = perlu perhatian.
+ * Dunia "cerita bulan ini": seluruh halaman adalah satu bidang warna (biru tinta),
+ * jawaban ditulis besar seperti kalimat cerita, sorotan hijau limau untuk angka yang dicari,
+ * dan lembar putih membulat untuk tabel & formulir yang dikerjakan.
  */
 @theme {
   --font-sans: 'Public Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'Azeret Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --font-display: 'Bricolage Grotesque', 'Public Sans', ui-sans-serif, system-ui, sans-serif;
 
-  /* Meja kasir (latar halaman) dan kertas nota. */
-  --color-counter: #eceef2;
+  /* Bidang halaman. */
+  --color-field: #2b2fa6;
+  --color-field-deep: #1d2079;
+  --color-field-raised: #3b3fb4;
+  --color-on-field: #f6f4ff;
+  --color-on-field-muted: #c3c5f2;
+  --color-lime: #d7f45a;
+  /* Bab iklan & stiker rugi (teks putih 5,4:1); versi terang untuk teks rugi di atas bidang biru (5:1). */
+  --color-coral: #c4361e;
+  --color-coral-soft: #ff9b85;
+
+  /* Lembar kerja di atas bidang. */
+  --color-counter: #eef0f7;
   --color-paper: #ffffff;
-  --color-line: #d8dce3;
-  --color-rule: #aeb5c0;
+  --color-line: #dfe2ee;
+  --color-rule: #b4b9cf;
 
-  /* Tinta. */
-  --color-ink: #17202b;
-  --color-ink-soft: #3a4553;
-  --color-ink-muted: #5a6574;
-  --color-rail: #141b25;
-  --color-rail-raised: #222c3a;
-  --color-rail-text: #c5cdd8;
+  /* Tinta di atas lembar. */
+  --color-ink: #16173d;
+  --color-ink-soft: #3b3d63;
+  --color-ink-muted: #5d6088;
 
-  /* Tinta stempel: aksi utama, pilihan, fokus. */
+  /* Aksi & pilihan di atas lembar. */
   --color-stamp: #3a3fb8;
   --color-stamp-strong: #2c309b;
   --color-stamp-tint: #ecedfb;
@@ -77,28 +85,31 @@
   --color-info: #1d4f86;
   --color-info-tint: #e8f0fa;
 
-
-  --shadow-sheet: 0 1px 2px rgb(23 32 43 / 0.06), 0 2px 8px rgb(23 32 43 / 0.05);
+  --shadow-sheet: 0 2px 4px rgb(16 18 70 / 0.12), 0 14px 34px rgb(16 18 70 / 0.18);
 }
 
 @layer base {
   html {
-    background: var(--color-counter);
+    background: var(--color-field);
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     accent-color: var(--color-stamp);
     caret-color: var(--color-stamp);
-    scrollbar-color: var(--color-rule) transparent;
+    scrollbar-color: var(--color-field-raised) var(--color-field-deep);
   }
   ::selection {
     background: var(--color-stamp-tint);
     color: var(--color-ink);
   }
   :focus-visible {
-    outline: 2px solid var(--color-stamp);
+    outline: 2px solid var(--focus, var(--color-stamp));
     outline-offset: 2px;
+  }
+  /* Di atas bidang biru, cincin fokus memakai hijau limau supaya terlihat. */
+  .on-field {
+    --focus: var(--color-lime);
   }
   a {
     text-underline-offset: 3px;
@@ -113,9 +124,7 @@
 @layer components {
   /* Angka di nota: Rupiah, persen, ROAS, qty. */
   .num {
-    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.01em;
   }
   /* Garis sobek sebelum total. */
   .tear {
@@ -128,9 +137,9 @@
  * kalau perangkat meminta gerak dikurangi (prefers-reduced-motion).
  */
 @layer components {
-  /* Cap dicapkan: turun dari atas, sedikit kebesaran, lalu menempel. Kemiringan tetap dari kelas -rotate-2. */
+  /* Stiker ditempel: muncul kecil, memantul sedikit kebesaran, lalu menempel. Kemiringan dari kelas -rotate-3. */
   .stamp-in {
-    animation: stamp-in 420ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+    animation: stamp-in 460ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
     animation-delay: var(--stamp-delay, 0ms);
   }
   /* Struk dicetak: baris nota muncul satu per satu dari atas. */
@@ -144,6 +153,23 @@
   .print-in > :nth-child(n + 6) { animation-delay: 350ms; }
   .print-last {
     animation: print-line 320ms cubic-bezier(0.2, 0.7, 0.3, 1) 260ms both;
+  }
+  /* Kata-kata judul cerita naik satu per satu. */
+  .word-rise {
+    display: inline-block;
+    white-space: pre;
+    animation: word-rise 520ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  }
+  /* Batang "dari setiap Rp100" tumbuh dari dasar (tegak) atau dari kiri (mendatar). */
+  .grow-split {
+    transform-origin: left;
+    animation: grow-x 620ms cubic-bezier(0.25, 0.8, 0.25, 1) both;
+  }
+  @media (min-width: 1024px) {
+    .grow-split {
+      transform-origin: bottom;
+      animation-name: grow-y;
+    }
   }
   /* Panel yang dibuka (status, "Kenapa…?", form upload iklan). */
   .reveal {
@@ -174,14 +200,14 @@
 @keyframes stamp-in {
   0% {
     opacity: 0;
-    transform: translateY(-10px) scale(1.7) rotate(-6deg);
+    transform: scale(0.3) rotate(-14deg);
   }
   55% {
     opacity: 1;
-    transform: translateY(0) scale(0.93) rotate(0deg);
+    transform: scale(1.14) rotate(3deg);
   }
-  75% {
-    transform: scale(1.04);
+  78% {
+    transform: scale(0.95) rotate(-1deg);
   }
   100% {
     opacity: 1;
@@ -200,6 +226,35 @@
     transform: none;
     /* Lebih lebar dari barisnya supaya cincin fokus tautan di dalamnya tidak terpotong. */
     clip-path: inset(-1rem);
+  }
+}
+
+@keyframes word-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: none;
   }
 }
 
@@ -241,6 +296,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .stamp-in,
+  .word-rise,
+  .grow-split,
   .print-in > *,
   .print-last,
   .reveal,

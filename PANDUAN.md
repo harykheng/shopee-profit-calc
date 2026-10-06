@@ -42,11 +42,11 @@ Hal penting yang perlu diingat:
   hari yang sama dengan pesanan selesai.
 - **Modal hanya dari barang yang selesai** di bulan itu. Barang batal dan barang retur tidak
   dihitung.
-- **Toko dipilih di pilihan Toko pada menu** (menu samping di laptop, bar atas di HP/iPad) dan
+- **Toko dipilih di pilihan Toko pada menu** (di bar paling atas, di laptop maupun HP/iPad) dan
   berlaku untuk semua halaman. Selalu cek nama toko sebelum upload.
 - **Menu dibagi dua:** *Lihat hasil* (Rekap, Iklan, Simulasi Harga) dan *Input bulanan* (Upload, HPP,
-  Biaya). Di HP/iPad keenam menu ada di **bawah layar**. Aplikasi langsung terbuka di **Rekap**,
-  dan angka **untung bersih** tampil paling atas.
+  Biaya). Di laptop menunya ada di **bar atas**; di HP/iPad keenam menu ada di **bawah layar**.
+  Aplikasi langsung terbuka di **Rekap**, dan angka **untung bersih** tampil paling atas.
 
 ---
 
@@ -162,9 +162,21 @@ Biaya di luar laporan penghasilan Shopee, per toko per bulan:
 
 Pilih bulan di atas. Untuk melihat beberapa bulan, pilih **"Lihat beberapa bulan"**.
 
-### Kotak untung bersih (nota)
+Rekap dibaca seperti cerita, dari atas ke bawah:
 
-Dibaca dari atas ke bawah seperti nota:
+| Bab | Isi |
+|---|---|
+| **Bab 1 · Untung** | Kalimat besar, mis. "Agustus 2026, Harel Beauty untung **Rp2,78 juta**", lalu angka tepatnya (Rp2.785.162), status bulan, dan batang **"Dari setiap Rp100 yang masuk"** (berapa untuk modal, biaya, dan berapa yang jadi untung). Kalau rugi, kalimatnya bilang "rugi". |
+| **Bab 2 · Dari mana angkanya** | Hitungannya (lihat di bawah). |
+| **Bab 3 · Iklan** | Ringkasan iklan bulan yang sama (untung/rugi setelah iklan, iklan yang sebaiknya dimatikan). Hanya muncul kalau melihat satu bulan; kalau belum ada data iklan 1 bulan penuh, ada ajakan untuk upload. |
+| **Bab 4 · Pesanan & produk** | Tab-tab rincian (lihat di bawah). |
+
+> Angka besar di Bab 1 dibulatkan ke bawah supaya mudah dibaca ("Rp2,78 juta"). Angka pastinya
+> selalu ada di kalimat "Tepatnya …" dan di Bab 2.
+
+### Dari mana angkanya (Bab 2)
+
+Dibaca dari atas ke bawah:
 
 ```
   Uang masuk dari Shopee      Rp…   (uang yang cair bulan ini, refund sudah dipotong)
@@ -195,7 +207,7 @@ Yang dicek:
 > pesanan selesai malam hari, Shopee mencairkan uangnya besok. Datanya sudah cocok dan tidak
 > menghalangi status final.
 
-### Tab-tab di bawah nota
+### Tab-tab di Bab 4
 
 | Tab | Isi |
 |---|---|
@@ -243,7 +255,10 @@ Kalau digabung, produk A dinilai dari data Juli + Agustus.
 - Yang ikut digabung hanya data iklan **1 bulan penuh** (data mingguan tidak ikut, supaya tidak
   dobel).
 
-### Nota iklan (paling atas)
+### Ringkasan iklan (paling atas)
+
+Paling atas ada kalimat jawaban, mis. **"Juli 2026, iklan rugi Rp283 ribu"** dan berapa iklan yang
+sebaiknya dimatikan. Di bawahnya rinciannya:
 
 ```
 Biaya iklan                                   Rp…

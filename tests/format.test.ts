@@ -7,6 +7,7 @@ import {
   formatMonth,
   formatPercent,
   formatRupiah,
+  formatRupiahShort,
   monthEnd,
 } from '../src/lib/format'
 
@@ -37,5 +38,22 @@ describe('format', () => {
     expect(monthEnd('2026-02-01')).toBe('2026-02-28')
     expect(monthEnd('2028-02-01')).toBe('2028-02-29')
     expect(currentMonth(new Date('2026-08-31T18:00:00Z'))).toBe('2026-09-01')
+  })
+})
+
+describe('formatRupiahShort', () => {
+  it('meringkas angka besar tanpa membulatkan ke atas', () => {
+    expect(formatRupiahShort(2785162)).toBe('Rp2,78 juta')
+    expect(formatRupiahShort(13771357)).toBe('Rp13,77 juta')
+    expect(formatRupiahShort(2000000)).toBe('Rp2 juta')
+    expect(formatRupiahShort(150000)).toBe('Rp150 ribu')
+    expect(formatRupiahShort(283642)).toBe('Rp283 ribu')
+    expect(formatRupiahShort(1250000000)).toBe('Rp1,25 miliar')
+  })
+  it('negatif dan angka kecil', () => {
+    expect(formatRupiahShort(-283642)).toBe('-Rp283 ribu')
+    expect(formatRupiahShort(-2785162)).toBe('-Rp2,78 juta')
+    expect(formatRupiahShort(950)).toBe('Rp950')
+    expect(formatRupiahShort(null)).toBe('-')
   })
 })
