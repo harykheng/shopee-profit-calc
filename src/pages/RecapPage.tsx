@@ -293,8 +293,20 @@ function NotaCard({
 
   return (
     <section className="space-y-5 rounded-lg border border-line bg-paper p-5 shadow-sheet sm:p-7">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Untung bersih {period}</h1>
+      {/* Jawaban dulu: angka untung bersih paling atas, rinciannya di nota di bawah. */}
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-ink-soft sm:text-xl">Untung bersih {period}</h1>
+          <p
+            className={`num mt-1 text-4xl font-bold tracking-tight sm:text-5xl ${t.profit < 0 ? 'text-loss' : 'text-ink'}`}
+          >
+            {formatRupiah(t.profit)}
+          </p>
+          {margin !== null && <p className="num mt-1 text-sm text-ink-muted">{formatPercent(margin)} dari uang masuk</p>}
+          {!allFinal && firstTodo && (
+            <p className="mt-1 text-sm font-medium text-warn">Belum final: {firstTodo.short}</p>
+          )}
+        </div>
         {statuses.length > 0 && (
           <button
             type="button"
@@ -383,21 +395,12 @@ function NotaCard({
         />
       </div>
 
-      <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-x-2 gap-y-1">
+      {/* Baris total nota: menutup hitungan di atasnya. */}
+      <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2">
         <span className="num text-center text-xl font-bold text-ink-muted">=</span>
-        <span>
-          <span className="block text-lg font-bold uppercase tracking-wide">Untung bersih</span>
-          {!allFinal && firstTodo && (
-            <span className="block text-sm font-medium text-warn">Belum final: {firstTodo.short}</span>
-          )}
-        </span>
-        <span className="col-span-full text-right sm:col-span-1">
-          <span className={`num block text-3xl font-bold sm:text-4xl ${t.profit < 0 ? 'text-loss' : 'text-ink'}`}>
-            {formatRupiah(t.profit)}
-          </span>
-          {margin !== null && (
-            <span className="num block text-sm text-ink-muted">{formatPercent(margin)} dari uang masuk</span>
-          )}
+        <span className="font-bold uppercase tracking-wide">Untung bersih</span>
+        <span className={`num whitespace-nowrap text-right text-xl font-bold ${t.profit < 0 ? 'text-loss' : 'text-ink'}`}>
+          {formatRupiah(t.profit)}
         </span>
       </div>
 

@@ -123,7 +123,7 @@
       "name": "Rail Navigation",
       "kind": "nav",
       "refersTo": "nav-item",
-      "description": "Ink rail with the active page as a paper pill.",
+      "description": "Ink rail with the active page as a paper pill (laptop). Below 1024px the same items sit in a fixed ink bottom bar: icon over a short label, active icon in a small paper pill.",
       "html": "<nav class=\"ds-rail\"><a class=\"ds-rail-item is-active\" href=\"#\">Rekap</a><a class=\"ds-rail-item\" href=\"#\">Iklan</a><a class=\"ds-rail-item\" href=\"#\">Simulasi Harga</a></nav>",
       "css": ".ds-rail{display:flex;flex-direction:column;gap:2px;width:14rem;padding:16px;background:#141b25} .ds-rail-item{display:flex;align-items:center;min-height:44px;padding:0 12px;border-radius:6px;color:#c5cdd8;font:500 1rem 'Public Sans',system-ui,sans-serif;text-decoration:none;transition:background .15s,color .15s} .ds-rail-item:hover{background:rgb(255 255 255 / .05);color:#fff} .ds-rail-item.is-active{background:#fff;color:#17202b} .ds-rail-item:focus-visible{outline:2px solid #3a3fb8;outline-offset:2px}"
     },
