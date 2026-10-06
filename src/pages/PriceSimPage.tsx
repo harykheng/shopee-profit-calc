@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Alert, Button, Card, ErrorBox, PageTitle } from '../components/ui'
+import { Alert, Button, Card, ErrorBox, PageTitle, Stamp } from '../components/ui'
+import { IconCheck, IconCornerDownRight, IconSearch } from '../components/icons'
 import { RupiahInput } from '../components/pickers'
 import {
   ADS_TARGET_PROFIT,
@@ -185,7 +186,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-        <Card title="Isi angka">
+        <Card title="Isi angka" className="self-start">
           <div className="space-y-4">
             <Field
               label="HPP per unit jual"
@@ -208,7 +209,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                 suffix="%"
               />
             </Field>
-            <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-slate-300 px-4">
+            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-line px-3 transition-colors hover:border-ink-muted">
               <input
                 type="checkbox"
                 checked={xtra}
@@ -216,10 +217,10 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                   setXtra(e.target.checked)
                   setFeesSaved(false)
                 }}
-                className="h-6 w-6 accent-orange-600"
+                className="h-5 w-5"
               />
-              <span className="text-lg">
-                Ikut Gratis Ongkir XTRA <span className="text-slate-500">({formatPercent(XTRA_FEE_RATE * 100)})</span>
+              <span>
+                Ikut Gratis Ongkir XTRA <span className="num text-ink-muted">({formatPercent(XTRA_FEE_RATE * 100)})</span>
               </span>
             </label>
             {selected && (
@@ -232,8 +233,13 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                 >
                   {feesSaving ? 'Menyimpan…' : 'Simpan % admin & XTRA untuk produk ini'}
                 </Button>
-                <p className="mt-1 text-sm text-slate-500">Berlaku untuk semua variasi produk ini.</p>
-                {feesSaved && <p className="mt-1 font-semibold text-emerald-700">✓ Tersimpan.</p>}
+                <p className="mt-1 text-sm text-ink-muted">Berlaku untuk semua variasi produk ini.</p>
+                {feesSaved && (
+                  <p className="mt-1 flex items-center gap-1.5 font-semibold text-gain">
+                    <IconCheck size={18} />
+                    Tersimpan.
+                  </p>
+                )}
                 {feesError ? (
                   <div className="mt-2">
                     <ErrorBox error={feesError} />
@@ -281,7 +287,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                   />
                   <NotaLine op="−" label="Packaging" detail="per order" amount={formatRupiah(packaging ?? 0)} />
                 </div>
-                <div className="mt-1 border-t-2 border-dashed border-slate-300">
+                <div className="mt-1 border-t-2 border-dashed border-rule">
                   <NotaLine
                     op="="
                     label="Penghasilan"
@@ -294,19 +300,19 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                   />
                   <NotaLine op="−" label="HPP" detail="modal per unit jual" amount={formatRupiah(hpp)} />
                 </div>
-                <div className="mt-1 grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2 border-t-2 border-slate-800 pt-3">
-                  <span className="text-center font-extrabold text-slate-400">=</span>
+                <div className="mt-1 grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2 border-t-2 border-dashed border-rule pt-3">
+                  <span className="num text-center text-xl font-bold text-ink-muted">=</span>
                   <span className="font-bold uppercase tracking-wide">Untung per order</span>
                   <span
-                    className={`whitespace-nowrap text-right text-2xl font-extrabold tabular-nums ${
-                      r.profitable ? 'text-emerald-700' : 'text-red-700'
+                    className={`num whitespace-nowrap text-right text-3xl font-bold ${
+                      r.profitable ? 'text-gain' : 'text-loss'
                     }`}
                   >
                     {formatRupiah(r.profit)}
                   </span>
                   <span />
-                  <span className="text-sm text-slate-500">sebelum iklan</span>
-                  <span className={`text-right font-semibold ${r.profitable ? 'text-emerald-700' : 'text-red-700'}`}>
+                  <span className="text-sm text-ink-muted">sebelum iklan</span>
+                  <span className={`num text-right font-medium ${r.profitable ? 'text-gain' : 'text-loss'}`}>
                     {formatPercent(r.margin * 100)}
                   </span>
                 </div>
@@ -319,25 +325,24 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
 
               {r.actual && (
                 <div
-                  className={`rounded-2xl border-2 p-5 ${
-                    r.actual.profitAfterAds >= 0 ? 'border-emerald-300 bg-emerald-50' : 'border-red-300 bg-red-50'
+                  className={`rounded-lg border p-5 shadow-sheet ${
+                    r.actual.profitAfterAds >= 0 ? 'border-gain/30 bg-gain-tint' : 'border-loss/30 bg-loss-tint'
                   }`}
                 >
-                  <span
-                    className={`inline-block rounded-full px-3 py-1 text-base font-bold ${
-                      r.actual.profitAfterAds >= 0 ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
-                    }`}
-                  >
-                    {r.actual.profitAfterAds >= 0 ? 'Iklan untung' : 'Iklan rugi'}
-                  </span>
-                  <p
-                    className={`mt-2 text-2xl font-extrabold tabular-nums ${
-                      r.actual.profitAfterAds >= 0 ? 'text-emerald-800' : 'text-red-800'
-                    }`}
-                  >
-                    {formatRupiah(Math.abs(r.actual.profitAfterAds))} per order
-                  </p>
-                  <p className="mt-1 text-slate-700">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p
+                      className={`num text-2xl font-bold ${
+                        r.actual.profitAfterAds >= 0 ? 'text-gain' : 'text-loss'
+                      }`}
+                    >
+                      {formatRupiah(Math.abs(r.actual.profitAfterAds))}
+                      <span className="ml-1.5 font-sans text-base font-medium">per order</span>
+                    </p>
+                    <Stamp tone={r.actual.profitAfterAds >= 0 ? 'gain' : 'loss'}>
+                      {r.actual.profitAfterAds >= 0 ? 'Iklan untung' : 'Iklan rugi'}
+                    </Stamp>
+                  </div>
+                  <p className="mt-2 text-ink-soft">
                     Biaya iklan per order {formatRupiah(r.actual.adCost)} (harga jual ÷ ROAS aktual{' '}
                     {decimal(actualRoas ?? 0)}). Untung setelah iklan = {formatRupiah(r.profit)} −{' '}
                     {formatRupiah(r.actual.adCost)}.
@@ -346,7 +351,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
               )}
 
               <Card title="Hasil">
-                <dl className="divide-y divide-slate-100">
+                <dl className="divide-y divide-line/70">
                   <Result
                     label="Balik modal butuh ROAS"
                     value={r.bepRoas !== null ? formatRoas(r.bepRoas) : 'Harga ini sudah rugi tanpa iklan'}
@@ -390,7 +395,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                     hint={exactHint(r.priceTargetMargin, 'Sebelum iklan.')}
                   />
                 </dl>
-                <p className="mt-3 text-sm text-slate-500">Saran harga dibulatkan ke atas ke Rp1.000.</p>
+                <p className="mt-3 text-sm text-ink-muted">Saran harga dibulatkan ke atas ke Rp1.000.</p>
               </Card>
             </>
           )}
@@ -422,10 +427,15 @@ function Field({
 }) {
   return (
     <div>
-      <p className="mb-1 text-lg font-semibold">{label}</p>
+      <p className="mb-1.5 font-medium">{label}</p>
       {children}
-      {note && <p className="mt-1 text-sm font-medium text-sky-800">↳ {note}</p>}
-      {hint && <p className="mt-1 text-sm text-slate-500">{hint}</p>}
+      {note && (
+        <p className="mt-1.5 flex gap-1.5 text-sm font-medium text-info">
+          <IconCornerDownRight size={16} className="mt-0.5 shrink-0" />
+          {note}
+        </p>
+      )}
+      {hint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
     </div>
   )
 }
@@ -495,8 +505,8 @@ function ProductPicker({
     return (
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-[16rem] flex-1">
-          <p className="line-clamp-3 text-lg font-semibold">{selected.product_name}</p>
-          {selected.variant_name && <p className="text-slate-600">Variasi: {selected.variant_name}</p>}
+          <p className="line-clamp-3 font-semibold">{selected.product_name}</p>
+          {selected.variant_name && <p className="text-ink-soft">Variasi: {selected.variant_name}</p>}
         </div>
         <Button variant="secondary" onClick={onClear}>
           Ganti / isi manual
@@ -507,21 +517,27 @@ function ProductPicker({
 
   return (
     <div>
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={products ? 'Ketik nama produk, mis. pigeon' : 'Memuat produk…'}
-        aria-label="Cari produk"
-        disabled={!products}
-        className="min-h-12 w-full rounded-xl border border-slate-300 px-4 text-lg focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
-      />
-      <p className="mt-1 text-sm text-slate-500">
+      <div className="relative">
+        <IconSearch
+          size={18}
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"
+        />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={products ? 'Ketik nama produk, mis. pigeon' : 'Memuat produk…'}
+          aria-label="Cari produk"
+          disabled={!products}
+          className="min-h-11 w-full rounded-md border border-line bg-paper pl-10 pr-3 transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25"
+        />
+      </div>
+      <p className="mt-1 text-sm text-ink-muted">
         HPP, harga jual terakhir, dan ROAS aktual akan terisi otomatis. Atau lewati dan isi angka sendiri di bawah.
       </p>
       {query.trim() !== '' && (
-        <ul className="mt-3 max-h-80 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200">
-          {results.length === 0 && <li className="p-3 text-slate-500">Tidak ada produk yang cocok.</li>}
+        <ul className="mt-3 max-h-80 divide-y divide-line/70 overflow-y-auto rounded-md border border-line">
+          {results.length === 0 && <li className="p-3 text-ink-muted">Tidak ada produk yang cocok.</li>}
           {results.slice(0, MAX_RESULTS).map((p) => (
             <li key={p.id}>
               <button
@@ -530,17 +546,17 @@ function ProductPicker({
                   setQuery('')
                   onPick(p)
                 }}
-                className="block min-h-12 w-full px-3 py-2 text-left hover:bg-orange-50"
+                className="block min-h-11 w-full px-3 py-2 text-left hover:bg-stamp-tint"
               >
                 <span className="line-clamp-2 font-medium">{p.product_name}</span>
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-ink-muted">
                   {p.variant_name || 'tanpa variasi'} · HPP {p.hpp === null ? 'belum diisi' : formatRupiah(Number(p.hpp))}
                 </span>
               </button>
             </li>
           ))}
           {results.length > MAX_RESULTS && (
-            <li className="p-3 text-sm text-slate-500">
+            <li className="p-3 text-sm text-ink-muted">
               {results.length - MAX_RESULTS} produk lain — ketik lebih spesifik.
             </li>
           )}
@@ -566,14 +582,14 @@ function Result({
   return (
     <div className="py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <dt className="font-semibold text-slate-700">{label}</dt>
+        <dt className="font-medium text-ink">{label}</dt>
         <dd
-          className={`tabular-nums ${bad ? 'text-base font-semibold text-red-700' : strong ? 'text-2xl font-extrabold' : 'text-xl font-bold'}`}
+          className={`${bad ? 'font-medium text-loss' : strong ? 'num text-2xl font-bold' : 'num text-xl font-semibold'}`}
         >
           {value}
         </dd>
       </div>
-      {hint && <p className="mt-1 text-sm text-slate-500">{hint}</p>}
+      {hint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
     </div>
   )
 }
@@ -635,14 +651,14 @@ function DecimalInput({
         onKeyDown={(e) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
         }}
-        className={`min-h-12 w-full rounded-xl border px-3 text-right text-lg tabular-nums focus:outline-none focus:ring-2 ${
+        className={`num min-h-11 w-full rounded-md border px-3 text-right text-base transition-colors placeholder:font-sans placeholder:text-ink-muted focus:outline-none focus:ring-2 ${
           suffix ? 'pr-9' : ''
-        } ${invalid ? 'border-red-500 ring-red-200' : 'border-slate-300 bg-white focus:border-orange-500 focus:ring-orange-200'}`}
+        } ${invalid ? 'border-loss ring-loss/20' : 'border-line bg-paper hover:border-ink-muted focus:border-stamp focus:ring-stamp/25'}`}
       />
       {suffix && (
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">{suffix}</span>
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted">{suffix}</span>
       )}
-      {invalid && <p className="mt-1 text-sm text-red-700">Isi angka saja, mis. 8,25</p>}
+      {invalid && <p className="mt-1 text-sm text-loss">Isi angka saja, mis. 8,25</p>}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent } from 'react'
-import { Alert, Button, Card, ErrorBox, PageTitle, Spinner } from '../components/ui'
+import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, Stamp } from '../components/ui'
+import { IconStore, IconUpload } from '../components/icons'
 import { fetchProducts, saveAdjustments, saveIncome, saveOrderItems } from '../lib/api'
 import { navigate } from '../lib/router'
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from '../lib/format'
@@ -126,20 +127,21 @@ export function UploadPage({
     <>
       <PageTitle subtitle="Upload export pesanan dan/atau laporan penghasilan dari Shopee.">Upload</PageTitle>
 
-      <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border-2 border-orange-200 bg-orange-50 px-5 py-4">
-        <span className="text-lg text-slate-700">Upload ke toko:</span>
-        <strong className="text-2xl text-orange-700">{store?.name ?? '-'}</strong>
-        <span className="text-sm text-slate-500">(ganti toko di menu kanan atas)</span>
+      <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-stamp/25 bg-stamp-tint px-5 py-4">
+        <IconStore size={22} className="text-stamp" />
+        <span className="text-ink-soft">Upload ke toko:</span>
+        <strong className="text-xl font-semibold text-ink">{store?.name ?? '-'}</strong>
+        <span className="text-sm text-ink-muted">(ganti toko di pilihan Toko pada menu)</span>
       </div>
 
-      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+      <div className="mb-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
         <Card title="1. Export pesanan (Excel)">
-          <p className="mb-3 text-slate-600">Seller Centre → Pesanan Saya → Export, status <strong>Semua</strong>. File .xlsx</p>
+          <p className="mb-3 text-ink-soft">Seller Centre → Pesanan Saya → Export, status <strong>Semua</strong>. File .xlsx</p>
           <FileInput key={`o${inputKey}`} accept=".xlsx,.xls" onChange={onOrdersFile} />
           <OrdersPreview parsed={orders} />
         </Card>
         <Card title="2. Laporan penghasilan (PDF)">
-          <p className="mb-3 text-slate-600">Keuangan → Penghasilan Saya → laporan bulanan. File .pdf</p>
+          <p className="mb-3 text-ink-soft">Keuangan → Penghasilan Saya → laporan bulanan. File .pdf</p>
           <FileInput key={`i${inputKey}`} accept=".pdf,application/pdf" onChange={onIncomeFile} />
           <IncomePreview parsed={income} store={store} />
         </Card>
@@ -147,7 +149,7 @@ export function UploadPage({
 
       {(orders?.result || income?.result) && (
         <Card title="3. Simpan" className="mb-6">
-          <p className="mb-4 text-lg">
+          <p className="mb-4 text-ink-soft">
             Data akan disimpan ke toko <strong>{store?.name ?? '(belum dipilih)'}</strong>. Upload file yang sama dua
             kali aman — data tidak akan dobel.
           </p>
@@ -171,11 +173,12 @@ export function UploadPage({
 function FileInput({ accept, onChange }: { accept: string; onChange: (e: ChangeEvent<HTMLInputElement>) => void }) {
   const [name, setName] = useState('')
   return (
-    <label className="flex cursor-pointer flex-wrap items-center gap-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 hover:border-orange-400">
-      <span className="flex min-h-12 items-center rounded-xl bg-orange-600 px-5 text-lg font-semibold text-white">
+    <label className="flex cursor-pointer flex-wrap items-center gap-4 rounded-md border-2 border-dashed border-rule bg-counter/40 p-4 transition-colors hover:border-stamp hover:bg-stamp-tint/40">
+      <span className="inline-flex min-h-11 items-center gap-2 rounded-md bg-stamp px-4 font-semibold text-white">
+        <IconUpload size={18} />
         Pilih file
       </span>
-      <span className="min-w-0 flex-1 truncate text-lg text-slate-600">{name || 'Belum ada file dipilih'}</span>
+      <span className="min-w-0 flex-1 truncate text-ink-soft">{name || 'Belum ada file dipilih'}</span>
       <input
         type="file"
         accept={accept}
@@ -226,34 +229,34 @@ function OrdersPreview({ parsed }: { parsed: Parsed<OrdersParseResult> | null })
       <Warnings warnings={r.warnings} />
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="border-b text-slate-500">
+          <thead className="border-b border-rule text-ink-muted">
             <tr>
-              <th className="py-2 pr-3">No. pesanan</th>
-              <th className="py-2 pr-3">Produk</th>
-              <th className="py-2 pr-3 text-right">Qty</th>
-              <th className="py-2 pr-3">Selesai</th>
+              <th className="py-2 pr-3 font-medium">No. pesanan</th>
+              <th className="py-2 pr-3 font-medium">Produk</th>
+              <th className="py-2 pr-3 text-right font-medium">Qty</th>
+              <th className="py-2 pr-3 font-medium">Selesai</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((i) => (
-              <tr key={i.order_no + i.sku} className="border-b border-slate-100 align-top">
-                <td className="py-2 pr-3 font-mono text-xs">{i.order_no}</td>
+              <tr key={i.order_no + i.sku} className="border-b border-line/70 align-top">
+                <td className="num py-2 pr-3 text-xs">{i.order_no}</td>
                 <td className="py-2 pr-3">
                   {i.product_name}
-                  {i.variant_name && <span className="text-slate-500"> — {i.variant_name}</span>}
+                  {i.variant_name && <span className="text-ink-muted"> — {i.variant_name}</span>}
                 </td>
-                <td className="py-2 pr-3 text-right tabular-nums">
+                <td className="py-2 pr-3 text-right num">
                   {i.qty}
-                  {i.returned_qty > 0 && <span className="block text-xs text-amber-700">retur {i.returned_qty}</span>}
+                  {i.returned_qty > 0 && <span className="block text-xs text-warn">retur {i.returned_qty}</span>}
                 </td>
-                <td className="whitespace-nowrap py-2 pr-3">{formatDateTime(i.completed_at)}</td>
+                <td className="num whitespace-nowrap py-2 pr-3 text-xs">{formatDateTime(i.completed_at)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
       {r.items.length > PREVIEW_ROWS && (
-        <button type="button" className="mt-2 min-h-12 text-lg text-orange-700 underline" onClick={() => setShowAll((v) => !v)}>
+        <button type="button" className="mt-2 min-h-11 font-medium text-stamp underline" onClick={() => setShowAll((v) => !v)}>
           {showAll ? 'Tampilkan lebih sedikit' : `Tampilkan semua (${r.items.length})`}
         </button>
       )}
@@ -280,7 +283,7 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
     <div className="mt-4">
       <Alert tone="success" title={parsed.fileName}>
         Periode {formatDate(r.periodStart)} – {formatDate(r.periodEnd)}: {r.days.length} hari dana dilepas, total
-        penghasilan <strong>{formatRupiah(r.totalIncome + adjustmentsTotal)}</strong>
+        penghasilan <strong className="num">{formatRupiah(r.totalIncome + adjustmentsTotal)}</strong>
         {adjustmentsTotal !== 0 && <> (termasuk biaya penyesuaian {formatRupiah(adjustmentsTotal)})</>}.
       </Alert>
       {shopMismatch && (
@@ -313,29 +316,29 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
       <Warnings warnings={r.warnings} />
       <div className="mt-4 max-h-96 overflow-auto">
         <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 border-b bg-white text-slate-500">
+          <thead className="sticky top-0 border-b border-rule bg-paper text-ink-muted">
             <tr>
-              <th className="py-2 pr-3">Tanggal dana dilepas</th>
-              <th className="py-2 pr-3 text-right">Subtotal pesanan</th>
-              <th className="py-2 pr-3 text-right">Penghasilan</th>
+              <th className="py-2 pr-3 font-medium">Tanggal dana dilepas</th>
+              <th className="py-2 pr-3 text-right font-medium">Subtotal pesanan</th>
+              <th className="py-2 pr-3 text-right font-medium">Penghasilan</th>
             </tr>
           </thead>
           <tbody>
             {r.days.map((d) => (
-              <tr key={d.released_date} className="border-b border-slate-100">
-                <td className="py-2 pr-3">{formatDate(d.released_date)}</td>
-                <td className="py-2 pr-3 text-right tabular-nums">{formatRupiah(d.subtotal_pesanan)}</td>
-                <td className="py-2 pr-3 text-right tabular-nums">{formatRupiah(d.total_income)}</td>
+              <tr key={d.released_date} className="border-b border-line/70">
+                <td className="num py-2 pr-3">{formatDate(d.released_date)}</td>
+                <td className="py-2 pr-3 text-right num">{formatRupiah(d.subtotal_pesanan)}</td>
+                <td className="py-2 pr-3 text-right num">{formatRupiah(d.total_income)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="font-semibold">
               <td className="py-2 pr-3">Total</td>
-              <td className="py-2 pr-3 text-right tabular-nums">
+              <td className="py-2 pr-3 text-right num">
                 {formatRupiah(r.days.reduce((s, d) => s + d.subtotal_pesanan, 0))}
               </td>
-              <td className="py-2 pr-3 text-right tabular-nums">{formatRupiah(r.totalIncome)}</td>
+              <td className="py-2 pr-3 text-right num">{formatRupiah(r.totalIncome)}</td>
             </tr>
           </tfoot>
         </table>
@@ -347,33 +350,41 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
 function SaveSummaryCard({ summary, onAgain }: { summary: SaveSummary; onAgain: () => void }) {
   const { orders, income, missingHpp } = summary
   return (
-    <Card title={`Berhasil disimpan ke ${summary.storeName}`} className="mb-6 border-emerald-300">
+    <Card
+      title={
+        <span className="flex flex-wrap items-center justify-between gap-3">
+          Berhasil disimpan ke {summary.storeName}
+          <Stamp tone="gain">Tersimpan</Stamp>
+        </span>
+      }
+      className="mb-6"
+    >
       <div className="grid gap-4 md:grid-cols-2">
         {orders && (
-          <div className="rounded-xl bg-slate-50 p-4 text-lg">
+          <div className="rounded-md bg-counter/60 p-4">
             <p className="font-semibold">Item pesanan</p>
             <ul className="mt-2 space-y-1">
-              <li>Baru: <strong>{formatNumber(orders.inserted)}</strong></li>
-              <li>Diperbarui: <strong>{formatNumber(orders.updated)}</strong></li>
-              <li>Sudah ada, tidak berubah: <strong>{formatNumber(orders.unchanged)}</strong></li>
+              <li>Baru: <strong className="num">{formatNumber(orders.inserted)}</strong></li>
+              <li>Diperbarui: <strong className="num">{formatNumber(orders.updated)}</strong></li>
+              <li>Sudah ada, tidak berubah: <strong className="num">{formatNumber(orders.unchanged)}</strong></li>
               {orders.skipped > 0 && (
-                <li>Dilewati (data tidak lengkap): <strong>{formatNumber(orders.skipped)}</strong></li>
+                <li>Dilewati (data tidak lengkap): <strong className="num">{formatNumber(orders.skipped)}</strong></li>
               )}
             </ul>
           </div>
         )}
         {income && (
-          <div className="rounded-xl bg-slate-50 p-4 text-lg">
+          <div className="rounded-md bg-counter/60 p-4">
             <p className="font-semibold">Penghasilan per hari</p>
             <ul className="mt-2 space-y-1">
-              <li>Baru: <strong>{formatNumber(income.inserted)}</strong></li>
-              <li>Diperbarui: <strong>{formatNumber(income.updated)}</strong></li>
-              <li>Sudah ada, tidak berubah: <strong>{formatNumber(income.unchanged)}</strong></li>
-              <li>Total penghasilan di file: <strong>{formatRupiah(income.totalIncome + income.adjustmentsTotal)}</strong></li>
+              <li>Baru: <strong className="num">{formatNumber(income.inserted)}</strong></li>
+              <li>Diperbarui: <strong className="num">{formatNumber(income.updated)}</strong></li>
+              <li>Sudah ada, tidak berubah: <strong className="num">{formatNumber(income.unchanged)}</strong></li>
+              <li>Total penghasilan di file: <strong className="num">{formatRupiah(income.totalIncome + income.adjustmentsTotal)}</strong></li>
               {income.adjustmentsSaved > 0 && (
                 <li>
                   Termasuk {formatNumber(income.adjustmentsSaved)} biaya penyesuaian:{' '}
-                  <strong>{formatRupiah(income.adjustmentsTotal)}</strong>
+                  <strong className="num">{formatRupiah(income.adjustmentsTotal)}</strong>
                 </li>
               )}
             </ul>

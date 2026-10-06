@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
-import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, selectClass } from '../components/ui'
+import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, Stamp, selectClass, type StampTone } from '../components/ui'
+import { IconAlertCircle, IconCheck, IconInfo, IconUpload } from '../components/icons'
 import {
   fetchAdReports,
   fetchAdRows,
@@ -149,13 +150,13 @@ const roundUp1 = (v: number) => Math.ceil(v * 10 - 1e-9) / 10
 /** Harga dibulatkan ke atas ke ratusan. */
 const roundUpPrice = (v: number) => Math.ceil(v / 100) * 100
 
-const VERDICTS: Record<AdVerdict, { label: string; icon: string; pill: string; border: string }> = {
-  takedown: { label: 'Takedown', icon: '🔴', pill: 'bg-red-100 text-red-800', border: 'border-red-300' },
-  kurang: { label: 'ROAS terlalu kecil', icon: '🟠', pill: 'bg-amber-100 text-amber-900', border: 'border-amber-300' },
-  hpp_kosong: { label: 'HPP belum diisi', icon: '⚪', pill: 'bg-slate-100 text-slate-700', border: 'border-slate-200' },
-  hero: { label: 'Hero', icon: '⭐', pill: 'bg-emerald-100 text-emerald-800', border: 'border-emerald-300' },
-  aman: { label: 'Aman', icon: '🟢', pill: 'bg-emerald-50 text-emerald-800', border: 'border-emerald-200' },
-  belum_cukup: { label: 'Data belum cukup', icon: '⚪', pill: 'bg-slate-100 text-slate-700', border: 'border-slate-200' },
+const VERDICTS: Record<AdVerdict, { label: string; tone: StampTone }> = {
+  takedown: { label: 'Takedown', tone: 'loss' },
+  kurang: { label: 'ROAS terlalu kecil', tone: 'warn' },
+  hpp_kosong: { label: 'HPP belum diisi', tone: 'neutral' },
+  hero: { label: 'Hero', tone: 'gain' },
+  aman: { label: 'Aman', tone: 'gain' },
+  belum_cukup: { label: 'Data belum cukup', tone: 'neutral' },
 }
 
 const VERDICT_ORDER: AdVerdict[] = ['takedown', 'kurang', 'hpp_kosong', 'hero', 'aman', 'belum_cukup']
@@ -241,6 +242,7 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
       <UploadCard
         store={store}
         stores={stores}
+        hasData={periods.length > 0}
         onSaved={(key) => {
           setSelected(key)
           setReloadKey((k) => k + 1)
@@ -256,7 +258,7 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
       ) : (
         <>
           <div className="mb-6 flex flex-wrap items-center gap-3">
-            <label htmlFor="ads-period" className="text-lg font-semibold">
+            <label htmlFor="ads-period" className="font-semibold">
               Periode iklan:
             </label>
             <select
@@ -275,7 +277,7 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
             </select>
             {selected === COMBINED && (
               <>
-                <label className="flex items-center gap-2 text-lg">
+                <label className="flex items-center gap-2 text-ink-soft">
                   Dari
                   <select value={from} onChange={(e) => setRange({ from: e.target.value, to })} className={selectClass}>
                     {fullMonths.map((x) => (
@@ -285,7 +287,7 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
                     ))}
                   </select>
                 </label>
-                <label className="flex items-center gap-2 text-lg">
+                <label className="flex items-center gap-2 text-ink-soft">
                   sampai
                   <select value={to} onChange={(e) => setRange({ from, to: e.target.value })} className={selectClass}>
                     {fullMonths.map((x) => (
@@ -315,12 +317,16 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
 function UploadCard({
   store,
   stores,
+  hasData,
   onSaved,
 }: {
   store: Store | null
   stores: Store[]
+  /** Sudah ada data iklan: kotak upload dilipat supaya hasil analisis tampil duluan. */
+  hasData: boolean
   onSaved: (periodKey: string) => void
 }) {
+  const [open, setOpen] = useState<boolean | null>(null)
   const [files, setFiles] = useState<ParsedFile[]>([])
   const [inputKey, setInputKey] = useState(0)
   const [elsewhere, setElsewhere] = useState<{ shop: string; storeName: string } | null>(null)
@@ -404,6 +410,7 @@ function UploadCard({
         })
       }
       setSaved(out)
+      setOpen(true)
       // Tampilkan periode yang paling baru.
       const latest = [...groups].sort((a, b) => b.end.localeCompare(a.end) || b.start.localeCompare(a.start))[0]
       onSaved(latest.key)
@@ -415,10 +422,41 @@ function UploadCard({
     }
   }
 
+  if (!(open ?? !hasData)) {
+    return (
+      <section className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-paper px-5 py-3 shadow-sheet">
+        <p>
+          <span className="font-semibold">Data iklan baru?</span>{' '}
+          <span className="text-ink-muted">Upload file CSV per bulan atau per minggu.</span>
+        </p>
+        <Button variant="secondary" onClick={() => setOpen(true)}>
+          <IconUpload size={18} />
+          Upload data iklan
+        </Button>
+      </section>
+    )
+  }
+
   return (
-    <Card title="Upload data iklan (CSV)" className="mb-6">
-      <details className="mb-4 rounded-xl bg-slate-50 p-4 text-slate-700">
-        <summary className="cursor-pointer text-lg font-semibold">Cara ambil file dari Shopee</summary>
+    <Card
+      title={
+        <span className="flex items-center justify-between gap-3">
+          Upload data iklan (CSV)
+          {hasData && (
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="min-h-11 rounded-md px-3 text-base font-medium text-ink-muted transition-colors hover:bg-counter hover:text-ink"
+            >
+              Tutup
+            </button>
+          )}
+        </span>
+      }
+      className="mb-6"
+    >
+      <details className="mb-4 rounded-md bg-counter/60 px-4 py-3 text-ink-soft">
+        <summary className="cursor-pointer font-semibold text-ink">Cara ambil file dari Shopee</summary>
         <ol className="mt-3 list-decimal space-y-2 pl-6">
           <li>
             Seller Centre → <strong>Iklan Saya</strong> → <strong>Download Data</strong>.
@@ -445,11 +483,12 @@ function UploadCard({
         </ol>
       </details>
 
-      <label className="flex cursor-pointer flex-wrap items-center gap-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 hover:border-orange-400">
-        <span className="flex min-h-12 items-center rounded-xl bg-orange-600 px-5 text-lg font-semibold text-white">
+      <label className="flex cursor-pointer flex-wrap items-center gap-4 rounded-md border-2 border-dashed border-rule bg-counter/40 p-4 transition-colors hover:border-stamp hover:bg-stamp-tint/40">
+        <span className="inline-flex min-h-11 items-center gap-2 rounded-md bg-stamp px-4 font-semibold text-white">
+          <IconUpload size={18} />
           Pilih file
         </span>
-        <span className="min-w-0 flex-1 truncate text-lg text-slate-600">
+        <span className="min-w-0 flex-1 truncate text-ink-soft">
           {files.length > 0 ? `${files.length} file dipilih` : 'Boleh pilih beberapa file .csv sekaligus'}
         </span>
         <input key={inputKey} type="file" accept=".csv,text/csv" multiple className="sr-only" onChange={onFiles} />
@@ -460,8 +499,8 @@ function UploadCard({
           {files
             .filter((f) => f.error)
             .map((f) => (
-              <li key={f.fileName} className="rounded-xl border border-slate-200 p-4">
-                <p className="break-all text-sm text-slate-500">{f.fileName}</p>
+              <li key={f.fileName} className="rounded-md border border-line p-4">
+                <p className="break-all text-sm text-ink-muted">{f.fileName}</p>
                 <div className="mt-2">
                   <ErrorBox error={f.error} />
                 </div>
@@ -473,22 +512,26 @@ function UploadCard({
       {groups.map((g) => {
         const note = expenseNote(g)
         return (
-          <section key={g.key} className="mt-4 rounded-xl border border-slate-200 p-4">
-            <h3 className="text-lg font-bold">
+          <section key={g.key} className="mt-4 rounded-md border border-line p-4">
+            <h3 className="font-semibold">
               Periode {formatPeriod(g.start, g.end)}
-              {g.month && <span className="ml-2 text-base font-normal text-slate-500">(1 bulan penuh)</span>}
+              {g.month && <span className="ml-2 text-base font-normal text-ink-muted">(1 bulan penuh)</span>}
             </h3>
             <ul className="mt-2 space-y-2">
               {g.files.map((r, i) => (
                 <li key={`${r.source}-${i}`}>
-                  <p className="font-semibold">✅ {r.sourceLabel}</p>
-                  <p className="text-slate-700">
+                  <p className="flex items-center gap-2 font-semibold">
+                    <IconCheck size={18} className="text-gain" />
+                    {r.sourceLabel}
+                  </p>
+                  <p className="text-ink-soft">
                     Toko di file: {r.shopName || '-'} · Total biaya <strong>{formatRupiah(r.totalSpend)}</strong>
                     {r.productCount > 0 && ` · ${r.productCount} produk dengan biaya`}
                   </p>
                   {r.warnings.map((w) => (
-                    <p key={w.code} className="mt-1 text-amber-700">
-                      ⚠️ {w.message}
+                    <p key={w.code} className="mt-1 flex gap-2 text-warn">
+                      <IconAlertCircle size={18} className="mt-0.5 shrink-0" />
+                      {w.message}
                     </p>
                   ))}
                 </li>
@@ -515,7 +558,7 @@ function UploadCard({
         <div className="mt-4">
           <Alert tone="warning" title="Cek toko dulu">
             Data iklan toko "{elsewhere.shop}" sebelumnya disimpan ke <strong>{elsewhere.storeName}</strong>. Sekarang
-            akan disimpan ke <strong>{store?.name}</strong>. Kalau salah, ganti toko di menu kanan atas.
+            akan disimpan ke <strong>{store?.name}</strong>. Kalau salah, ganti toko di pilihan Toko pada menu.
           </Alert>
         </div>
       )}
@@ -722,7 +765,7 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
           </FilterChip>
           {VERDICT_ORDER.filter((v) => counts.get(v)).map((v) => (
             <FilterChip key={v} active={filter === v} onClick={() => setFilter(v)}>
-              {VERDICTS[v].icon} {VERDICTS[v].label} ({counts.get(v)})
+              {VERDICTS[v].label} <span className="num">({counts.get(v)})</span>
             </FilterChip>
           ))}
         </div>
@@ -735,17 +778,17 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
       </div>
 
       {noSales.length > 0 && (filter === 'semua' || filter === 'belum_cukup') && (
-        <details className="rounded-2xl border border-slate-200 bg-white p-5">
-          <summary className="cursor-pointer text-lg font-semibold">
-            ⚪ {noSales.length} produk lain belum ada penjualan — total biaya{' '}
+        <details className="rounded-lg border border-line bg-paper p-5 shadow-sheet">
+          <summary className="cursor-pointer font-semibold">
+            {noSales.length} produk lain belum ada penjualan — total biaya{' '}
             {formatRupiah(noSales.reduce((s, p) => s + p.spend, 0))}
           </summary>
-          <p className="mt-2 text-slate-600">Biayanya masih kecil, tunggu dulu. Kalau sudah banyak klik tapi tetap tidak laku, matikan.</p>
-          <ul className="mt-3 divide-y divide-slate-100">
+          <p className="mt-2 text-ink-soft">Biayanya masih kecil, tunggu dulu. Kalau sudah banyak klik tapi tetap tidak laku, matikan.</p>
+          <ul className="mt-3 divide-y divide-line/70">
             {noSales.map((p) => (
               <li key={p.code} className="flex flex-wrap justify-between gap-x-4 py-2">
                 <span className="min-w-0 flex-1">{p.name}</span>
-                <span className="tabular-nums text-slate-600">
+                <span className="num text-ink-soft">
                   {formatRupiah(p.spend)} · {formatNumber(p.clicks)} klik
                 </span>
               </li>
@@ -765,8 +808,8 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`min-h-12 rounded-full border px-4 text-base font-semibold ${
-        active ? 'border-orange-600 bg-orange-600 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+      className={`min-h-11 rounded-md border px-3.5 font-medium transition-colors duration-150 ${
+        active ? 'border-ink bg-ink text-white' : 'border-line bg-paper text-ink-soft hover:border-ink-muted hover:text-ink'
       }`}
     >
       {children}
@@ -779,7 +822,7 @@ function PerMonthCard({ rows }: { rows: { month: string; analysis: AdsAnalysis }
     <Card title="Per bulan">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[34rem] text-left text-base">
-          <thead className="text-sm text-slate-500">
+          <thead className="text-sm text-ink-muted">
             <tr>
               <th className="py-2 pr-3 font-medium">Bulan</th>
               <th className="py-2 pr-3 text-right font-medium">Biaya iklan</th>
@@ -788,14 +831,14 @@ function PerMonthCard({ rows }: { rows: { month: string; analysis: AdsAnalysis }
               <th className="py-2 text-right font-medium">Untung setelah iklan</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 tabular-nums">
+          <tbody className="divide-y divide-line/70">
             {rows.map(({ month, analysis: a }) => (
               <tr key={month}>
                 <td className="py-2 pr-3 font-semibold">{formatMonth(month)}</td>
-                <td className="py-2 pr-3 text-right">{formatRupiah(a.totalSpend)}</td>
-                <td className="py-2 pr-3 text-right">{formatRupiah(a.netGmv)}</td>
-                <td className="py-2 pr-3 text-right">{formatRoas(a.realRoas)}</td>
-                <td className={`py-2 text-right font-bold ${a.profitAfterAds < 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                <td className="num py-2 pr-3 text-right">{formatRupiah(a.totalSpend)}</td>
+                <td className="num py-2 pr-3 text-right">{formatRupiah(a.netGmv)}</td>
+                <td className="num py-2 pr-3 text-right">{formatRoas(a.realRoas)}</td>
+                <td className={`num py-2 text-right font-bold ${a.profitAfterAds < 0 ? 'text-loss' : 'text-gain'}`}>
                   {formatRupiah(a.profitAfterAds)}
                 </td>
               </tr>
@@ -812,7 +855,7 @@ function SummaryCard({ data, period }: { data: Loaded; period: Period }) {
   const month = fullMonthOf(period.start, period.end)
   return (
     <Card>
-      <p className="text-slate-600">
+      <p className="text-ink-soft">
         {period.months && period.months.length > 1 ? (
           <>
             Gabungan <strong>{period.months.length} bulan</strong> ({period.months.map(formatMonth).join(', ')})
@@ -826,7 +869,7 @@ function SummaryCard({ data, period }: { data: Loaded; period: Period }) {
         <strong>{formatPercent(data.feeRate * 100)}</strong>{' '}
         {data.feeFrom ? `(dari laporan penghasilan ${data.feeFrom})` : '(perkiraan — laporan penghasilan belum di-upload)'}
       </p>
-      <dl className="mt-4 space-y-2 text-lg">
+      <dl className="mt-4 space-y-2 border-t-2 border-dashed border-rule pt-3">
         <Line label="Biaya iklan" value={formatRupiah(a.totalSpend)} strong />
         <Line label="Omzet dari iklan (versi Shopee)" value={formatRupiah(a.adsGmv)} />
         <Line
@@ -835,7 +878,7 @@ function SummaryCard({ data, period }: { data: Loaded; period: Period }) {
           note={`ROAS nyata ${formatRoas(a.realRoas)}`}
         />
         <Line label="Untung produk yang diiklankan (sebelum iklan)" value={formatRupiah(a.profitBeforeAds)} />
-        <div className="border-t-2 border-dashed border-slate-300 pt-2">
+        <div className="border-t-2 border-dashed border-rule pt-3">
           <Line
             label="Untung setelah iklan"
             value={formatRupiah(a.profitAfterAds)}
@@ -845,9 +888,9 @@ function SummaryCard({ data, period }: { data: Loaded; period: Period }) {
         </div>
       </dl>
       {month && period.reports.some((r) => r.source === 'keseluruhan') && (
-        <p className="mt-3 text-slate-600">
+        <p className="mt-3 text-ink-soft">
           Biaya iklan ini sudah otomatis masuk ke{' '}
-          <a href={`#/biaya?bulan=${month}`} className="font-semibold text-orange-700 underline">
+          <a href={`#/biaya?bulan=${month}`} className="font-semibold text-stamp underline">
             Biaya {formatMonth(month)}
           </a>
           .
@@ -870,14 +913,14 @@ function Line({
   strong?: boolean
   tone?: 'good' | 'bad'
 }) {
-  const color = tone === 'bad' ? 'text-red-700' : tone === 'good' ? 'text-emerald-700' : ''
+  const color = tone === 'bad' ? 'text-loss' : tone === 'good' ? 'text-gain' : ''
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-      <dt className={strong ? 'font-bold' : 'text-slate-700'}>
+      <dt className={strong ? 'font-semibold' : 'text-ink-soft'}>
         {label}
-        {note && <span className="ml-2 text-base font-normal text-slate-500">({note})</span>}
+        {note && <span className="num ml-2 text-sm font-normal text-ink-muted">({note})</span>}
       </dt>
-      <dd className={`tabular-nums ${strong ? 'text-2xl font-bold' : 'font-semibold'} ${color}`}>{value}</dd>
+      <dd className={`num ${strong ? 'text-2xl font-bold' : 'font-medium'} ${color}`}>{value}</dd>
     </div>
   )
 }
@@ -914,17 +957,17 @@ function ProductCard({ p, months }: { p: AdProductResult; months?: MonthFigure[]
   const v = VERDICTS[p.verdict]
   const sold = Math.round(p.netSold)
   return (
-    <article className={`flex flex-col rounded-2xl border-2 bg-white p-5 shadow-sm ${v.border}`}>
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className={`rounded-full px-3 py-1 text-base font-bold ${v.pill}`}>
-          {v.icon} {v.label}
-        </span>
+    <article className="flex flex-col rounded-lg border border-line bg-paper p-5 shadow-sheet">
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="line-clamp-2 min-w-0 font-semibold leading-snug" title={p.name}>
+          {p.name}
+        </h3>
+        <Stamp tone={v.tone} className="mt-0.5 shrink-0">
+          {v.label}
+        </Stamp>
       </div>
-      <h3 className="line-clamp-2 text-lg font-semibold" title={p.name}>
-        {p.name}
-      </h3>
 
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+      <div className="mt-4 grid grid-cols-3 divide-x divide-line border-y border-line py-2.5 text-center">
         <Mini label="Biaya iklan" value={formatRupiah(p.spend)} />
         <Mini
           label="Terjual"
@@ -939,7 +982,7 @@ function ProductCard({ p, months }: { p: AdProductResult; months?: MonthFigure[]
       </div>
 
       {p.unitProfit !== null && (
-        <dl className="mt-3 space-y-1">
+        <dl className="mt-3 space-y-1.5">
           <Row label="Balik modal butuh ROAS" value={p.bepRoas !== null ? formatRoas(p.bepRoas) : 'tidak mungkin'} />
           <Row
             label="Saran target ROAS di Shopee"
@@ -947,33 +990,44 @@ function ProductCard({ p, months }: { p: AdProductResult; months?: MonthFigure[]
             strong
           />
           <Row
-            label="Untung setelah iklan"
-            value={formatRupiah(p.profitAfterAds)}
-            tone={(p.profitAfterAds ?? 0) < 0 ? 'bad' : 'good'}
-            strong
-          />
-          <Row
             label="Untung per barang (sebelum iklan)"
             value={`${formatRupiah(p.unitProfit)} (${formatPercent((p.margin ?? 0) * 100)})`}
           />
+          <div className="border-t-2 border-dashed border-rule pt-2">
+            <Row
+              label="Untung setelah iklan"
+              value={formatRupiah(p.profitAfterAds)}
+              tone={(p.profitAfterAds ?? 0) < 0 ? 'bad' : 'good'}
+              strong
+            />
+          </div>
         </dl>
       )}
 
       {p.margin !== null && p.margin < PRICE_TARGET_MARGIN && p.idealPrice !== null && (
-        <p className="mt-2 text-amber-800">
-          ⚠️ Untung harga di bawah {formatPercent(PRICE_TARGET_MARGIN * 100)}. Harga sekarang ±{formatRupiah(p.price)};
-          supaya {formatPercent(PRICE_TARGET_MARGIN * 100)}: <strong>±{formatRupiah(roundUpPrice(p.idealPrice))}</strong>
+        <p className="mt-3 flex gap-2 text-sm text-warn">
+          <IconAlertCircle size={18} className="mt-px shrink-0" />
+          <span>
+            Untung harga di bawah {formatPercent(PRICE_TARGET_MARGIN * 100)}. Harga sekarang ±{formatRupiah(p.price)};
+            supaya {formatPercent(PRICE_TARGET_MARGIN * 100)}:{' '}
+            <strong className="num">±{formatRupiah(roundUpPrice(p.idealPrice))}</strong>
+          </span>
         </p>
       )}
-      {p.hppIncomplete && <p className="mt-2 text-amber-800">⚠️ Sebagian variasi belum ada HPP-nya.</p>}
+      {p.hppIncomplete && (
+        <p className="mt-2 flex gap-2 text-sm text-warn">
+          <IconAlertCircle size={18} className="mt-px shrink-0" />
+          Sebagian variasi belum ada HPP-nya.
+        </p>
+      )}
 
       {months && (
-        <div className="mt-3 border-t border-slate-100 pt-2 text-sm text-slate-600">
-          <p className="font-semibold text-slate-700">Per bulan:</p>
+        <div className="mt-3 border-t border-line/70 pt-2 text-sm text-ink-soft">
+          <p className="font-semibold text-ink-soft">Per bulan:</p>
           {months.length <= 1 && <p>Hanya diiklankan di 1 bulan.</p>}
           <ul>
             {months.map(({ month, p: m }) => (
-              <li key={month} className="tabular-nums">
+              <li key={month} className="num">
                 {formatMonth(month)}: biaya {formatRupiah(m.spend)} · terjual {formatNumber(Math.round(m.netSold))} · ROAS{' '}
                 {formatRoas(m.realRoas)}
               </li>
@@ -982,7 +1036,7 @@ function ProductCard({ p, months }: { p: AdProductResult; months?: MonthFigure[]
         </div>
       )}
 
-      <p className="mt-3 rounded-xl bg-slate-50 p-3 text-base text-slate-800">{advice(p)}</p>
+      <p className="mt-auto rounded-md bg-counter/70 px-3 py-2.5 text-ink [margin-top:max(0.75rem,auto)]">{advice(p)}</p>
       {p.verdict === 'hpp_kosong' && (
         <Button variant="secondary" className="mt-3 self-start" onClick={() => navigate('hpp', { kosong: '1' })}>
           Isi HPP
@@ -994,29 +1048,34 @@ function ProductCard({ p, months }: { p: AdProductResult; months?: MonthFigure[]
 
 function Mini({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
-    <div className="rounded-xl bg-slate-50 px-2 py-2">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="text-lg font-bold tabular-nums">{value}</p>
-      {detail && <p className="text-xs text-slate-500">{detail}</p>}
+    <div className="px-2">
+      <p className="text-sm text-ink-muted">{label}</p>
+      <p className="num text-lg font-semibold">{value}</p>
+      {detail && <p className="text-xs text-ink-muted">{detail}</p>}
     </div>
   )
 }
 
 function Row({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: 'good' | 'bad' }) {
-  const color = tone === 'bad' ? 'text-red-700' : tone === 'good' ? 'text-emerald-700' : ''
+  const color = tone === 'bad' ? 'text-loss' : tone === 'good' ? 'text-gain' : ''
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-      <dt className="text-slate-600">{label}</dt>
-      <dd className={`tabular-nums ${strong ? 'text-lg font-bold' : 'font-semibold'} ${color}`}>{value}</dd>
+      <dt className={strong ? 'font-medium text-ink' : 'text-ink-soft'}>{label}</dt>
+      <dd className={`${/^[-±\d]|^Rp/.test(value) ? 'num' : ''} ${strong ? 'text-lg font-bold' : 'font-medium'} ${color}`}>
+        {value}
+      </dd>
     </div>
   )
 }
 
 function HowToRead({ feeRate }: { feeRate: number }) {
   return (
-    <details className="rounded-2xl border border-slate-200 bg-white p-5">
-      <summary className="cursor-pointer text-lg font-semibold">ⓘ Cara baca angka-angka ini</summary>
-      <ul className="mt-3 list-disc space-y-2 pl-6 text-slate-700">
+    <details className="rounded-lg border border-line bg-paper p-5 shadow-sheet">
+      <summary className="flex cursor-pointer items-center gap-2 font-semibold">
+        <IconInfo size={18} className="text-stamp" />
+        Cara baca angka-angka ini
+      </summary>
+      <ul className="mt-3 list-disc space-y-2 pl-6 text-ink-soft marker:text-rule">
         <li>
           <strong>ROAS</strong> = omzet ÷ biaya iklan. ROAS 10 artinya biaya iklan Rp1.000 menghasilkan omzet Rp10.000.
         </li>
@@ -1037,9 +1096,17 @@ function HowToRead({ feeRate }: { feeRate: number }) {
           pesanan batal.
         </li>
         <li>
-          Label: <strong>⭐ Hero</strong> = ROAS jauh di atas saran · <strong>🟢 Aman</strong> = sesuai target ·{' '}
-          <strong>🟠 ROAS terlalu kecil</strong> = di atas balik modal tapi untung belum {formatPercent(ADS_TARGET_PROFIT * 100)} ·{' '}
-          <strong>🔴 Takedown</strong> = iklan rugi · <strong>⚪ Data belum cukup</strong> = terjual kurang dari 3.
+          Label:
+          <span className="mt-2 grid gap-2 sm:grid-cols-2">
+            <span><Stamp tone="gain" tilt={false} className="!text-xs">Hero</Stamp> ROAS jauh di atas saran</span>
+            <span><Stamp tone="gain" tilt={false} className="!text-xs">Aman</Stamp> sesuai target</span>
+            <span>
+              <Stamp tone="warn" tilt={false} className="!text-xs">ROAS terlalu kecil</Stamp> di atas balik modal, untung belum{' '}
+              {formatPercent(ADS_TARGET_PROFIT * 100)}
+            </span>
+            <span><Stamp tone="loss" tilt={false} className="!text-xs">Takedown</Stamp> iklan rugi</span>
+            <span><Stamp tone="neutral" tilt={false} className="!text-xs">Data belum cukup</Stamp> terjual kurang dari 3</span>
+          </span>
         </li>
         <li>
           Harga untuk untung {formatPercent(PRICE_TARGET_MARGIN * 100)} = HPP ÷ (1 − potongan Shopee −{' '}

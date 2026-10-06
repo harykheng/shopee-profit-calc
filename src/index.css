@@ -1,1 +1,124 @@
 @import 'tailwindcss';
+
+/* Huruf disimpan sendiri di public/fonts (lisensi OFL, lihat public/fonts/OFL-*.txt). */
+@font-face {
+  font-family: 'Public Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/public-sans-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Public Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/public-sans-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Azeret Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/azeret-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Azeret Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/azeret-mono-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/*
+ * Dunia "nota kasir": lembar kertas putih di atas meja kasir abu-abu dingin,
+ * tinta biru-hitam, tinta stempel ungu-biru untuk aksi & pilihan,
+ * merah = rugi, hijau = untung, kuning tua = perlu perhatian.
+ */
+@theme {
+  --font-sans: 'Public Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Azeret Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  /* Meja kasir (latar halaman) dan kertas nota. */
+  --color-counter: #eceef2;
+  --color-paper: #ffffff;
+  --color-line: #d8dce3;
+  --color-rule: #aeb5c0;
+
+  /* Tinta. */
+  --color-ink: #17202b;
+  --color-ink-soft: #3a4553;
+  --color-ink-muted: #5a6574;
+  --color-rail: #141b25;
+  --color-rail-raised: #222c3a;
+  --color-rail-text: #c5cdd8;
+
+  /* Tinta stempel: aksi utama, pilihan, fokus. */
+  --color-stamp: #3a3fb8;
+  --color-stamp-strong: #2c309b;
+  --color-stamp-tint: #ecedfb;
+
+  /* Status. */
+  --color-loss: #b3261e;
+  --color-loss-tint: #fdeceb;
+  --color-gain: #146c43;
+  --color-gain-tint: #e5f3eb;
+  --color-warn: #8a5300;
+  --color-warn-tint: #fff3d9;
+  --color-warn-line: #ebc06a;
+  --color-info: #1d4f86;
+  --color-info-tint: #e8f0fa;
+
+
+  --shadow-sheet: 0 1px 2px rgb(23 32 43 / 0.06), 0 2px 8px rgb(23 32 43 / 0.05);
+}
+
+@layer base {
+  html {
+    background: var(--color-counter);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    accent-color: var(--color-stamp);
+    caret-color: var(--color-stamp);
+    scrollbar-color: var(--color-rule) transparent;
+  }
+  ::selection {
+    background: var(--color-stamp-tint);
+    color: var(--color-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-stamp);
+    outline-offset: 2px;
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+}
+
+@layer components {
+  /* Angka di nota: Rupiah, persen, ROAS, qty. */
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  /* Garis sobek sebelum total. */
+  .tear {
+    border-top: 2px dashed var(--color-rule);
+  }
+}

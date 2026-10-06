@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-06T05:40:38+00:00",
+  "title": "Design System: Profit Shopee",
+  "extensions": {
+    "colorMeta": {
+      "stamp-ink": {
+        "role": "primary",
+        "displayName": "Stamp Ink",
+        "tonalRamp": [
+          "#1c1f5e",
+          "#23267a",
+          "#2c309b",
+          "#3a3fb8",
+          "#4f53c8",
+          "#7c80dd",
+          "#b0b3ee",
+          "#ecedfb"
+        ]
+      },
+      "receipt-ink": {
+        "role": "neutral",
+        "displayName": "Receipt Ink"
+      },
+      "rail-ink": {
+        "role": "neutral",
+        "displayName": "Rail Ink"
+      },
+      "counter-grey": {
+        "role": "neutral",
+        "displayName": "Counter Grey"
+      },
+      "paper-white": {
+        "role": "neutral",
+        "displayName": "Paper White"
+      },
+      "loss-red": {
+        "role": "error",
+        "displayName": "Loss Red"
+      },
+      "gain-green": {
+        "role": "success",
+        "displayName": "Gain Green"
+      },
+      "warn-amber": {
+        "role": "warning",
+        "displayName": "Warn Amber"
+      },
+      "info-blue": {
+        "role": "info",
+        "displayName": "Info Blue"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles and the nota title."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Every Rupiah, %, ROAS and count; tabular numerals."
+      },
+      "figure-total": {
+        "displayName": "Figure Total",
+        "purpose": "The single total of a nota."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Stamps and the uppercase total label."
+      }
+    },
+    "shadows": [
+      {
+        "name": "sheet",
+        "value": "0 1px 2px rgb(23 32 43 / 0.06), 0 2px 8px rgb(23 32 43 / 0.05)",
+        "purpose": "Every sheet and product card."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "150ms ease",
+        "purpose": "Colour and border changes on hover, chevron rotation; no entrance animations."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px (rail navigation)"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main action on a sheet (Simpan, Pilih file).",
+      "html": "<button class=\"ds-btn-primary\">Simpan biaya</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:0;border-radius:6px;background:#3a3fb8;color:#fff;font:600 1rem/1 'Public Sans',system-ui,sans-serif;cursor:pointer;transition:background .15s} .ds-btn-primary:hover,.ds-btn-primary:active{background:#2c309b} .ds-btn-primary:focus-visible{outline:2px solid #3a3fb8;outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Secondary action (Isi HPP, Batal, Ganti / isi manual).",
+      "html": "<button class=\"ds-btn-secondary\">Isi HPP</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid #d8dce3;border-radius:6px;background:#fff;color:#17202b;font:600 1rem/1 'Public Sans',system-ui,sans-serif;cursor:pointer;transition:border-color .15s,background .15s} .ds-btn-secondary:hover{border-color:#5a6574;background:#f5f6f8} .ds-btn-secondary:focus-visible{outline:2px solid #3a3fb8;outline-offset:2px}"
+    },
+    {
+      "name": "Money Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Rupiah field with Rp prefix, figures right-aligned in the mono.",
+      "html": "<label class=\"ds-money\"><span>Rp</span><input value=\"198.200\" aria-label=\"Harga jual\"></label>",
+      "css": ".ds-money{position:relative;display:block;width:16rem} .ds-money span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#5a6574;font:400 1rem 'Azeret Mono',ui-monospace,monospace} .ds-money input{box-sizing:border-box;width:100%;min-height:44px;padding:0 12px 0 40px;border:1px solid #d8dce3;border-radius:6px;background:#fff;color:#17202b;text-align:right;font:400 1rem 'Azeret Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums} .ds-money input:hover{border-color:#5a6574} .ds-money input:focus{outline:none;border-color:#3a3fb8;box-shadow:0 0 0 2px rgb(58 63 184 / .25)}"
+    },
+    {
+      "name": "Rail Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Ink rail with the active page as a paper pill.",
+      "html": "<nav class=\"ds-rail\"><a class=\"ds-rail-item is-active\" href=\"#\">Rekap</a><a class=\"ds-rail-item\" href=\"#\">Iklan</a><a class=\"ds-rail-item\" href=\"#\">Simulasi Harga</a></nav>",
+      "css": ".ds-rail{display:flex;flex-direction:column;gap:2px;width:14rem;padding:16px;background:#141b25} .ds-rail-item{display:flex;align-items:center;min-height:44px;padding:0 12px;border-radius:6px;color:#c5cdd8;font:500 1rem 'Public Sans',system-ui,sans-serif;text-decoration:none;transition:background .15s,color .15s} .ds-rail-item:hover{background:rgb(255 255 255 / .05);color:#fff} .ds-rail-item.is-active{background:#fff;color:#17202b} .ds-rail-item:focus-visible{outline:2px solid #3a3fb8;outline-offset:2px}"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "filter-chip-active",
+      "description": "Filters ad products by label; count in the figure font.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip is-on\">Semua (10)</button><button class=\"ds-chip\">Takedown (7)</button></div>",
+      "css": ".ds-chips{display:flex;gap:8px} .ds-chip{min-height:44px;padding:0 14px;border:1px solid #d8dce3;border-radius:6px;background:#fff;color:#3a4553;font:500 1rem 'Public Sans',system-ui,sans-serif;cursor:pointer;transition:border-color .15s,color .15s} .ds-chip:hover{border-color:#5a6574;color:#17202b} .ds-chip.is-on{background:#17202b;border-color:#17202b;color:#fff}"
+    },
+    {
+      "name": "Stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Verdict stamp: Angka final, Takedown, Hero, Iklan rugi.",
+      "html": "<span class=\"ds-stamp ds-stamp-loss\">Takedown</span> <span class=\"ds-stamp ds-stamp-gain\">Angka final</span>",
+      "css": ".ds-stamp{display:inline-flex;align-items:center;padding:2px 8px;border:3px double currentColor;border-radius:3px;background:rgb(255 255 255 / .8);font:700 .875rem 'Public Sans',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;transform:rotate(-2deg)} .ds-stamp-loss{color:#b3261e} .ds-stamp-gain{color:#146c43}"
+    },
+    {
+      "name": "Nota",
+      "kind": "card",
+      "refersTo": "sheet",
+      "description": "Signature receipt sheet: operator column, tear rule, one total.",
+      "html": "<section class=\"ds-nota\"><div class=\"ds-row\"><span class=\"op\">+</span><span>Uang masuk dari Shopee</span><b>Rp13.771.357</b></div><div class=\"ds-row\"><span class=\"op\">−</span><span>Modal barang terjual</span><b>Rp9.532.551</b></div><div class=\"ds-total\"><span class=\"op\">=</span><span>UNTUNG BERSIH</span><b>Rp4.088.806</b></div></section>",
+      "css": ".ds-nota{width:30rem;padding:24px;border:1px solid #d8dce3;border-radius:8px;background:#fff;box-shadow:0 1px 2px rgb(23 32 43 / .06),0 2px 8px rgb(23 32 43 / .05);color:#17202b;font:400 1rem/1.5 'Public Sans',system-ui,sans-serif} .ds-row,.ds-total{display:grid;grid-template-columns:1.5rem 1fr auto;gap:8px;align-items:baseline;padding:12px 0} .ds-row+.ds-row{border-top:1px solid #d8dce3} .ds-row:first-child{border-top:2px dashed #aeb5c0} .ds-total{border-top:2px dashed #aeb5c0;font-weight:700;letter-spacing:.03em} .ds-nota .op{color:#5a6574;text-align:center;font-family:'Azeret Mono',ui-monospace,monospace} .ds-nota b{font:600 1.125rem 'Azeret Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums} .ds-total b{font-size:2rem;font-weight:700}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Store Receipt (Nota Kasir)",
+    "keyCharacteristics": [
+      "White sheets on a cool grey counter; one blue-black rail.",
+      "Every Rupiah, percentage, ROAS and quantity set in a tabular monospace.",
+      "Dashed tear rule before every total.",
+      "Verdicts (Angka final, Takedown, Hero, Iklan rugi) as double-ruled, slightly tilted stamps.",
+      "Colour carries meaning only: stamp ink for action and selection, red loss, green gain, amber attention."
+    ],
+    "rules": [
+      {
+        "name": "The Meaning-Only Rule",
+        "section": "colors",
+        "body": "Stamp ink, red, green and amber are never used for decoration. If a colour does not tell the reader to act, that money was lost, gained, or needs attention, it is a neutral."
+      },
+      {
+        "name": "The Counter-and-Paper Rule",
+        "section": "colors",
+        "body": "The page ground stays Counter Grey and content sits on Paper White sheets. No tinted sheets except the state washes for alerts and the ad-result box."
+      },
+      {
+        "name": "The Figures-Are-Mono Rule",
+        "section": "typography",
+        "body": "Every money amount, percentage, ROAS and count is set in Azeret Mono with tabular numerals so columns align like a receipt. Words, including words that sit in a figure column (\"belum diisi\", \"tidak mungkin\"), stay in Public Sans."
+      },
+      {
+        "name": "The No-Costume Rule",
+        "section": "typography",
+        "body": "Mono is for figures only: not for headings, buttons, stamps or labels."
+      },
+      {
+        "name": "The One-Sheet-Deep Rule",
+        "section": "elevation",
+        "body": "Sheets never nest inside sheets. Inside a sheet, group with hairline dividers, a tear rule, or a Counter Grey well."
+      }
+    ]
+  }
+}

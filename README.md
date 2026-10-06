@@ -65,7 +65,7 @@ membaca file di browser, Vitest untuk test.
    - **Project URL** → nanti diisi ke `VITE_SUPABASE_URL`
    - **anon / publishable key** → nanti diisi ke `VITE_SUPABASE_ANON_KEY`
 
-> ⚠️ Jangan pernah memakai **service_role / secret key** di aplikasi atau di Vercel.
+> Jangan pernah memakai **service_role / secret key** di aplikasi atau di Vercel.
 > Kunci anon/publishable aman terlihat di browser karena semua data dilindungi login + RLS.
 
 ### Memperbarui database yang sudah berjalan
@@ -127,7 +127,7 @@ Kalau env var diubah, lakukan **Redeploy** supaya nilainya terpakai.
 ## 4. Cara pakai setiap bulan
 
 Panduan lengkap ada di **[PANDUAN.md](PANDUAN.md)**. Ringkasnya, di awal bulan untuk bulan
-sebelumnya, per toko (toko dipilih di menu kanan atas):
+sebelumnya, per toko (toko dipilih di pilihan Toko pada menu):
 
 1. **Download dari Shopee Seller Centre**:
    - **Export pesanan** (.xlsx): Pesanan Saya → Export, status **Semua**, rentang dari pertengahan
@@ -143,7 +143,7 @@ sebelumnya, per toko (toko dipilih di menu kanan atas):
 4. **Iklan**: pilih semua file .csv sekaligus → **Simpan**. Data 1 bulan penuh mengisi Biaya Iklan
    Shopee otomatis. Pilih **Gabungkan beberapa bulan…** untuk analisis beberapa bulan sekaligus.
 5. **Biaya**: isi Meta Ads, packaging, lain-lain (Rp0 kalau tidak ada).
-6. **Rekap**: cek status **✅ Angka final**; kalau **⚠️ Belum lengkap**, ikuti daftar yang muncul.
+6. **Rekap**: cek status **Angka final**; kalau **Belum lengkap**, ikuti daftar yang muncul.
 
 Aturan penting:
 - **Upload file yang sama berkali-kali aman** — tidak ada data dobel.
@@ -216,6 +216,10 @@ src/lib/parsers/       Parser export pesanan (.xlsx), laporan penghasilan (.pdf)
 src/lib/monthStatus.ts Logika status "Angka final / Belum lengkap" (termasuk uang cair geser 1–2 hari)
 src/lib/adsMath.ts     Analisis iklan: ROAS nyata, balik modal, saran ROAS, label
 src/pages/             Halaman Login, Upload, HPP, Biaya, Rekap, Iklan, Simulasi Harga
+src/index.css          Token warna, huruf, dan gaya dasar ("nota kasir")
+src/components/        Komponen dasar (tombol, lembar, cap stempel, ikon garis)
+public/fonts/          Huruf Public Sans & Azeret Mono (lisensi OFL, disimpan sendiri)
+PRODUCT.md / DESIGN.md Fakta produk & sistem desain (dipakai skill desain Impeccable)
 tests/                 Test Vitest + fixture dummy
 scripts/make-fixtures.mjs  Pembuat fixture dummy
 ```
