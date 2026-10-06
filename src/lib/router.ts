@@ -13,7 +13,7 @@ export const ROUTES: { route: Route; label: string; short?: string }[] = [
 
 export function readHash(): { route: Route; params: URLSearchParams } {
   const [path, query] = window.location.hash.replace(/^#\/?/, '').split('?')
-  const route = (ROUTES.some((n) => n.route === path) ? path : 'upload') as Route
+  const route = (ROUTES.some((n) => n.route === path) ? path : 'rekap') as Route
   return { route, params: new URLSearchParams(query ?? '') }
 }
 

@@ -42,8 +42,10 @@ Hal penting yang perlu diingat:
   hari yang sama dengan pesanan selesai.
 - **Modal hanya dari barang yang selesai** di bulan itu. Barang batal dan barang retur tidak
   dihitung.
-- **Toko dipilih di menu kanan atas** dan berlaku untuk semua halaman. Selalu cek nama toko
-  sebelum upload.
+- **Toko dipilih di pilihan Toko pada menu** (menu samping di laptop, bagian atas di HP/iPad) dan
+  berlaku untuk semua halaman. Selalu cek nama toko sebelum upload.
+- **Menu dibagi dua:** *Lihat hasil* (Rekap, Iklan, Simulasi Harga) dan *Input bulanan* (Upload, HPP,
+  Biaya). Aplikasi langsung terbuka di **Rekap**.
 
 ---
 
@@ -57,10 +59,10 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 3. **HPP** → isi HPP produk yang masih merah.
 4. **Iklan** → upload file data iklan (.csv). Biaya iklan Shopee terisi otomatis.
 5. **Biaya** → isi Meta Ads, packaging, lain-lain. Kalau tidak ada, simpan Rp0.
-6. **Rekap** → cek statusnya **✅ Angka final**. Kalau masih **⚠️ Belum lengkap**, ikuti daftar
+6. **Rekap** → cek statusnya **Angka final**. Kalau masih **Belum lengkap**, ikuti daftar
    yang muncul.
 
-> 💡 Upload file yang sama dua kali **aman**. Data tidak akan dobel.
+> Upload file yang sama dua kali **aman**. Data tidak akan dobel.
 
 ---
 
@@ -92,7 +94,7 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 | **Rincian Data Iklan Produk Otomatis** | Ya, kalau pakai Iklan Produk Otomatis | Biaya per produk |
 | **Semua Data Grup Iklan** | Kalau pakai grup iklan | Biaya per produk di dalam grup |
 
-> ⚠️ **Mau beberapa bulan? Download per bulan.** File dengan periode 2–3 bulan sekaligus hanya
+> **Mau beberapa bulan? Download per bulan.** File dengan periode 2–3 bulan sekaligus hanya
 > berisi **total**, tanpa rincian per bulan, jadi tidak bisa dipecah. Lebih baik download per bulan
 > (cukup ganti tanggal lalu download lagi), lalu upload semuanya sekaligus.
 
@@ -100,7 +102,7 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 
 ## 4. Halaman Upload
 
-1. Cek kotak oranye **"Upload ke toko: …"**. Kalau salah, ganti toko di kanan atas.
+1. Cek kotak **"Upload ke toko: …"**. Kalau salah, ganti toko di pilihan Toko pada menu.
 2. **Kotak 1:** pilih file Excel export pesanan.
 3. **Kotak 2:** pilih file PDF laporan penghasilan.
 4. Cek **preview**: jumlah pesanan per status, jumlah hari uang cair, total penghasilan, dan biaya
@@ -178,8 +180,8 @@ Dibaca dari atas ke bawah seperti nota:
 
 | Status | Artinya |
 |---|---|
-| **✅ Angka final** | Semua data lengkap. Untung bersih adalah angka pasti. |
-| **⚠️ Belum lengkap · N hal** | Klik untuk melihat apa yang kurang. |
+| **Angka final** | Semua data lengkap. Untung bersih adalah angka pasti. |
+| **Belum lengkap · N hal** | Klik untuk melihat apa yang kurang. |
 
 Yang dicek:
 1. Laporan penghasilan (PDF) bulan itu sudah di-upload.
@@ -188,7 +190,7 @@ Yang dicek:
 3. Semua barang sudah punya HPP.
 4. Biaya sudah disimpan (boleh Rp0).
 
-> ℹ️ Kadang muncul catatan **"Rp… cair 1–2 hari setelah tanggal pesanan selesai"**. Itu normal:
+> Kadang muncul catatan **"Rp… cair 1–2 hari setelah tanggal pesanan selesai"**. Itu normal:
 > pesanan selesai malam hari, Shopee mencairkan uangnya besok. Datanya sudah cocok dan tidak
 > menghalangi status final.
 
@@ -209,7 +211,7 @@ ROAS yang sebaiknya diisi di Shopee.
 
 ### Cara upload
 
-1. Pilih toko di kanan atas.
+1. Pilih toko di pilihan Toko pada menu.
 2. Tekan **Pilih file**, lalu pilih **semua file .csv iklan sekaligus**. Boleh dari beberapa bulan;
    aplikasi mengelompokkannya per periode sendiri.
 3. Cek preview tiap periode:
@@ -219,7 +221,7 @@ ROAS yang sebaiknya diisi di Shopee.
      tidak bisa dipecah per bulan.
 4. Tekan **Simpan**.
 
-> 💡 Supaya hasilnya akurat, **upload export pesanan untuk periode yang sama dulu** (halaman
+> Supaya hasilnya akurat, **upload export pesanan untuk periode yang sama dulu** (halaman
 > Upload). Laporan iklan Shopee ikut menghitung pesanan yang kemudian **batal**; aplikasi
 > menguranginya memakai data pesanan.
 
@@ -266,19 +268,19 @@ Tiap produk punya kartu berisi:
 | **Saran target ROAS di Shopee** | Angka untuk diisi di pengaturan iklan (GMV Max ROAS) supaya masih **untung 5%** setelah iklan. Sudah termasuk cadangan pesanan batal. |
 | **Untung setelah iklan** | Untung produk ini dikurangi biaya iklannya |
 | **Untung per barang (sebelum iklan)** | Harga jual − potongan Shopee − HPP |
-| **⚠️ Untung harga di bawah 20%** | Harga sekarang belum memberi untung 20%; ditampilkan harga yang dibutuhkan |
+| **Untung harga di bawah 20%** | Harga sekarang belum memberi untung 20%; ditampilkan harga yang dibutuhkan |
 | **Saran** | Kalimat singkat apa yang sebaiknya dilakukan |
 
 ### Arti label
 
 | Label | Artinya | Yang sebaiknya dilakukan |
 |---|---|---|
-| ⭐ **Hero** | ROAS nyata jauh di atas saran (≥ 1,2× saran) dan sudah terjual minimal 3 | Pertahankan, budget boleh dinaikkan |
-| 🟢 **Aman** | ROAS nyata sudah sesuai target | Pertahankan |
-| 🟠 **ROAS terlalu kecil** | Sudah di atas balik modal, tapi untungnya belum sampai 5% | Naikkan target ROAS di Shopee ke angka saran, atau naikkan harga |
-| 🔴 **Takedown** | Iklan rugi: ROAS di bawah balik modal, atau biaya sudah habis tanpa penjualan, atau harga jual sudah rugi | Matikan iklan, atau naikkan harga |
-| ⚪ **Data belum cukup** | Terjual kurang dari 3, atau biaya masih kecil tanpa penjualan | Tunggu dulu |
-| ⚪ **HPP belum diisi** | Untung belum bisa dihitung | Isi HPP produk ini |
+| **Hero** | ROAS nyata jauh di atas saran (≥ 1,2× saran) dan sudah terjual minimal 3 | Pertahankan, budget boleh dinaikkan |
+| **Aman** | ROAS nyata sudah sesuai target | Pertahankan |
+| **ROAS terlalu kecil** | Sudah di atas balik modal, tapi untungnya belum sampai 5% | Naikkan target ROAS di Shopee ke angka saran, atau naikkan harga |
+| **Takedown** | Iklan rugi: ROAS di bawah balik modal, atau biaya sudah habis tanpa penjualan, atau harga jual sudah rugi | Matikan iklan, atau naikkan harga |
+| **Data belum cukup** | Terjual kurang dari 3, atau biaya masih kecil tanpa penjualan | Tunggu dulu |
+| **HPP belum diisi** | Untung belum bisa dihitung | Isi HPP produk ini |
 
 Produk yang **belum ada penjualan** dan biayanya masih kecil dikumpulkan di bagian bawah
 ("N produk lain belum ada penjualan").
@@ -313,7 +315,7 @@ memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
 
 ### Cara pakai
 
-1. Buka menu **Simulasi** (judul halamannya "Simulasi Harga"). Nama toko di judul mengikuti pilihan toko di kanan atas.
+1. Buka menu **Simulasi** (judul halamannya "Simulasi Harga"). Nama toko di judul mengikuti pilihan Toko pada menu.
 2. **Pilih produk (opsional)**: ketik nama produk, lalu pilih variasinya. Lihat
    [Memakai produk yang sudah di-upload](#memakai-produk-yang-sudah-di-upload). Untuk produk baru
    yang belum pernah dijual, lewati saja.
@@ -437,7 +439,7 @@ Dua alasan:
 
 **Salah upload ke toko lain?**
 Hubungi pengelola aplikasi untuk menghapus datanya. Untuk mencegahnya, selalu cek nama toko di
-kanan atas sebelum upload. Halaman Iklan juga memberi peringatan kalau tokonya terlihat beda.
+menu sebelum upload. Halaman Iklan juga memberi peringatan kalau tokonya terlihat beda.
 
 **Apakah data pembeli tersimpan?**
 Tidak. Nama, alamat, no. HP, username, catatan, dan no. resi pembeli **tidak pernah dibaca maupun

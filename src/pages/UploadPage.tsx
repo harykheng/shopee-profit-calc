@@ -129,7 +129,7 @@ export function UploadPage({
       <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border-2 border-orange-200 bg-orange-50 px-5 py-4">
         <span className="text-lg text-slate-700">Upload ke toko:</span>
         <strong className="text-2xl text-orange-700">{store?.name ?? '-'}</strong>
-        <span className="text-sm text-slate-500">(ganti toko di menu kanan atas)</span>
+        <span className="text-sm text-slate-500">(ganti toko di pilihan Toko pada menu)</span>
       </div>
 
       <div className="mb-6 grid gap-6 lg:grid-cols-2">

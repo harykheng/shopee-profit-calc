@@ -11,7 +11,40 @@ import { ExpensesPage } from './pages/ExpensesPage'
 import { RecapPage } from './pages/RecapPage'
 import { AdsPage } from './pages/AdsPage'
 import { PriceSimPage } from './pages/PriceSimPage'
-import { ROUTES, readHash } from './lib/router'
+import { ROUTES, readHash, type Route } from './lib/router'
+import { IconCalculator, IconChevronDown, IconLogout, IconMegaphone, IconReceipt, IconStore, IconTag, IconUpload, IconWallet } from './components/icons'
+
+const NAV_GROUPS: { title: string; routes: Route[] }[] = [
+  { title: 'Lihat hasil', routes: ['rekap', 'iklan', 'simulasi'] },
+  { title: 'Input bulanan', routes: ['upload', 'hpp', 'biaya'] },
+]
+
+const NAV_ICONS: Record<Route, typeof IconUpload> = {
+  rekap: IconReceipt,
+  iklan: IconMegaphone,
+  simulasi: IconCalculator,
+  upload: IconUpload,
+  hpp: IconTag,
+  biaya: IconWallet,
+}
+
+function NavLink({ route, current, variant }: { route: Route; current: boolean; variant: 'rail' | 'bar' }) {
+  const r = ROUTES.find((x) => x.route === route)
+  const Icon = NAV_ICONS[route]
+  if (!r) return null
+  return (
+    <a
+      href={`#/${route}`}
+      aria-current={current ? 'page' : undefined}
+      className={`flex min-h-11 items-center gap-3 whitespace-nowrap rounded-md px-3 font-medium transition-colors duration-150 ${
+        current ? 'bg-paper text-ink' : 'text-rail-text hover:bg-white/5 hover:text-white'
+      }`}
+    >
+      <Icon size={18} className={current ? 'text-stamp' : ''} />
+      {variant === 'bar' ? (r.short ?? r.label) : r.label}
+    </a>
+  )
+}
 
 const STORE_KEY = 'profit-shopee:store'
 
@@ -86,57 +119,105 @@ function MainApp({ email }: { email: string }) {
     saveStoreId(id)
   }
 
+  const storeSelect = (variant: 'rail' | 'bar') =>
+    stores && stores.length > 0 ? (
+      <label className={variant === 'rail' ? 'block' : 'min-w-0'}>
+        <span className={variant === 'rail' ? 'mb-1.5 block text-xs font-medium text-rail-text' : 'sr-only'}>Toko</span>
+        <span className="relative block">
+          <IconStore
+            size={18}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-rail-text"
+          />
+          <select
+            value={storeId ?? ''}
+            onChange={(e) => setStoreId(Number(e.target.value))}
+            className={`min-h-11 w-full cursor-pointer appearance-none truncate rounded-md border border-white/10 bg-rail-raised pl-10 pr-9 text-base font-semibold text-white transition-colors hover:border-white/25 focus:border-white/40 focus:outline-none ${
+              variant === 'bar' ? 'max-w-[12rem]' : ''
+            }`}
+          >
+            {stores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <IconChevronDown
+            size={18}
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-rail-text"
+          />
+        </span>
+      </label>
+    ) : null
+
+  const logout = (
+    <button
+      type="button"
+      onClick={() => supabase.auth.signOut()}
+      className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-rail-text transition-colors hover:bg-white/5 hover:text-white"
+    >
+      <IconLogout size={18} />
+      <span className="max-sm:sr-only">Keluar</span>
+    </button>
+  )
+
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3">
-          <span className="mr-1 text-lg font-bold leading-tight text-orange-600 lg:mr-3 lg:text-xl">
-            Profit<span className="hidden xl:inline"> Shopee</span>
-          </span>
-          <nav className="flex flex-1 flex-wrap gap-1">
-            {ROUTES.map((n) => (
-              <a
-                key={n.route}
-                href={`#/${n.route}`}
-                aria-current={route === n.route ? 'page' : undefined}
-                className={`flex min-h-12 items-center rounded-xl px-2.5 text-lg font-semibold lg:px-4 ${
-                  route === n.route ? 'bg-orange-100 text-orange-800' : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                {n.short ?? n.label}
-              </a>
+    <div className="min-h-screen lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)]">
+      {/* Laptop: rel samping (latar penuh setinggi halaman, isinya menempel di atas). */}
+      <div className="hidden bg-rail lg:block">
+        <aside className="sticky top-0 flex h-screen flex-col px-4 py-5 text-rail-text">
+          <a href="#/rekap" className="flex items-center gap-2.5 rounded-md px-2 py-1 text-white">
+            <IconReceipt size={22} />
+            <span className="text-lg font-semibold tracking-tight">Profit Shopee</span>
+          </a>
+          <div className="mt-6">{storeSelect('rail')}</div>
+          <nav aria-label="Menu utama" className="mt-6 flex flex-1 flex-col gap-5 overflow-y-auto">
+            {NAV_GROUPS.map((g) => (
+              <div key={g.title}>
+                <p className="mb-1.5 px-3 text-xs font-medium text-rail-text/80">{g.title}</p>
+                <ul className="flex flex-col gap-0.5">
+                  {g.routes.map((r) => (
+                    <li key={r}>
+                      <NavLink route={r} current={route === r} variant="rail" />
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
           </nav>
-          <div className="flex flex-wrap items-center gap-2">
-            {stores && stores.length > 0 && (
-              <label className="flex items-center gap-2">
-                <span className="sr-only">Toko</span>
-                <select
-                  value={storeId ?? ''}
-                  onChange={(e) => setStoreId(Number(e.target.value))}
-                  className="min-h-12 max-w-[11rem] cursor-pointer lg:max-w-[14rem] rounded-xl border-2 border-orange-600 bg-white px-3 text-base font-bold text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-200 lg:text-lg"
-                >
-                  {stores.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <span className="hidden text-sm text-slate-500 lg:inline">{email}</span>
-            <button
-              type="button"
-              onClick={() => supabase.auth.signOut()}
-              className="min-h-12 rounded-xl px-3 text-base text-slate-600 hover:bg-slate-100"
-            >
-              Keluar
-            </button>
+          <div className="border-t border-white/10 pt-4">
+            <p className="truncate px-3 pb-2 text-sm text-rail-text/80" title={email}>
+              {email}
+            </p>
+            {logout}
           </div>
-        </div>
-      </header>
+        </aside>
+      </div>
 
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <div className="min-w-0">
+        {/* HP & iPad: bar atas, menu bisa digeser ke samping. */}
+        <header className="sticky top-0 z-10 bg-rail text-rail-text lg:hidden">
+          <div className="flex items-center gap-3 px-4 pt-3">
+            <a href="#/rekap" className="flex shrink-0 items-center gap-2 text-white">
+              <IconReceipt size={20} />
+              <span className="font-semibold tracking-tight">Profit</span>
+            </a>
+            <div className="ml-auto flex min-w-0 items-center gap-1">
+              {storeSelect('bar')}
+              {logout}
+            </div>
+          </div>
+          <nav aria-label="Menu utama" className="overflow-x-auto px-2 pb-2 pt-2 [scrollbar-width:none]">
+            <ul className="flex w-max gap-1">
+              {NAV_GROUPS.flatMap((g) => g.routes).map((r) => (
+                <li key={r}>
+                  <NavLink route={r} current={route === r} variant="bar" />
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
         {storesError ? (
           <ErrorBox error={storesError} />
         ) : !stores ? (
@@ -166,6 +247,7 @@ function MainApp({ email }: { email: string }) {
           </>
         )}
       </main>
+      </div>
     </div>
   )
 }

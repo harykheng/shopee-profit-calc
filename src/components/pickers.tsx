@@ -55,7 +55,7 @@ export function MonthPicker({
   for (let yr = thisYear + 1; yr >= 2020; yr--) years.push(yr)
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {label && <span className="text-lg font-medium text-slate-700">{label}</span>}
+      {label && <span className="font-medium text-ink-soft">{label}</span>}
       <select
         aria-label={label ? `${label} (bulan)` : 'Bulan'}
         className={selectClass}
@@ -102,7 +102,7 @@ export function MonthSelect({
   if (!options.includes(value)) options.push(value)
   return (
     <label className="flex items-center gap-2">
-      <span className="text-lg text-slate-600">{label}</span>
+      <span className="text-ink-soft">{label}</span>
       <select value={value} onChange={(e) => onChange(e.target.value)} className={`${selectClass} font-bold ${className}`}>
         {options.map((m) => (
           <option key={m} value={m}>
@@ -161,7 +161,7 @@ export function RupiahInput({
 
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">Rp</span>
+      <span className="num pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">Rp</span>
       <input
         type="text"
         inputMode="numeric"
@@ -175,15 +175,15 @@ export function RupiahInput({
         onKeyDown={(e) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
         }}
-        className={`min-h-12 w-full rounded-xl border pl-10 pr-3 text-right text-lg tabular-nums focus:outline-none focus:ring-2 ${
+        className={`num min-h-11 w-full rounded-md border pl-10 pr-3 text-right text-base transition-colors placeholder:font-sans placeholder:text-ink-muted focus:outline-none focus:ring-2 ${
           invalid
-            ? 'border-red-500 ring-red-200'
+            ? 'border-loss ring-loss/20'
             : highlight
-              ? 'border-red-400 bg-red-50 focus:ring-red-200'
-              : 'border-slate-300 bg-white focus:border-orange-500 focus:ring-orange-200'
+              ? 'border-loss/60 bg-loss-tint focus:ring-loss/20'
+              : 'border-line bg-paper hover:border-ink-muted focus:border-stamp focus:ring-stamp/25'
         }`}
       />
-      {invalid && <p className="mt-1 text-sm text-red-700">Isi angka saja, mis. 12500</p>}
+      {invalid && <p className="mt-1 text-sm text-loss">Isi angka saja, mis. 12500</p>}
     </div>
   )
 }
