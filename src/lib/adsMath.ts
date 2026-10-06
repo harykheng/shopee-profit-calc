@@ -14,6 +14,8 @@ export const DEFAULT_FEE_RATE = 0.15
 export const MIN_SALES_FOR_VERDICT = 3
 /** ROAS nyata ≥ ROAS saran × faktor ini → Hero. */
 export const HERO_FACTOR = 1.2
+/** ROAS di atas ini praktis tidak bisa dicapai iklan Shopee → dianggap "tidak mungkin". */
+export const MAX_TARGET_ROAS = 50
 /** Biaya tanpa penjualan di atas ini → takedown (kalau untung per barang belum diketahui). */
 export const NO_SALE_SPEND_LIMIT = 10_000
 
@@ -22,6 +24,8 @@ export type AdVerdict = 'takedown' | 'kurang' | 'hero' | 'aman' | 'belum_cukup' 
 export interface AdReportRows {
   source: AdSource
   rows: AdRow[]
+  /** Kunci periode laporan (mis. "2026-07-01|2026-07-31"). Untuk menggabungkan beberapa bulan. */
+  period?: string
 }
 
 /** Satu item pesanan yang DIBUAT dalam periode iklan. */
@@ -77,12 +81,16 @@ export interface UnallocatedSpend {
   spend: number
   /** File rincian yang perlu di-upload supaya biaya ini terbagi per produk. */
   need: 'otomatis' | 'grup'
+  /** Periode laporan asal biaya ini. */
+  period?: string
 }
 
 export interface AdsAnalysis {
   totalSpend: number
-  /** Dari file Data Keseluruhan (lengkap) atau hanya dari file rincian. */
+  /** Dari file Data Keseluruhan (lengkap) atau (sebagian) hanya dari file rincian. */
   spendFrom: 'keseluruhan' | 'rincian'
+  /** Periode yang belum punya file Data Keseluruhan. */
+  periodsWithoutKeseluruhan: string[]
   unallocated: UnallocatedSpend[]
   products: AdProductResult[]
   adsGmv: number
@@ -128,28 +136,42 @@ export function analyzeAds(input: {
   const all = bySource('keseluruhan')
   const breakdown = [...bySource('otomatis'), ...bySource('grup')]
 
-  // --- Total biaya & biaya yang belum terbagi per produk.
-  let totalSpend: number
+  // --- Total biaya & biaya yang belum terbagi per produk, dihitung per periode laporan
+  // (supaya beberapa bulan bisa digabung tanpa dobel), lalu dijumlahkan.
+  let totalSpend = 0
   const unallocated: UnallocatedSpend[] = []
-  const hasKeseluruhan = reports.some((r) => r.source === 'keseluruhan')
-  if (hasKeseluruhan) {
-    totalSpend = all.reduce((s, r) => s + r.spend, 0)
-    const covered = new Set(breakdown.filter((r) => !r.product_code).map((r) => productKey(r.ad_name)))
-    for (const r of all) {
-      if (r.product_code || r.spend <= 0 || covered.has(productKey(r.ad_name))) continue
-      unallocated.push({
-        adName: r.ad_name,
-        spend: r.spend,
-        need: productKey(r.ad_name) === productKey(ADS_CSV.autoAdName) ? 'otomatis' : 'grup',
-      })
-    }
-  } else {
-    totalSpend = 0
-    for (const rep of reports) {
-      const totals = rep.rows.filter((r) => !r.product_code)
-      totalSpend += (totals.length > 0 ? totals : rep.rows).reduce((s, r) => s + r.spend, 0)
+  const periodsWithoutKeseluruhan: string[] = []
+  const periods = [...new Set(reports.map((r) => r.period ?? ''))]
+  for (const period of periods) {
+    const reps = reports.filter((r) => (r.period ?? '') === period)
+    const pAll = reps.filter((r) => r.source === 'keseluruhan').flatMap((r) => r.rows)
+    if (reps.some((r) => r.source === 'keseluruhan')) {
+      totalSpend += pAll.reduce((s, r) => s + r.spend, 0)
+      const covered = new Set(
+        reps
+          .filter((r) => r.source !== 'keseluruhan')
+          .flatMap((r) => r.rows)
+          .filter((r) => !r.product_code)
+          .map((r) => productKey(r.ad_name)),
+      )
+      for (const r of pAll) {
+        if (r.product_code || r.spend <= 0 || covered.has(productKey(r.ad_name))) continue
+        unallocated.push({
+          adName: r.ad_name,
+          spend: r.spend,
+          need: productKey(r.ad_name) === productKey(ADS_CSV.autoAdName) ? 'otomatis' : 'grup',
+          ...(period ? { period } : {}),
+        })
+      }
+    } else {
+      periodsWithoutKeseluruhan.push(period)
+      for (const rep of reps) {
+        const totals = rep.rows.filter((r) => !r.product_code)
+        totalSpend += (totals.length > 0 ? totals : rep.rows).reduce((s, r) => s + r.spend, 0)
+      }
     }
   }
+  const hasKeseluruhan = periodsWithoutKeseluruhan.length === 0
 
   // --- Gabungkan baris produk per Kode Produk (iklan produk + otomatis + grup).
   const agg = new Map<string, { name: string; spend: number; clicks: number; sold: number; gmv: number }>()
@@ -199,8 +221,10 @@ export function analyzeAds(input: {
     const unitProfit = price !== null && hpp !== null ? price * (1 - feeRate) - hpp : null
     const margin = unitProfit !== null && price ? unitProfit / price : null
     const bepRoas = margin !== null && margin > 0 ? 1 / margin : null
-    const targetRoas = margin !== null && margin > ADS_TARGET_PROFIT ? 1 / (margin - ADS_TARGET_PROFIT) : null
-    const shopeeTargetRoas = targetRoas !== null && batalShare < 1 ? targetRoas / (1 - batalShare) : null
+    const rawTarget = margin !== null && margin > ADS_TARGET_PROFIT ? 1 / (margin - ADS_TARGET_PROFIT) : null
+    const targetRoas = rawTarget !== null && rawTarget <= MAX_TARGET_ROAS ? rawTarget : null
+    const shopeeTarget = targetRoas !== null && batalShare < 1 ? targetRoas / (1 - batalShare) : null
+    const shopeeTargetRoas = shopeeTarget !== null && shopeeTarget <= MAX_TARGET_ROAS ? shopeeTarget : null
     const realRoas = a.spend > 0 ? netGmv / a.spend : null
     const profitAfterAds = unitProfit !== null ? netSold * unitProfit - a.spend : null
     const idealPrice =
@@ -244,6 +268,7 @@ export function analyzeAds(input: {
   return {
     totalSpend,
     spendFrom: hasKeseluruhan ? 'keseluruhan' : 'rincian',
+    periodsWithoutKeseluruhan,
     unallocated,
     products,
     adsGmv: products.reduce((s, p) => s + p.adsGmv, 0),

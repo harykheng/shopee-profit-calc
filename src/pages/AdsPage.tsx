@@ -22,7 +22,7 @@ import {
   type AdVerdict,
   type AdsAnalysis,
 } from '../lib/adsMath'
-import { addMonths, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, monthEnd } from '../lib/format'
+import { addMonths, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, monthEnd, wibDay } from '../lib/format'
 import { ParseError } from '../lib/parsers/common'
 import { parseAdsCsv, type AdsParseResult } from '../lib/parsers/ads'
 import { navigate } from '../lib/router'
@@ -120,7 +120,13 @@ interface Period {
   start: string
   end: string
   reports: AdReport[]
+  /** Untuk gabungan: bulan-bulan (YYYY-MM-01) yang digabung. */
+  months?: string[]
+  /** Untuk gabungan: bulan di rentang yang belum punya data iklan 1 bulan penuh. */
+  missingMonths?: string[]
 }
+
+const COMBINED = 'gabungan'
 
 const periodKey = (start: string, end: string) => `${start}|${end}`
 
@@ -194,7 +200,37 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
     return [...map.values()]
   }, [reports])
 
-  const period = periods.find((p) => p.key === selected) ?? null
+  // Bulan yang punya data iklan 1 bulan penuh (bisa digabung tanpa dobel).
+  const fullMonths = useMemo(
+    () =>
+      periods
+        .map((p) => ({ month: fullMonthOf(p.start, p.end), p }))
+        .filter((x): x is { month: string; p: Period } => x.month !== null)
+        .sort((a, b) => a.month.localeCompare(b.month)),
+    [periods],
+  )
+  const [range, setRange] = useState<{ from: string; to: string } | null>(null)
+  const from = range?.from ?? fullMonths[Math.max(0, fullMonths.length - 2)]?.month ?? ''
+  const to = range?.to ?? fullMonths[fullMonths.length - 1]?.month ?? ''
+
+  const combined = useMemo((): Period | null => {
+    if (selected !== COMBINED || !from || !to || from > to) return null
+    const inRange = fullMonths.filter((x) => x.month >= from && x.month <= to)
+    const missingMonths: string[] = []
+    for (let m = from; m <= to; m = addMonths(m, 1)) {
+      if (!inRange.some((x) => x.month === m)) missingMonths.push(m)
+    }
+    return {
+      key: `${COMBINED}|${from}|${to}`,
+      start: from,
+      end: monthEnd(to),
+      reports: inRange.flatMap((x) => x.p.reports),
+      months: inRange.map((x) => x.month),
+      missingMonths,
+    }
+  }, [selected, from, to, fullMonths])
+
+  const period = selected === COMBINED ? combined : (periods.find((p) => p.key === selected) ?? null)
 
   return (
     <>
@@ -235,8 +271,38 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
                   {fullMonthOf(p.start, p.end) ? ' (1 bulan)' : ''}
                 </option>
               ))}
+              {fullMonths.length >= 2 && <option value={COMBINED}>Gabungkan beberapa bulan…</option>}
             </select>
+            {selected === COMBINED && (
+              <>
+                <label className="flex items-center gap-2 text-lg">
+                  Dari
+                  <select value={from} onChange={(e) => setRange({ from: e.target.value, to })} className={selectClass}>
+                    {fullMonths.map((x) => (
+                      <option key={x.month} value={x.month}>
+                        {formatMonth(x.month)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-lg">
+                  sampai
+                  <select value={to} onChange={(e) => setRange({ from, to: e.target.value })} className={selectClass}>
+                    {fullMonths.map((x) => (
+                      <option key={x.month} value={x.month}>
+                        {formatMonth(x.month)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            )}
           </div>
+          {selected === COMBINED && from > to && (
+            <div className="mb-6">
+              <Alert tone="error">Bulan "dari" harus sebelum atau sama dengan bulan "sampai".</Alert>
+            </div>
+          )}
           {period && store && <Analysis key={`${period.key}#${reloadKey}`} storeId={store.id} period={period} />}
         </>
       )}
@@ -509,6 +575,8 @@ interface Loaded {
   feeRate: number
   feeFrom: string | null
   hasOrders: boolean
+  /** Untuk gabungan beberapa bulan: hasil per bulan. */
+  perMonth?: { month: string; analysis: AdsAnalysis }[]
 }
 
 function Analysis({ storeId, period }: { storeId: number; period: Period }) {
@@ -548,19 +616,29 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
       }
       const fallbackHpp = new Map([...fallback].map(([k, v]) => [k, v.reduce((s, x) => s + x, 0) / v.length]))
 
-      const analysis = analyzeAds({
-        reports,
-        orders: items.map((i) => ({
-          product_name: i.product_name,
-          status_group: i.status_group,
-          qty: Number(i.qty),
-          subtotal: Number(i.subtotal),
-          hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
-        })),
-        feeRate: feeRate ?? DEFAULT_FEE_RATE,
-        fallbackHpp,
+      const toLine = (i: (typeof items)[number]) => ({
+        product_name: i.product_name,
+        status_group: i.status_group,
+        qty: Number(i.qty),
+        subtotal: Number(i.subtotal),
+        hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
       })
-      if (!cancelled) setData({ analysis, feeRate: feeRate ?? DEFAULT_FEE_RATE, feeFrom, hasOrders: items.length > 0 })
+      const rate = feeRate ?? DEFAULT_FEE_RATE
+      const analysis = analyzeAds({ reports, orders: items.map(toLine), feeRate: rate, fallbackHpp })
+      // Gabungan: hitung juga per bulan (data iklan & pesanan bulan itu saja) untuk dibandingkan.
+      const perMonth =
+        period.months && period.months.length > 1
+          ? period.months.map((m) => ({
+              month: m,
+              analysis: analyzeAds({
+                reports: reports.filter((r) => r.period === `${m}|${monthEnd(m)}`),
+                orders: items.filter((i) => i.created_at && wibDay(i.created_at).slice(0, 7) === m.slice(0, 7)).map(toLine),
+                feeRate: rate,
+                fallbackHpp,
+              }),
+            }))
+          : undefined
+      if (!cancelled) setData({ analysis, feeRate: rate, feeFrom, hasOrders: items.length > 0, perMonth })
     })().catch((e) => !cancelled && setError(e))
     return () => {
       cancelled = true
@@ -571,16 +649,27 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
   if (!data) return <Spinner label="Menghitung…" />
 
   const { analysis: a } = data
-  const sources = new Set(period.reports.map((r) => r.source))
+  const periodName = (key: string) => {
+    const [start, end] = key.split('|')
+    return start && end ? formatPeriod(start, end) : ''
+  }
   const noSales = a.products.filter((p) => p.verdict === 'belum_cukup' && p.netSold < 0.5)
   const main = a.products.filter((p) => !noSales.includes(p))
   const counts = new Map<AdVerdict, number>()
   for (const p of main) counts.set(p.verdict, (counts.get(p.verdict) ?? 0) + 1)
   const shown = filter === 'semua' ? main : main.filter((p) => p.verdict === filter)
+  // Gabungan: angka tiap produk per bulan (mis. Juli baru jalan sebentar, Agustus penuh).
+  const productMonths = new Map<string, MonthFigure[]>()
+  for (const { month, analysis } of data.perMonth ?? []) {
+    for (const p of analysis.products) {
+      productMonths.set(p.code, [...(productMonths.get(p.code) ?? []), { month, p }])
+    }
+  }
 
   return (
     <div className="space-y-6">
       <SummaryCard data={data} period={period} />
+      {data.perMonth && <PerMonthCard rows={data.perMonth} />}
 
       <div className="space-y-3">
         {!data.hasOrders && (
@@ -592,17 +681,28 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
             .
           </Alert>
         )}
+        {period.missingMonths && period.missingMonths.length > 0 && (
+          <Alert tone="warning" title="Ada bulan yang belum punya data iklan 1 bulan penuh.">
+            {period.missingMonths.map(formatMonth).join(', ')} tidak ikut dihitung. Upload data iklan bulan itu (tanggal 1 –
+            akhir bulan).
+          </Alert>
+        )}
         {a.unallocated.map((u) => (
-          <Alert key={u.adName} tone="warning" title={`${formatRupiah(u.spend)} biaya "${u.adName}" belum dirinci per produk.`}>
+          <Alert
+            key={`${u.period ?? ''}${u.adName}`}
+            tone="warning"
+            title={`${formatRupiah(u.spend)} biaya "${u.adName}"${period.months && u.period ? ` (${periodName(u.period)})` : ''} belum dirinci per produk.`}
+          >
             Upload file{' '}
             <strong>{u.need === 'otomatis' ? 'Rincian Data Iklan Produk Otomatis' : 'Semua Data Grup Iklan'}</strong> untuk
             periode yang sama. Biaya ini tetap dihitung di total.
           </Alert>
         ))}
-        {!sources.has('keseluruhan') && (
+        {a.periodsWithoutKeseluruhan.length > 0 && (
           <Alert tone="warning">
-            File <strong>Data Keseluruhan</strong> belum di-upload untuk periode ini, jadi total biaya hanya dari file rincian
-            (iklan per produk belum termasuk).
+            File <strong>Data Keseluruhan</strong> belum di-upload untuk{' '}
+            {period.months ? a.periodsWithoutKeseluruhan.map(periodName).join(', ') : 'periode ini'}, jadi total biaya
+            hanya dari file rincian (iklan per produk belum termasuk).
           </Alert>
         )}
         {a.productsWithoutProfit > 0 && (
@@ -630,7 +730,7 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {shown.map((p) => (
-          <ProductCard key={p.code} p={p} />
+          <ProductCard key={p.code} p={p} months={data.perMonth ? (productMonths.get(p.code) ?? []) : undefined} />
         ))}
       </div>
 
@@ -674,13 +774,55 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
   )
 }
 
+function PerMonthCard({ rows }: { rows: { month: string; analysis: AdsAnalysis }[] }) {
+  return (
+    <Card title="Per bulan">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[34rem] text-left text-base">
+          <thead className="text-sm text-slate-500">
+            <tr>
+              <th className="py-2 pr-3 font-medium">Bulan</th>
+              <th className="py-2 pr-3 text-right font-medium">Biaya iklan</th>
+              <th className="py-2 pr-3 text-right font-medium">Omzet iklan (tanpa batal)</th>
+              <th className="py-2 pr-3 text-right font-medium">ROAS nyata</th>
+              <th className="py-2 text-right font-medium">Untung setelah iklan</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 tabular-nums">
+            {rows.map(({ month, analysis: a }) => (
+              <tr key={month}>
+                <td className="py-2 pr-3 font-semibold">{formatMonth(month)}</td>
+                <td className="py-2 pr-3 text-right">{formatRupiah(a.totalSpend)}</td>
+                <td className="py-2 pr-3 text-right">{formatRupiah(a.netGmv)}</td>
+                <td className="py-2 pr-3 text-right">{formatRoas(a.realRoas)}</td>
+                <td className={`py-2 text-right font-bold ${a.profitAfterAds < 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                  {formatRupiah(a.profitAfterAds)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  )
+}
+
 function SummaryCard({ data, period }: { data: Loaded; period: Period }) {
   const a = data.analysis
   const month = fullMonthOf(period.start, period.end)
   return (
     <Card>
       <p className="text-slate-600">
-        Periode <strong>{formatPeriod(period.start, period.end)}</strong> · Potongan Shopee{' '}
+        {period.months && period.months.length > 1 ? (
+          <>
+            Gabungan <strong>{period.months.length} bulan</strong> ({period.months.map(formatMonth).join(', ')})
+          </>
+        ) : (
+          <>
+            Periode <strong>{formatPeriod(period.start, period.end)}</strong>
+          </>
+        )}{' '}
+        · Potongan Shopee{' '}
         <strong>{formatPercent(data.feeRate * 100)}</strong>{' '}
         {data.feeFrom ? `(dari laporan penghasilan ${data.feeFrom})` : '(perkiraan — laporan penghasilan belum di-upload)'}
       </p>
@@ -766,7 +908,9 @@ function advice(p: AdProductResult): string {
   }
 }
 
-function ProductCard({ p }: { p: AdProductResult }) {
+type MonthFigure = { month: string; p: AdProductResult }
+
+function ProductCard({ p, months }: { p: AdProductResult; months?: MonthFigure[] }) {
   const v = VERDICTS[p.verdict]
   const sold = Math.round(p.netSold)
   return (
@@ -822,6 +966,21 @@ function ProductCard({ p }: { p: AdProductResult }) {
         </p>
       )}
       {p.hppIncomplete && <p className="mt-2 text-amber-800">⚠️ Sebagian variasi belum ada HPP-nya.</p>}
+
+      {months && (
+        <div className="mt-3 border-t border-slate-100 pt-2 text-sm text-slate-600">
+          <p className="font-semibold text-slate-700">Per bulan:</p>
+          {months.length <= 1 && <p>Hanya diiklankan di 1 bulan.</p>}
+          <ul>
+            {months.map(({ month, p: m }) => (
+              <li key={month} className="tabular-nums">
+                {formatMonth(month)}: biaya {formatRupiah(m.spend)} · terjual {formatNumber(Math.round(m.netSold))} · ROAS{' '}
+                {formatRoas(m.realRoas)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <p className="mt-3 rounded-xl bg-slate-50 p-3 text-base text-slate-800">{advice(p)}</p>
       {p.verdict === 'hpp_kosong' && (

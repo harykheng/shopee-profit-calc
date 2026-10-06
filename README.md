@@ -140,6 +140,10 @@ Toko dipilih di **menu kanan atas** dan berlaku untuk semua halaman.
    otomatis) → **Simpan ke …**. Biaya Iklan Shopee bulan itu
    terisi otomatis dari *Data Keseluruhan*. Untuk cek mingguan, upload data iklan 7 hari — periode
    yang bukan 1 bulan penuh hanya untuk analisis dan **tidak** mengubah Biaya.
+   - Mau lihat beberapa bulan sekaligus (mis. Juli + Agustus)? Di **Periode iklan** pilih
+     **Gabungkan beberapa bulan…** → pilih dari/sampai bulan. Produk yang sama dijumlahkan, dan ada
+     tabel **Per bulan** untuk membandingkan biaya, ROAS, dan untung tiap bulan. Yang digabung hanya
+     data iklan 1 bulan penuh (data mingguan tidak ikut, supaya tidak dobel).
    - Upload export pesanan untuk periode yang sama dulu: laporan iklan Shopee ikut menghitung
      pesanan yang kemudian **batal**, dan aplikasi menguranginya dari data pesanan (**ROAS nyata**).
    - **Saran target ROAS di Shopee** = angka untuk diisi di pengaturan iklan supaya masih untung 5%
