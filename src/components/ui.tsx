@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react'
 import { errorText, friendlyError } from '../lib/errors'
 import { IconAlertCircle, IconCheckCircle, IconError, IconInfo } from './icons'
 
@@ -21,7 +21,7 @@ export function Button({
     <button
       type="button"
       {...props}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-4 text-base font-semibold transition-colors duration-150 disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-4 text-base font-semibold transition duration-150 enabled:active:scale-[0.97] disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
     />
   )
 }
@@ -121,15 +121,19 @@ export function Stamp({
   children,
   className = '',
   tilt = true,
+  delay = 0,
 }: {
   tone: StampTone
   children: ReactNode
   className?: string
   tilt?: boolean
+  /** Jeda sebelum dicapkan (ms), untuk cap berurutan di daftar. */
+  delay?: number
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-[3px] border-[3px] border-double bg-paper/80 px-2 py-0.5 text-sm font-bold uppercase tracking-[0.1em] ${
+      style={delay ? ({ '--stamp-delay': `${delay}ms` } as CSSProperties) : undefined}
+      className={`stamp-in inline-flex items-center gap-1.5 rounded-[3px] border-[3px] border-double bg-paper/80 px-2 py-0.5 text-sm font-bold uppercase tracking-[0.1em] ${
         tilt ? '-rotate-2' : ''
       } ${STAMP_TONES[tone]} ${className}`}
     >

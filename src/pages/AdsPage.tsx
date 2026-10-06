@@ -453,7 +453,7 @@ function UploadCard({
           )}
         </span>
       }
-      className="mb-6"
+      className={`mb-6 ${hasData ? 'reveal' : ''}`}
     >
       <details className="mb-4 rounded-md bg-counter/60 px-4 py-3 text-ink-soft">
         <summary className="cursor-pointer font-semibold text-ink">Cara ambil file dari Shopee</summary>
@@ -772,8 +772,13 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {shown.map((p) => (
-          <ProductCard key={p.code} p={p} months={data.perMonth ? (productMonths.get(p.code) ?? []) : undefined} />
+        {shown.map((p, i) => (
+          <ProductCard
+            key={p.code}
+            p={p}
+            months={data.perMonth ? (productMonths.get(p.code) ?? []) : undefined}
+            stampDelay={Math.min(i, 8) * 60}
+          />
         ))}
       </div>
 
@@ -953,7 +958,7 @@ function advice(p: AdProductResult): string {
 
 type MonthFigure = { month: string; p: AdProductResult }
 
-function ProductCard({ p, months }: { p: AdProductResult; months?: MonthFigure[] }) {
+function ProductCard({ p, months, stampDelay = 0 }: { p: AdProductResult; months?: MonthFigure[]; stampDelay?: number }) {
   const v = VERDICTS[p.verdict]
   const sold = Math.round(p.netSold)
   return (
@@ -962,7 +967,7 @@ function ProductCard({ p, months }: { p: AdProductResult; months?: MonthFigure[]
         <h3 className="line-clamp-2 min-w-0 font-semibold leading-snug" title={p.name}>
           {p.name}
         </h3>
-        <Stamp tone={v.tone} className="mt-0.5 shrink-0">
+        <Stamp tone={v.tone} delay={stampDelay} className="mt-0.5 shrink-0">
           {v.label}
         </Stamp>
       </div>

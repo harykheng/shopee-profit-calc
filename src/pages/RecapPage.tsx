@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { MonthSelect } from '../components/pickers'
 import { Alert, Button, ErrorBox, Spinner, Stamp } from '../components/ui'
 import { IconAlertCircle, IconCheck, IconChevronDown, IconInfo } from '../components/icons'
@@ -20,6 +20,7 @@ import { addMonths, currentMonth, formatDate, formatMonth, formatNumber, formatP
 import { monthStatus, type MonthStatus } from '../lib/monthStatus'
 import { estimateProfit, soldFlow, type FlowStep, type ProfitEstimate } from '../lib/recapMath'
 import { navigate } from '../lib/router'
+import { Confetti, useCelebrateOnce, useCountUp } from '../components/motion'
 import type {
   DailyReconciliation,
   MonthlyRecap,
@@ -163,6 +164,7 @@ export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: numbe
             singleMonth={from === end ? from : null}
             rangeEnd={end}
             onRecalc={setRecalcMonth}
+            storeId={storeId}
           />
 
           <div role="tablist" aria-label="Rincian" className="flex flex-wrap gap-1 border-b border-line">
@@ -171,11 +173,13 @@ export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: numbe
             {data.months.length > 1 && <TabButton id="bulan" tab={tab} setTab={setTab}>Per bulan</TabButton>}
           </div>
 
-          {tab === 'pesanan' && <OrdersTab orders={orders} period={period} />}
-          {tab === 'produk' && <ProductsTab products={data.products} returned={data.returned} period={period} />}
-          {tab === 'bulan' && data.months.length > 1 && (
-            <MonthsTab months={data.months} reconciliation={data.reconciliation} onRecalc={setRecalcMonth} />
-          )}
+          <div key={tab} className="page-in">
+            {tab === 'pesanan' && <OrdersTab orders={orders} period={period} />}
+            {tab === 'produk' && <ProductsTab products={data.products} returned={data.returned} period={period} />}
+            {tab === 'bulan' && data.months.length > 1 && (
+              <MonthsTab months={data.months} reconciliation={data.reconciliation} onRecalc={setRecalcMonth} />
+            )}
+          </div>
         </div>
       )}
 
@@ -231,7 +235,7 @@ function Why({ label, children }: { label: string; children: ReactNode }) {
         {label}
         <IconChevronDown size={16} className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && <div className="space-y-2 rounded-md bg-counter/60 px-4 py-3 text-ink-soft">{children}</div>}
+      {open && <div className="reveal space-y-2 rounded-md bg-counter/60 px-4 py-3 text-ink-soft">{children}</div>}
     </div>
   )
 }
@@ -245,6 +249,7 @@ function NotaCard({
   singleMonth,
   rangeEnd,
   onRecalc,
+  storeId,
 }: {
   data: RecapData
   orders: OrdersData | null
@@ -252,6 +257,7 @@ function NotaCard({
   singleMonth: string | null
   rangeEnd: string
   onRecalc: (month: string) => void
+  storeId: number | null
 }) {
   const t = data.months.reduce(
     (a, m) => ({
@@ -291,6 +297,11 @@ function NotaCard({
   const flow = orders ? buildFlow(orders, t.qty, rangeEnd) : null
   const biayaMonth = unfilledExpenses[0]?.month ?? singleMonth ?? data.months[0]?.month
 
+  // Angka berputar naik, baris nota tercetak, lalu cap dicapkan; konfeti sekali per bulan yang final.
+  const shownProfit = useCountUp(t.profit)
+  const stampRef = useRef<HTMLButtonElement>(null)
+  const celebrate = useCelebrateOnce(allFinal && singleMonth && storeId ? `final:${storeId}:${singleMonth}` : null, 750)
+
   return (
     <section className="space-y-5 rounded-lg border border-line bg-paper p-5 shadow-sheet sm:p-7">
       {/* Jawaban dulu: angka untung bersih paling atas, rinciannya di nota di bawah. */}
@@ -300,21 +311,23 @@ function NotaCard({
           <p
             className={`num mt-1 text-4xl font-bold tracking-tight sm:text-5xl ${t.profit < 0 ? 'text-loss' : 'text-ink'}`}
           >
-            {formatRupiah(t.profit)}
+            {formatRupiah(Math.round(shownProfit))}
           </p>
           {margin !== null && <p className="num mt-1 text-sm text-ink-muted">{formatPercent(margin)} dari uang masuk</p>}
           {!allFinal && firstTodo && (
             <p className="mt-1 text-sm font-medium text-warn">Belum final: {firstTodo.short}</p>
           )}
         </div>
+        <Confetti anchor={stampRef} fireKey={celebrate} />
         {statuses.length > 0 && (
           <button
+            ref={stampRef}
             type="button"
             aria-expanded={showStatus}
             onClick={() => setShowStatus((s) => !s)}
             className="group inline-flex min-h-11 items-center gap-1.5 rounded-md px-1"
           >
-            <Stamp tone={allFinal ? 'final' : 'warn'}>{allFinal ? 'Angka final' : `Belum lengkap · ${todoCount} hal`}</Stamp>
+            <Stamp tone={allFinal ? 'final' : 'warn'} delay={450}>{allFinal ? 'Angka final' : `Belum lengkap · ${todoCount} hal`}</Stamp>
             <IconChevronDown
               size={18}
               className={`text-ink-muted transition-transform duration-150 group-hover:text-ink ${showStatus ? 'rotate-180' : ''}`}
@@ -325,7 +338,7 @@ function NotaCard({
       </div>
 
       {showStatus && (
-        <div className={`space-y-4 rounded-md p-4 ${allFinal ? 'bg-gain-tint' : 'bg-warn-tint'}`}>
+        <div className={`reveal space-y-4 rounded-md p-4 ${allFinal ? 'bg-gain-tint' : 'bg-warn-tint'}`}>
           {statuses.map((s) => (
             <Checklist
               key={s.month}
@@ -338,7 +351,7 @@ function NotaCard({
         </div>
       )}
 
-      <div className="border-y-2 border-dashed border-rule">
+      <div className="print-in border-y-2 border-dashed border-rule">
         <NotaLine
           op="+"
           label="Uang masuk dari Shopee"
@@ -395,8 +408,8 @@ function NotaCard({
         />
       </div>
 
-      {/* Baris total nota: menutup hitungan di atasnya. */}
-      <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2">
+      {/* Baris total nota: menutup hitungan di atasnya, tercetak paling akhir. */}
+      <div className="print-last grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2">
         <span className="num text-center text-xl font-bold text-ink-muted">=</span>
         <span className="font-bold uppercase tracking-wide">Untung bersih</span>
         <span className={`num whitespace-nowrap text-right text-xl font-bold ${t.profit < 0 ? 'text-loss' : 'text-ink'}`}>
