@@ -312,7 +312,7 @@ memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
 
 ### Cara pakai
 
-1. Buka menu **Simulasi Harga**. Nama toko di judul mengikuti pilihan toko di kanan atas.
+1. Buka menu **Simulasi** (judul halamannya "Simulasi Harga"). Nama toko di judul mengikuti pilihan toko di kanan atas.
 2. Isi kolom-kolomnya. Angka diperbarui setelah kolom ditinggalkan atau tombol Enter ditekan.
 
 | Kolom | Isi | Bawaan |
