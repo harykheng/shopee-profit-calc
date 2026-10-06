@@ -15,8 +15,9 @@ Untuk setup database dan deploy, lihat [README.md](README.md).
 6. [Halaman Biaya](#6-halaman-biaya)
 7. [Halaman Rekap](#7-halaman-rekap)
 8. [Halaman Iklan](#8-halaman-iklan)
-9. [Pertanyaan yang sering muncul](#9-pertanyaan-yang-sering-muncul)
-10. [Kamus istilah](#10-kamus-istilah)
+9. [Halaman Simulasi Harga](#9-halaman-simulasi-harga)
+10. [Pertanyaan yang sering muncul](#10-pertanyaan-yang-sering-muncul)
+11. [Kamus istilah](#11-kamus-istilah)
 
 ---
 
@@ -298,7 +299,79 @@ Iklan tidak akan bisa memberi untung 5% (atau ROAS yang dibutuhkan di atas 50). 
 
 ---
 
-## 9. Pertanyaan yang sering muncul
+## 9. Halaman Simulasi Harga
+
+Dipakai **sebelum jualan produk baru atau sebelum ganti harga**. Tidak perlu upload apa pun: isi
+beberapa angka, hasilnya langsung keluar. Angka di halaman ini **tidak disimpan**. Kalau halaman
+ditutup, isinya hilang.
+
+Bedanya dengan halaman Iklan: halaman Iklan menilai yang **sudah terjadi** (dari data upload),
+sedangkan Simulasi Harga menghitung **sebelum** terjadi. Potongan Shopee dihitung **per komponen**
+(admin %, Gratis Ongkir XTRA %, dan biaya proses yang tetap per order), jadi lebih tepat untuk
+memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
+
+### Cara pakai
+
+1. Buka menu **Simulasi Harga**. Nama toko di judul mengikuti pilihan toko di kanan atas.
+2. Isi kolom-kolomnya. Angka diperbarui setelah kolom ditinggalkan atau tombol Enter ditekan.
+
+| Kolom | Isi | Bawaan |
+|---|---|---|
+| **HPP per unit jual** | Modal per 1 unit yang dijual di Shopee. Paket/bundling: HPP per paket. | – |
+| **Harga jual** | Harga jual per unit/paket | – |
+| **Biaya admin** | Persen biaya admin kategori produk itu (boleh pakai koma, mis. 8,25) | 8,25% |
+| **Ikut Gratis Ongkir XTRA** | Centang kalau produk ikut program ini (potongan 4%) | dicentang |
+| **Biaya proses pesanan** | Biaya tetap per order dari Shopee | Rp1.250 |
+| **Packaging per order** | Bubble wrap, lakban, kardus, dll. per order | Rp0 |
+| **ROAS realistis** | ROAS yang biasa didapat di iklan (lihat halaman Iklan) | 5,5 |
+| **ROAS aktual** (opsional) | ROAS nyata iklan produk ini, kalau iklannya sudah jalan | kosong |
+
+### Rincian per order (nota)
+
+```
+  Harga jual                    Rp…
+− Biaya admin                   Rp…   (admin % × harga jual)
+− Biaya proses pesanan          Rp…   (tetap per order)
+− Gratis Ongkir XTRA            Rp…   (4% × harga jual, kalau ikut)
+− Packaging                     Rp…
+= Penghasilan                   Rp…   (uang cair per order, setelah packaging)
+− HPP                           Rp…
+= UNTUNG PER ORDER              Rp…   (dan % dari harga jual, sebelum iklan)
+```
+
+Kalau untungnya minus, muncul tulisan **"Harga ini sudah rugi tanpa iklan"**. Artinya harga jual
+harus dinaikkan dulu, belum usah memikirkan iklan.
+
+### Hasil
+
+| Angka | Artinya |
+|---|---|
+| **Balik modal butuh ROAS** | ROAS minimum supaya iklan tidak rugi (harga jual ÷ untung per order). Di bawah angka ini, setiap order dari iklan rugi. |
+| **Saran target ROAS di Shopee** | Angka untuk diisi di pengaturan iklan supaya masih **untung 5%** dari harga jual setelah iklan. Rumusnya sama dengan halaman Iklan, tapi **tanpa cadangan pesanan batal** (simulasi tidak punya data batal), jadi sebaiknya diisi sedikit lebih tinggi. |
+| **Harga minimum balik modal di ROAS …** | Harga jual terendah supaya iklan dengan **ROAS realistis** tidak rugi. Kalau harga sekarang di bawah ini, iklan hampir pasti rugi. |
+| **Harga untuk untung 5% setelah iklan** | Harga jual supaya, dengan ROAS realistis, masih untung 5% setelah biaya iklan. |
+| **Harga untuk untung 20%** | Harga jual supaya untung 20% (sebelum iklan). |
+
+- Semua saran harga **dibulatkan ke atas ke Rp1.000**; angka persisnya tertulis kecil di bawahnya.
+- Kalau tertulis **"tidak mungkin, untung per barang terlalu tipis"**: potongan Shopee dan biaya
+  iklan sudah terlalu besar dibanding harga, jadi berapa pun harganya target itu tidak tercapai
+  dengan ROAS tersebut (atau ROAS yang dibutuhkan di atas 50).
+
+### Kalau ROAS aktual diisi
+
+Muncul kotak **"Iklan untung"** (hijau) atau **"Iklan rugi"** (merah) dengan rupiahnya per order:
+
+- **Biaya iklan per order** = harga jual ÷ ROAS aktual
+- **Untung setelah iklan** = untung per order − biaya iklan per order
+
+Contoh: HPP Rp46.668, harga Rp65.000, admin 8,25%, ikut XTRA, ROAS aktual 6,94:
+- untung per order ±Rp9.120;
+- biaya iklan per order ±Rp9.366;
+- jadi **iklan rugi ±Rp246 per order**. Balik modal butuh ROAS 7,13, sedangkan ROAS aktual baru 6,94.
+
+---
+
+## 10. Pertanyaan yang sering muncul
 
 **Upload file yang sama dua kali, apakah dobel?**
 Tidak. Pesanan, penghasilan, dan data iklan dikenali dan diperbarui, tidak ditambah lagi.
@@ -346,7 +419,7 @@ disimpan**. File dibaca langsung di browser.
 
 ---
 
-## 10. Kamus istilah
+## 11. Kamus istilah
 
 | Istilah | Artinya |
 |---|---|

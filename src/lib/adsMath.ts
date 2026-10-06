@@ -122,6 +122,24 @@ export function feeRateFromIncome(days: { total_income: number; subtotal_pesanan
   return rate >= 0 && rate < 0.6 ? rate : null
 }
 
+/**
+ * ROAS supaya masih untung ADS_TARGET_PROFIT (5%) dari harga jual setelah iklan.
+ * - `targetRoas`: ROAS nyata yang dibutuhkan; null = tidak mungkin (margin ≤ 5% atau > MAX_TARGET_ROAS).
+ * - `shopeeTargetRoas`: angka untuk diisi di Shopee, dengan cadangan pesanan batal
+ *   (Shopee ikut menghitung pesanan batal); null = tidak mungkin.
+ * `margin` = untung per barang (sebelum iklan) ÷ harga jual; `batalShare` = porsi pesanan batal (0–1).
+ */
+export function targetRoasFromMargin(
+  margin: number | null,
+  batalShare = 0,
+): { targetRoas: number | null; shopeeTargetRoas: number | null } {
+  const rawTarget = margin !== null && margin > ADS_TARGET_PROFIT ? 1 / (margin - ADS_TARGET_PROFIT) : null
+  const targetRoas = rawTarget !== null && rawTarget <= MAX_TARGET_ROAS ? rawTarget : null
+  const shopeeTarget = targetRoas !== null && batalShare < 1 ? targetRoas / (1 - batalShare) : null
+  const shopeeTargetRoas = shopeeTarget !== null && shopeeTarget <= MAX_TARGET_ROAS ? shopeeTarget : null
+  return { targetRoas, shopeeTargetRoas }
+}
+
 const ORDER: Record<AdVerdict, number> = { takedown: 0, kurang: 1, hpp_kosong: 2, hero: 3, aman: 4, belum_cukup: 5 }
 
 export function analyzeAds(input: {
@@ -221,10 +239,7 @@ export function analyzeAds(input: {
     const unitProfit = price !== null && hpp !== null ? price * (1 - feeRate) - hpp : null
     const margin = unitProfit !== null && price ? unitProfit / price : null
     const bepRoas = margin !== null && margin > 0 ? 1 / margin : null
-    const rawTarget = margin !== null && margin > ADS_TARGET_PROFIT ? 1 / (margin - ADS_TARGET_PROFIT) : null
-    const targetRoas = rawTarget !== null && rawTarget <= MAX_TARGET_ROAS ? rawTarget : null
-    const shopeeTarget = targetRoas !== null && batalShare < 1 ? targetRoas / (1 - batalShare) : null
-    const shopeeTargetRoas = shopeeTarget !== null && shopeeTarget <= MAX_TARGET_ROAS ? shopeeTarget : null
+    const { targetRoas, shopeeTargetRoas } = targetRoasFromMargin(margin, batalShare)
     const realRoas = a.spend > 0 ? netGmv / a.spend : null
     const profitAfterAds = unitProfit !== null ? netSold * unitProfit - a.spend : null
     const idealPrice =
@@ -310,4 +325,111 @@ export function fullMonthOf(periodStart: string, periodEnd: string): string | nu
   const [y, m] = periodStart.split('-').map(Number)
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate()
   return Number(periodEnd.slice(8, 10)) === last ? periodStart : null
+}
+
+// --- Simulasi harga (sebelum jualan / ganti harga) ---------------------------------
+
+/** Potongan Gratis Ongkir XTRA kalau ikut program (persen dari harga jual). */
+export const XTRA_FEE_RATE = 0.04
+
+export interface PriceSimInput {
+  /** HPP per unit jual (paket: HPP per paket). */
+  hpp: number
+  /** Harga jual per unit. */
+  price: number
+  /** Biaya admin, pecahan (8,25% → 0.0825). */
+  adminRate: number
+  /** Ikut Gratis Ongkir XTRA. */
+  xtra: boolean
+  /** Biaya proses pesanan per order (Rp, flat). */
+  processFee: number
+  /** Packaging per order (Rp). */
+  packaging: number
+  /** ROAS yang biasa didapat di iklan. */
+  realisticRoas: number
+  /** ROAS aktual iklan produk ini (opsional). */
+  actualRoas?: number | null
+}
+
+/** Saran harga: harga persis dan harga dibulatkan ke atas ke Rp1.000. null = tidak mungkin. */
+export interface SuggestedPrice {
+  exact: number
+  rounded: number
+}
+
+export interface PriceSimResult {
+  adminFee: number
+  xtraFee: number
+  processFee: number
+  /** Total potongan Shopee per order. */
+  totalFee: number
+  /** Harga − potongan. */
+  income: number
+  /** Penghasilan − HPP − packaging (sebelum iklan). */
+  profit: number
+  margin: number
+  /** false = harga ini sudah rugi tanpa iklan. */
+  profitable: boolean
+  /** ROAS minimal supaya iklan tidak rugi; null kalau sudah rugi tanpa iklan. */
+  bepRoas: number | null
+  /** Saran target ROAS (untung 5% setelah iklan, tanpa cadangan pesanan batal). null = tidak mungkin. */
+  targetRoas: number | null
+  /** Harga minimum supaya iklan balik modal di ROAS realistis. */
+  priceBreakEven: SuggestedPrice | null
+  /** Harga supaya masih untung 5% setelah iklan di ROAS realistis. */
+  priceTargetProfit: SuggestedPrice | null
+  /** Harga supaya untung 20% (sebelum iklan). */
+  priceTargetMargin: SuggestedPrice | null
+  /** Diisi kalau ROAS aktual diisi. */
+  actual: { adCost: number; profitAfterAds: number } | null
+}
+
+/** Bulatkan ke atas ke Rp1.000 terdekat. */
+export function roundUpToThousand(value: number): number {
+  return Math.ceil(value / 1000 - 1e-9) * 1000
+}
+
+/**
+ * Hitung untung per order dan saran harga, dengan potongan Shopee per komponen
+ * (admin % + Gratis Ongkir XTRA % + biaya proses flat per order).
+ */
+export function simulatePrice(input: PriceSimInput): PriceSimResult {
+  const { hpp, price, adminRate, xtra, processFee, packaging, realisticRoas, actualRoas } = input
+  const xtraRate = xtra ? XTRA_FEE_RATE : 0
+  const adminFee = price * adminRate
+  const xtraFee = price * xtraRate
+  const totalFee = adminFee + xtraFee + processFee
+  const income = price - totalFee
+  const profit = income - hpp - packaging
+  const margin = price > 0 ? profit / price : 0
+  const profitable = profit > 0
+
+  // Harga = biaya tetap ÷ (1 − potongan % − porsi lain). Penyebut ≤ 0 → tidak mungkin.
+  const fixedCost = hpp + processFee + packaging
+  const pctLeft = 1 - adminRate - xtraRate
+  const priceFor = (share: number): SuggestedPrice | null => {
+    const denom = pctLeft - share
+    if (denom <= 0) return null
+    const exact = fixedCost / denom
+    return { exact, rounded: roundUpToThousand(exact) }
+  }
+  const adShare = realisticRoas > 0 ? 1 / realisticRoas : Infinity
+
+  const adCost = actualRoas && actualRoas > 0 ? price / actualRoas : null
+  return {
+    adminFee,
+    xtraFee,
+    processFee,
+    totalFee,
+    income,
+    profit,
+    margin,
+    profitable,
+    bepRoas: profitable ? price / profit : null,
+    targetRoas: profitable ? targetRoasFromMargin(margin, 0).shopeeTargetRoas : null,
+    priceBreakEven: priceFor(adShare),
+    priceTargetProfit: priceFor(adShare + ADS_TARGET_PROFIT),
+    priceTargetMargin: priceFor(PRICE_TARGET_MARGIN),
+    actual: adCost !== null ? { adCost, profitAfterAds: profit - adCost } : null,
+  }
 }

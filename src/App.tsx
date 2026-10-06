@@ -10,6 +10,7 @@ import { HppPage } from './pages/HppPage'
 import { ExpensesPage } from './pages/ExpensesPage'
 import { RecapPage } from './pages/RecapPage'
 import { AdsPage } from './pages/AdsPage'
+import { PriceSimPage } from './pages/PriceSimPage'
 import { ROUTES, readHash } from './lib/router'
 
 const STORE_KEY = 'profit-shopee:store'
@@ -102,7 +103,7 @@ function MainApp({ email }: { email: string }) {
                   route === n.route ? 'bg-orange-100 text-orange-800' : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                {n.label}
+                {n.short ?? n.label}
               </a>
             ))}
           </nav>
@@ -161,6 +162,7 @@ function MainApp({ email }: { email: string }) {
             )}
             {route === 'rekap' && <RecapPage stores={stores} storeId={storeId} />}
             {route === 'iklan' && <AdsPage key={storeId} stores={stores} storeId={storeId} />}
+            {route === 'simulasi' && <PriceSimPage stores={stores} storeId={storeId} />}
           </>
         )}
       </main>

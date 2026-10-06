@@ -457,7 +457,7 @@ function FlowList({ steps }: { steps: FlowStep[] }) {
   )
 }
 
-function NotaLine({ op, label, detail, amount }: { op: string; label: string; detail: ReactNode; amount: ReactNode }) {
+export function NotaLine({ op, label, detail, amount }: { op: string; label: string; detail: ReactNode; amount: ReactNode }) {
   return (
     <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2 border-slate-100 py-3 [&+&]:border-t">
       <span className="text-center font-extrabold text-slate-400">{op}</span>
