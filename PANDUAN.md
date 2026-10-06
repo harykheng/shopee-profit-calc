@@ -301,9 +301,10 @@ Iklan tidak akan bisa memberi untung 5% (atau ROAS yang dibutuhkan di atas 50). 
 
 ## 9. Halaman Simulasi Harga
 
-Dipakai **sebelum jualan produk baru atau sebelum ganti harga**. Tidak perlu upload apa pun: isi
-beberapa angka, hasilnya langsung keluar. Angka di halaman ini **tidak disimpan**. Kalau halaman
-ditutup, isinya hilang.
+Dipakai **sebelum jualan produk baru atau sebelum ganti harga**. Isi beberapa angka (atau pilih
+produk yang sudah pernah di-upload), hasilnya langsung keluar. Angka simulasi **tidak disimpan**;
+kalau halaman ditutup, isinya hilang. Yang bisa disimpan hanya **% admin dan XTRA per produk**
+(lihat di bawah).
 
 Bedanya dengan halaman Iklan: halaman Iklan menilai yang **sudah terjadi** (dari data upload),
 sedangkan Simulasi Harga menghitung **sebelum** terjadi. Potongan Shopee dihitung **per komponen**
@@ -313,7 +314,11 @@ memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
 ### Cara pakai
 
 1. Buka menu **Simulasi** (judul halamannya "Simulasi Harga"). Nama toko di judul mengikuti pilihan toko di kanan atas.
-2. Isi kolom-kolomnya. Angka diperbarui setelah kolom ditinggalkan atau tombol Enter ditekan.
+2. **Pilih produk (opsional)**: ketik nama produk, lalu pilih variasinya. Lihat
+   [Memakai produk yang sudah di-upload](#memakai-produk-yang-sudah-di-upload). Untuk produk baru
+   yang belum pernah dijual, lewati saja.
+3. Isi atau ubah kolom-kolomnya. Angka diperbarui setelah kolom ditinggalkan atau tombol Enter
+   ditekan.
 
 | Kolom | Isi | Bawaan |
 |---|---|---|
@@ -325,6 +330,27 @@ memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
 | **Packaging per order** | Bubble wrap, lakban, kardus, dll. per order | Rp0 |
 | **ROAS realistis** | ROAS yang biasa didapat di iklan (lihat halaman Iklan) | 5,5 |
 | **ROAS aktual** (opsional) | ROAS nyata iklan produk ini, kalau iklannya sudah jalan | kosong |
+
+### Memakai produk yang sudah di-upload
+
+Setelah produk dipilih, kolom-kolom ini terisi otomatis. Di bawah kolomnya tertulis asal angkanya
+(↳ …):
+
+| Kolom | Diambil dari |
+|---|---|
+| **HPP** | Halaman HPP. Kalau masih kosong, muncul peringatan dan tombol **Isi HPP**. |
+| **Harga jual** | Harga per barang di **pesanan terakhir** variasi itu (pesanan batal tidak dihitung), beserta tanggalnya |
+| **ROAS aktual** | **ROAS nyata** produk itu di data iklan **terbaru** (halaman Iklan). Kosong kalau produknya tidak diiklankan di periode itu. |
+| **Biaya admin & XTRA** | Nilai yang pernah disimpan untuk produk ini; kalau belum pernah, nilai bawaan (8,25% dan ikut XTRA) |
+
+Semua angka tetap **bisa diubah**. Contoh: ubah harga jual untuk melihat efeknya kalau harga
+dinaikkan. Mengubah angka di sini tidak mengubah data di halaman lain.
+
+**% admin dan XTRA tidak ada di file export Shopee**, jadi diisi sendiri. Isi sekali yang benar,
+lalu tekan **Simpan % admin & XTRA untuk produk ini**. Nilainya tersimpan untuk **semua variasi**
+produk itu dan dipakai lagi di semua perangkat dan semua akun.
+
+Tekan **Ganti / isi manual** untuk memilih produk lain atau mengisi semuanya sendiri.
 
 ### Rincian per order (nota)
 

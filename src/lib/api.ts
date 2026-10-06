@@ -98,6 +98,35 @@ export async function updateHpp(productId: number, hpp: number | null): Promise<
   ) as Product
 }
 
+/** Harga jual per barang dari pesanan terakhir (tidak batal) untuk SKU ini. */
+export async function fetchLastSalePrice(storeId: number, sku: string) {
+  const rows = check(
+    await supabase
+      .from('order_items')
+      .select('qty, subtotal, created_at')
+      .eq('store_id', storeId)
+      .eq('sku', sku)
+      .neq('status_group', 'batal')
+      .gt('qty', 0)
+      .order('created_at', { ascending: false, nullsFirst: false })
+      .order('id', { ascending: false })
+      .limit(1),
+  ) as { qty: number; subtotal: number; created_at: string | null }[]
+  const r = rows[0]
+  return r ? { price: Math.round(Number(r.subtotal) / Number(r.qty)), date: r.created_at } : null
+}
+
+/** Simpan % admin & XTRA untuk semua variasi dengan nama produk ini (Simulasi Harga). */
+export async function saveProductFees(storeId: number, productName: string, adminPct: number, xtra: boolean) {
+  check(
+    await supabase
+      .from('products')
+      .update({ admin_pct: adminPct, xtra })
+      .eq('store_id', storeId)
+      .eq('product_name', productName),
+  )
+}
+
 // --- Biaya ------------------------------------------------------------------
 
 export async function fetchExpenses(storeId: number, month: string): Promise<Expense[]> {

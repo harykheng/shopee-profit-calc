@@ -53,6 +53,7 @@ membaca file di browser, Vitest untuk test.
    | 2 | `20261004000000_income_adjustments.sql` | Biaya penyesuaian dari laporan penghasilan |
    | 3 | `20261005000000_all_order_statuses.sql` | Semua status pesanan + tabel "Pesanan masuk" |
    | 4 | `20261006000000_ads.sql` | Data iklan (halaman Iklan) |
+   | 5 | `20261007000000_product_fee_settings.sql` | % admin & XTRA per produk (halaman Simulasi Harga) |
 
    Kalau muncul tulisan *NOTICE … skipping*, itu normal (artinya bagian itu sudah ada).
 4. **Matikan pendaftaran publik** (wajib):
@@ -83,6 +84,10 @@ menghapus data.
 
 > Sudah setup sebelum 6 Oktober 2026? Jalankan sekali file `20261006000000_ads.sql` supaya
 > halaman **Iklan** bisa dipakai.
+
+> Sudah setup sebelum 7 Oktober 2026? Jalankan sekali file
+> `20261007000000_product_fee_settings.sql` supaya % admin & XTRA bisa disimpan per produk di
+> halaman **Simulasi Harga**. Tanpa file ini, simulasi tetap jalan, hanya tombol simpan yang gagal.
 
 ## 2. Membuat akun pengguna
 
@@ -210,7 +215,7 @@ src/lib/shopeeColumns.ts  Pemetaan kolom Shopee (satu-satunya tempat yang perlu 
 src/lib/parsers/       Parser export pesanan (.xlsx), laporan penghasilan (.pdf), data iklan (.csv)
 src/lib/monthStatus.ts Logika status "Angka final / Belum lengkap" (termasuk uang cair geser 1–2 hari)
 src/lib/adsMath.ts     Analisis iklan: ROAS nyata, balik modal, saran ROAS, label
-src/pages/             Halaman Login, Upload, HPP, Biaya, Rekap, Iklan
+src/pages/             Halaman Login, Upload, HPP, Biaya, Rekap, Iklan, Simulasi Harga
 tests/                 Test Vitest + fixture dummy
 scripts/make-fixtures.mjs  Pembuat fixture dummy
 ```

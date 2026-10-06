@@ -11,6 +11,10 @@ export interface Product {
   product_name: string
   variant_name: string
   hpp: number | null
+  /** % biaya admin untuk Simulasi Harga (null = belum diisi). Ada setelah SQL 20261007 dijalankan. */
+  admin_pct?: number | null
+  /** Ikut Gratis Ongkir XTRA (null = belum diisi). */
+  xtra?: boolean | null
   updated_at: string
 }
 
