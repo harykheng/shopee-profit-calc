@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { RupiahInput } from '../components/pickers'
-import { Alert, Card, ErrorBox, PageTitle, Spinner } from '../components/ui'
+import { Alert, Card, ErrorBox, PageTitle, Spinner, inputClass } from '../components/ui'
+import { IconCheck, IconCheckCircle, IconSearch } from '../components/icons'
 import { fetchProducts, updateHpp } from '../lib/api'
 import { friendlyError } from '../lib/errors'
 import { formatNumber } from '../lib/format'
@@ -94,40 +95,49 @@ export function HppPage({
       ) : (
         <Card>
           <div className="mb-4 flex flex-wrap items-center gap-4">
-            <input
-              type="search"
-              placeholder="Cari produk / SKU…"
-              aria-label="Cari produk"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="min-h-12 flex-1 rounded-xl border border-slate-300 px-4 text-lg focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
-            />
-            <label className="flex min-h-12 items-center gap-3 text-lg">
+            <div className="relative min-w-[14rem] flex-1">
+              <IconSearch
+                size={18}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"
+              />
+              <input
+                type="search"
+                placeholder="Cari produk / SKU…"
+                aria-label="Cari produk"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className={`${inputClass} pl-10`}
+              />
+            </div>
+            <label className="flex min-h-11 cursor-pointer items-center gap-3">
               <input
                 type="checkbox"
                 checked={onlyMissing}
                 onChange={(e) => setOnlyMissing(e.target.checked)}
-                className="h-6 w-6 accent-orange-600"
+                className="h-5 w-5"
               />
               Hanya yang belum ada HPP
             </label>
           </div>
 
           {missingCount > 0 ? (
-            <p className="mb-4 text-lg font-semibold text-red-700">
+            <p className="mb-4 font-semibold text-loss">
               {formatNumber(missingCount)} dari {formatNumber(products.length)} produk belum punya HPP.
             </p>
           ) : (
-            <p className="mb-4 text-lg font-semibold text-emerald-700">Semua produk sudah punya HPP. 👍</p>
+            <p className="mb-4 flex items-center gap-2 font-semibold text-gain">
+              <IconCheckCircle size={20} />
+              Semua produk sudah punya HPP.
+            </p>
           )}
 
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="border-b text-slate-500">
+              <thead className="border-b border-rule text-sm text-ink-muted">
                 <tr>
-                  <th className="py-2 pr-3">Produk</th>
-                  <th className="py-2 pr-3">SKU</th>
-                  <th className="w-56 py-2 pr-3">HPP per pcs</th>
+                  <th className="py-2 pr-3 font-medium">Produk</th>
+                  <th className="py-2 pr-3 font-medium">SKU</th>
+                  <th className="w-56 py-2 pr-3 font-medium">HPP per pcs</th>
                   <th className="w-28 py-2" />
                 </tr>
               </thead>
@@ -136,16 +146,16 @@ export function HppPage({
                   const st = status[p.id]
                   const sourceLabel = SOURCE_LABEL[p.sku_source]
                   return (
-                    <tr key={p.id} className={`border-b border-slate-100 align-middle ${p.hpp === null ? 'bg-red-50' : ''}`}>
+                    <tr key={p.id} className={`border-b border-line/70 align-middle ${p.hpp === null ? 'bg-loss-tint/50' : ''}`}>
                       <td className="py-3 pr-3">
                         <p className="font-medium">{p.product_name}</p>
-                        {p.variant_name && <p className="text-slate-600">Variasi: {p.variant_name}</p>}
+                        {p.variant_name && <p className="text-ink-soft">Variasi: {p.variant_name}</p>}
                       </td>
                       <td className="py-3 pr-3 text-sm">
                         {p.sku_source === 'sku' ? (
-                          <span className="font-mono">{p.sku}</span>
+                          <span className="num text-ink-soft">{p.sku}</span>
                         ) : (
-                          <span className="whitespace-nowrap rounded-lg bg-amber-100 px-2 py-1 text-amber-900">{sourceLabel}</span>
+                          <span className="whitespace-nowrap rounded-md bg-warn-tint px-2 py-1 text-warn">{sourceLabel}</span>
                         )}
                       </td>
                       <td className="py-3 pr-3">
@@ -158,17 +168,22 @@ export function HppPage({
                         />
                       </td>
                       <td className="py-3 text-sm">
-                        {st?.state === 'saving' && <span className="text-slate-500">Menyimpan…</span>}
-                        {st?.state === 'saved' && <span className="text-emerald-700">Tersimpan ✓</span>}
-                        {st?.state === 'error' && <span className="text-red-700">{st.message}</span>}
-                        {!st && p.hpp === null && <span className="font-semibold text-red-700">Belum diisi</span>}
+                        {st?.state === 'saving' && <span className="text-ink-muted">Menyimpan…</span>}
+                        {st?.state === 'saved' && (
+                          <span className="inline-flex items-center gap-1 text-gain">
+                            <IconCheck size={16} />
+                            Tersimpan
+                          </span>
+                        )}
+                        {st?.state === 'error' && <span className="text-loss">{st.message}</span>}
+                        {!st && p.hpp === null && <span className="font-semibold text-loss">Belum diisi</span>}
                       </td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
-            {visible.length === 0 && <p className="py-6 text-center text-lg text-slate-500">Tidak ada produk yang cocok.</p>}
+            {visible.length === 0 && <p className="py-6 text-center text-ink-muted">Tidak ada produk yang cocok.</p>}
           </div>
         </Card>
       )}

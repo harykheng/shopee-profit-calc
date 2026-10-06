@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { Button, ErrorBox } from '../components/ui'
+import { Button, ErrorBox, inputClass } from '../components/ui'
+import { IconReceipt } from '../components/icons'
 import { supabase } from '../lib/supabase'
 
 export function LoginPage() {
@@ -17,16 +18,20 @@ export function LoginPage() {
     setBusy(false)
   }
 
-  const inputClass =
-    'mt-1 min-h-12 w-full rounded-xl border border-slate-300 px-4 text-lg focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200'
-
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <form onSubmit={submit} className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-3xl font-bold text-orange-600">Profit Shopee</h1>
-        <p className="mt-1 text-lg text-slate-600">Masuk untuk melanjutkan</p>
+      <form onSubmit={submit} className="w-full max-w-md rounded-lg border border-line bg-paper p-6 shadow-sheet sm:p-8">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-md bg-rail text-white">
+            <IconReceipt size={22} />
+          </span>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Profit Shopee</h1>
+            <p className="text-ink-soft">Masuk untuk melanjutkan</p>
+          </div>
+        </div>
 
-        <label className="mt-6 block text-lg font-medium">
+        <label className="mt-6 block font-medium">
           Email
           <input
             type="email"
@@ -34,10 +39,10 @@ export function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={inputClass}
+            className={`mt-1.5 font-normal ${inputClass}`}
           />
         </label>
-        <label className="mt-4 block text-lg font-medium">
+        <label className="mt-4 block font-medium">
           Password
           <input
             type="password"
@@ -45,7 +50,7 @@ export function LoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
+            className={`mt-1.5 font-normal ${inputClass}`}
           />
         </label>
 
@@ -54,7 +59,7 @@ export function LoginPage() {
         <Button type="submit" disabled={busy} className="mt-6 w-full">
           {busy ? 'Memproses…' : 'Masuk'}
         </Button>
-        <p className="mt-4 text-sm text-slate-500">
+        <p className="mt-4 text-sm text-ink-muted">
           Lupa password atau belum punya akun? Hubungi pengelola aplikasi.
         </p>
       </form>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MonthPicker, RupiahInput } from '../components/pickers'
-import { Alert, Button, Card, ErrorBox, PageTitle, Spinner } from '../components/ui'
+import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, inputClass } from '../components/ui'
+import { IconAlertCircle } from '../components/icons'
 import { fetchExpenses, saveExpenses } from '../lib/api'
 import { addMonths, currentMonth, formatMonth, formatRupiah } from '../lib/format'
 import { EXPENSE_CATEGORIES, type ExpenseCategory, type Store } from '../lib/types'
@@ -108,7 +109,7 @@ export function ExpensesPage({
           <div className="space-y-5">
             {EXPENSE_CATEGORIES.map(({ key, label }) => (
               <div key={key} className="grid gap-3 md:grid-cols-[12rem_16rem_1fr] md:items-center">
-                <p className="text-lg font-semibold">{label}</p>
+                <p className="font-medium">{label}</p>
                 <RupiahInput
                   value={values[key].amount}
                   onCommit={(amount) => update(key, { amount })}
@@ -120,15 +121,16 @@ export function ExpensesPage({
                   aria-label={`Catatan ${label}`}
                   value={values[key].note}
                   onChange={(e) => update(key, { note: e.target.value })}
-                  className="min-h-12 rounded-xl border border-slate-300 px-4 text-lg focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  className={inputClass}
                 />
               </div>
             ))}
           </div>
 
-          <p className="mt-6 text-xl">
-            Total biaya: <strong className="tabular-nums">{formatRupiah(total)}</strong>
-          </p>
+          <div className="mt-6 flex flex-wrap items-baseline justify-between gap-3 border-t-2 border-dashed border-rule pt-4">
+            <span className="font-bold uppercase tracking-wide">Total biaya</span>
+            <strong className="num text-2xl font-bold">{formatRupiah(total)}</strong>
+          </div>
 
           {/* Pesan status di BAWAH tombol, supaya tombol tidak bergeser saat ditekan. */}
           <Button className="mt-4" onClick={save} disabled={saving}>
@@ -141,7 +143,12 @@ export function ExpensesPage({
               <Alert tone="success">Biaya {formatMonth(month)} tersimpan.</Alert>
             </div>
           )}
-          {dirty && !saving && <p className="mt-4 text-amber-700">Ada perubahan yang belum disimpan.</p>}
+          {dirty && !saving && (
+            <p className="mt-4 flex items-center gap-2 text-warn">
+              <IconAlertCircle size={18} />
+              Ada perubahan yang belum disimpan.
+            </p>
+          )}
         </Card>
       )}
     </>

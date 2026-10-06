@@ -25,10 +25,10 @@ export function StorePicker({
             role="radio"
             aria-checked={active}
             onClick={() => onChange(s.id)}
-            className={`min-h-12 rounded-xl border-2 px-5 text-lg font-semibold transition-colors ${
+            className={`min-h-11 rounded-md border px-4 font-semibold transition-colors ${
               active
-                ? 'border-orange-600 bg-orange-600 text-white'
-                : 'border-slate-300 bg-white text-slate-700 hover:border-orange-400'
+                ? 'border-stamp bg-stamp text-white'
+                : 'border-line bg-paper text-ink-soft hover:border-ink-muted'
             }`}
           >
             {s.name}

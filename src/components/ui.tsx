@@ -58,7 +58,7 @@ export function Alert({ tone = 'info', title, children }: { tone?: Tone; title?:
     <div className={`rounded-md border px-4 py-3 ${TONES[tone]}`} role={tone === 'error' ? 'alert' : undefined}>
       <div className="flex gap-3">
         <Icon className="mt-0.5 shrink-0" />
-        <div className="min-w-0 flex-1 text-ink">
+        <div className="min-w-0 flex-1 text-ink [overflow-wrap:anywhere]">
           {title && <p className="font-semibold">{title}</p>}
           {children && <div className={`text-ink-soft ${title ? 'mt-1' : ''}`}>{children}</div>}
         </div>
@@ -140,3 +140,7 @@ export function Stamp({
 
 export const selectClass =
   'min-h-11 rounded-md border border-line bg-paper px-3 text-base text-ink transition-colors hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'
+
+/** Kotak isian teks biasa (email, catatan, cari). */
+export const inputClass =
+  'min-h-11 w-full rounded-md border border-line bg-paper px-3 text-base text-ink transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'

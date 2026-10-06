@@ -221,6 +221,14 @@ Small, practical radii: 3px for stamps, 6px for controls (buttons, inputs, chips
 - **Style:** 44px, 6px radius, Hairline border, Paper White, values in the figure font, right-aligned for money with a muted "Rp" prefix or "%" suffix.
 - **Hover:** border to Muted Ink. **Focus:** border Stamp Ink plus a 2px Stamp Ink ring at 25%.
 - **Error:** Loss Red border and a one-line red hint under the field. Source notes ("↳ Dari halaman HPP") are Info Blue with a corner-arrow line icon.
+- **Text fields** (email, notes, search) share one class (`inputClass` in `ui.tsx`): same box, words in the sans face, muted placeholder. Search fields carry an 18px search icon inside on the left.
+- **Missing values** (HPP not yet filled): the money field turns Loss tint with a soft Loss border, and the row is washed Loss tint so gaps are findable while scrolling.
+- **File picker:** a dashed Hairline well holding a primary "Pilih file" button with an upload icon and the chosen file name (truncated) beside it. Long names wrap anywhere so phones never scroll sideways.
+
+### Input pages (Upload, HPP, Biaya, Login)
+- **Upload:** a Stamp-tint banner names the store being written to; two sheets side by side at ≥1024px (Excel, PDF); the save result is a sheet with a "TERSIMPAN" stamp and counts in figures.
+- **Biaya:** a small nota: one row per cost (label, money field, note), then a tear rule and "TOTAL BIAYA" in Figure Total. Unsaved changes show a Warn line with an alert icon.
+- **Login:** one centred sheet on the counter with an ink receipt badge; nothing else.
 
 ### Navigation
 - **Rail item:** 44px, 6px radius, 18px line icon + label, Rail Text on Rail Ink; hover lightens to white on a 5% white wash.
