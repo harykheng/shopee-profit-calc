@@ -1,6 +1,7 @@
-import { useState, type ChangeEvent } from 'react'
+import { useRef, useState, type ChangeEvent } from 'react'
 import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, Stamp } from '../components/ui'
 import { IconStore, IconUpload } from '../components/icons'
+import { Confetti } from '../components/motion'
 import { fetchProducts, saveAdjustments, saveIncome, saveOrderItems } from '../lib/api'
 import { navigate } from '../lib/router'
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from '../lib/format'
@@ -349,12 +350,18 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
 
 function SaveSummaryCard({ summary, onAgain }: { summary: SaveSummary; onAgain: () => void }) {
   const { orders, income, missingHpp } = summary
+  // Perayaan kecil setiap kali upload berhasil disimpan: konfeti dari cap TERSIMPAN.
+  const stampRef = useRef<HTMLSpanElement>(null)
+  const [savedAt] = useState(() => Date.now())
   return (
     <Card
       title={
         <span className="flex flex-wrap items-center justify-between gap-3">
           Berhasil disimpan ke {summary.storeName}
-          <Stamp tone="gain">Tersimpan</Stamp>
+          <span ref={stampRef}>
+            <Stamp tone="gain" delay={150}>Tersimpan</Stamp>
+          </span>
+          <Confetti anchor={stampRef} fireKey={savedAt} delay={380} />
         </span>
       }
       className="mb-6"

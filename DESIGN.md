@@ -232,7 +232,7 @@ Small, practical radii: 3px for stamps, 6px for controls (buttons, inputs, chips
 
 ### Navigation
 - **Rail item:** 44px, 6px radius, 18px line icon + label, Rail Text on Rail Ink; hover lightens to white on a 5% white wash.
-- **Active:** Paper White pill with Receipt Ink text and a Stamp Ink icon.
+- **Active:** Paper White pill with Receipt Ink text and a Stamp Ink icon. The pill is one shared indicator that slides to the chosen item (rail and bottom bar alike); link colours fade over the same 260ms.
 - **Mobile / iPad:** six equal cells in the ink bottom bar: 18px icon above a short label ("Simulasi"); the active cell puts the icon in a small Paper White pill with Stamp Ink, its label turns white.
 
 ### Nota (signature)
@@ -245,6 +245,16 @@ Small, practical radii: 3px for stamps, 6px for controls (buttons, inputs, chips
 ### Alerts
 - 6px radius, 1px tinted border, state wash background, a 20px line icon in the state ink, title in Receipt Ink, body in Soft Ink. No side stripes.
 
+## Motion
+
+Motion only marks a state change or a result, never decoration, and every effect lives in `src/index.css` and `src/components/motion.tsx` (no motion library). With the device's reduced-motion setting all of it is off: figures show their final value, stamps are simply there, no confetti.
+
+- **Stamping** (`.stamp-in`, built into `Stamp`): the stamp drops in about 1.7× large and slightly twisted, overshoots to 0.93, settles (420ms). A verdict that changes re-stamps (keyed by its tone, e.g. "Iklan rugi" → "Iklan untung" in Simulasi Harga). Lists stagger by 60ms per card, capped at 8.
+- **Printing** (`.print-in`, `.print-last`): nota lines appear one after another from the top, 70ms apart, the closing total last, like a receipt leaving the printer. Only when a nota first renders (new data or another month), never on hover or re-render.
+- **Counting** (`useCountUp`): the Rekap headline figure rolls up to its value (700ms, ease-out); the Untung bersih stamp lands after it.
+- **Celebration** (`Confetti`): square paper scraps in stamp, gain, amber, rule and ink burst from a stamp once: every time an upload is saved (from TERSIMPAN), and the first time a month is seen as ANGKA FINAL in this browser (remembered in localStorage). The layer is clipped to the viewport so the page never widens.
+- **Feedback:** buttons press to 97% (nav cells 95%); opened panels (status checklist, "Kenapa …?", the ad upload form) fade down 4px in 200ms; a new page or Rekap tab fades up 4px in 180ms.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -252,6 +262,7 @@ Small, practical radii: 3px for stamps, 6px for controls (buttons, inputs, chips
 - **Do** put every figure in Azeret Mono with tabular numerals and every word in Public Sans.
 - **Do** use a stamp for a verdict (status, ad label, ad result) and nowhere else.
 - **Do** keep controls standard and at least 44px tall.
+- **Do** tie any new motion to a state change and add it to the reduced-motion block.
 - **Do** use the line icons in `src/components/icons.tsx` (24px grid, 1.75 stroke) for any new icon.
 
 ### Don't:
@@ -260,3 +271,4 @@ Small, practical radii: 3px for stamps, 6px for controls (buttons, inputs, chips
 - **Don't** use stamp ink, red, green or amber for decoration.
 - **Don't** set headings, buttons, stamps or labels in the monospace.
 - **Don't** fake paper or ink texture (no grain, torn-edge images or ink-bleed effects); the receipt is expressed through structure and type.
+- **Don't** animate routine page loads beyond the short fade, loop anything, or fire confetti for anything but a save or a first ANGKA FINAL.

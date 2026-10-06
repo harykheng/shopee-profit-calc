@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { Alert, ErrorBox, Spinner } from './components/ui'
 import { fetchStores } from './lib/api'
@@ -12,6 +12,7 @@ import { RecapPage } from './pages/RecapPage'
 import { AdsPage } from './pages/AdsPage'
 import { PriceSimPage } from './pages/PriceSimPage'
 import { ROUTES, readHash, type Route } from './lib/router'
+import { useActiveIndicator } from './components/motion'
 import { IconCalculator, IconChevronDown, IconLogout, IconMegaphone, IconReceipt, IconStore, IconTag, IconUpload, IconWallet } from './components/icons'
 
 const NAV_GROUPS: { title: string; routes: Route[] }[] = [
@@ -37,13 +38,14 @@ function NavLink({ route, current, variant }: { route: Route; current: boolean; 
       <a
         href={`#/${route}`}
         aria-current={current ? 'page' : undefined}
-        className={`flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors duration-150 ${
+        className={`relative flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-medium transition duration-[260ms] active:scale-95 ${
           current ? 'text-white' : 'text-rail-text hover:text-white'
         }`}
       >
         <span
-          className={`flex h-7 w-12 items-center justify-center rounded-md transition-colors duration-150 ${
-            current ? 'bg-paper text-stamp' : ''
+          data-pill
+          className={`flex h-7 w-12 items-center justify-center rounded-md transition-colors duration-[260ms] ${
+            current ? 'text-stamp' : ''
           }`}
         >
           <Icon size={18} />
@@ -56,8 +58,8 @@ function NavLink({ route, current, variant }: { route: Route; current: boolean; 
     <a
       href={`#/${route}`}
       aria-current={current ? 'page' : undefined}
-      className={`flex min-h-11 items-center gap-3 whitespace-nowrap rounded-md px-3 font-medium transition-colors duration-150 ${
-        current ? 'bg-paper text-ink' : 'text-rail-text hover:bg-white/5 hover:text-white'
+      className={`relative flex min-h-11 items-center gap-3 whitespace-nowrap rounded-md px-3 font-medium transition-colors duration-[260ms] ${
+        current ? 'text-ink' : 'text-rail-text hover:bg-white/5 hover:text-white'
       }`}
     >
       <Icon size={18} className={current ? 'text-stamp' : ''} />
@@ -115,6 +117,19 @@ export default function App() {
 
 function MainApp({ email }: { email: string }) {
   const [{ route, params }, setLocation] = useState(readHash)
+  const railRef = useRef<HTMLElement>(null)
+  const barRef = useRef<HTMLElement>(null)
+  // Latar menu aktif bergeser ke menu yang baru dipilih.
+  const railIndicator = useActiveIndicator(railRef, route, (active, box) => {
+    const a = active.getBoundingClientRect()
+    const b = box.getBoundingClientRect()
+    return { top: a.top - b.top + box.scrollTop, left: a.left - b.left, width: a.width, height: a.height }
+  })
+  const barIndicator = useActiveIndicator(barRef, route, (active, box) => {
+    const a = (active.querySelector<HTMLElement>('[data-pill]') ?? active).getBoundingClientRect()
+    const b = box.getBoundingClientRect()
+    return { top: a.top - b.top, left: a.left - b.left, width: a.width, height: a.height }
+  })
   const [stores, setStores] = useState<Store[] | null>(null)
   const [storesError, setStoresError] = useState<unknown>(null)
   const [storeId, setStoreIdState] = useState<number | null>(loadStoreId)
@@ -190,7 +205,10 @@ function MainApp({ email }: { email: string }) {
             <span className="text-lg font-semibold tracking-tight">Profit Shopee</span>
           </a>
           <div className="mt-6">{storeSelect('rail')}</div>
-          <nav aria-label="Menu utama" className="mt-6 flex flex-1 flex-col gap-5 overflow-y-auto">
+          <nav ref={railRef} aria-label="Menu utama" className="relative mt-6 flex flex-1 flex-col gap-5 overflow-y-auto">
+            {railIndicator && (
+              <span aria-hidden="true" className="nav-indicator absolute rounded-md bg-paper" style={railIndicator} />
+            )}
             {NAV_GROUPS.map((g) => (
               <div key={g.title}>
                 <p className="mb-1.5 px-3 text-xs font-medium text-rail-text/80">{g.title}</p>
@@ -228,9 +246,13 @@ function MainApp({ email }: { email: string }) {
           </div>
         </header>
         <nav
+          ref={barRef}
           aria-label="Menu utama"
           className="fixed inset-x-0 bottom-0 z-10 bg-rail pb-[env(safe-area-inset-bottom)] lg:hidden"
         >
+          {barIndicator && (
+            <span aria-hidden="true" className="nav-indicator absolute rounded-md bg-paper" style={barIndicator} />
+          )}
           <ul className="mx-auto grid max-w-2xl grid-cols-6 px-1">
             {NAV_GROUPS.flatMap((g) => g.routes).map((r) => (
               <li key={r}>
@@ -246,7 +268,7 @@ function MainApp({ email }: { email: string }) {
         ) : !stores ? (
           <Spinner />
         ) : (
-          <>
+          <div key={route} className="page-in">
             {route === 'upload' && <UploadPage stores={stores} storeId={storeId} />}
             {route === 'hpp' && (
               <HppPage
@@ -267,7 +289,7 @@ function MainApp({ email }: { email: string }) {
             {route === 'rekap' && <RecapPage stores={stores} storeId={storeId} />}
             {route === 'iklan' && <AdsPage key={storeId} stores={stores} storeId={storeId} />}
             {route === 'simulasi' && <PriceSimPage stores={stores} storeId={storeId} />}
-          </>
+          </div>
         )}
       </main>
       </div>

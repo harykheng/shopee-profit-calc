@@ -338,7 +338,8 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                       {formatRupiah(Math.abs(r.actual.profitAfterAds))}
                       <span className="ml-1.5 font-sans text-base font-medium">per order</span>
                     </p>
-                    <Stamp tone={r.actual.profitAfterAds >= 0 ? 'gain' : 'loss'}>
+                    {/* key: cap baru dicapkan setiap kali vonisnya berubah. */}
+                    <Stamp key={r.actual.profitAfterAds >= 0 ? 'gain' : 'loss'} tone={r.actual.profitAfterAds >= 0 ? 'gain' : 'loss'}>
                       {r.actual.profitAfterAds >= 0 ? 'Iklan untung' : 'Iklan rugi'}
                     </Stamp>
                   </div>
