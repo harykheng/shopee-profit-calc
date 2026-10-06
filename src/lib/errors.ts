@@ -19,6 +19,12 @@ export function friendlyError(err: unknown): string {
       'SQL "20261004000000_income_adjustments.sql" di Supabase (lihat README), lalu upload ulang file ini.'
     )
   }
+  if (lower.includes('admin_pct') || lower.includes("'xtra'") || lower.includes('column products.xtra')) {
+    return (
+      'Database belum diperbarui untuk pengaturan admin & XTRA per produk. Pengelola aplikasi perlu menjalankan ' +
+      'file SQL "20261007000000_product_fee_settings.sql" di Supabase (lihat README).'
+    )
+  }
   if (lower.includes('save_ad_report') || lower.includes('ad_reports') || lower.includes('ad_rows')) {
     return (
       'Database belum diperbarui untuk data iklan. Pengelola aplikasi perlu menjalankan file ' +
