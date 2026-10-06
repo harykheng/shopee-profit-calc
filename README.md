@@ -19,6 +19,10 @@ Profit bersih = Penghasilan dilepas − Modal (qty × HPP) − Biaya
 Stack: React + Vite + Tailwind CSS, Supabase (Postgres + Auth + RLS), SheetJS dan pdf.js untuk
 membaca file di browser, Vitest untuk test.
 
+> 📖 **Pemakai aplikasi** (pemilik, cici, adik): baca **[PANDUAN.md](PANDUAN.md)** — cara pakai
+> tiap halaman, cara membaca Rekap dan Iklan, dan pertanyaan yang sering muncul.
+> README ini untuk setup (Supabase, akun, Vercel) dan pengembangan.
+
 ---
 
 ## Daftar isi
@@ -117,58 +121,30 @@ Kalau env var diubah, lakukan **Redeploy** supaya nilainya terpakai.
 
 ## 4. Cara pakai setiap bulan
 
-Lakukan di awal bulan untuk menghitung bulan sebelumnya (contoh: awal September untuk Agustus).
+Panduan lengkap ada di **[PANDUAN.md](PANDUAN.md)**. Ringkasnya, di awal bulan untuk bulan
+sebelumnya, per toko (toko dipilih di menu kanan atas):
 
-1. **Download dari Shopee Seller Centre** (per toko):
-   - **Export pesanan**: Pesanan Saya → Export (.xlsx), status **Semua**. Ambil rentang yang agak
-     lebar, misalnya **dari pertengahan bulan sebelumnya sampai akhir bulan ini**, karena dana yang
-     cair di awal bulan sering berasal dari pesanan bulan sebelumnya. Data yang sama tidak akan
-     dobel, dan pesanan yang tadinya "dikirim" otomatis berubah jadi selesai saat di-upload lagi.
-   - **Laporan penghasilan**: Keuangan → Penghasilan Saya → laporan bulanan (.pdf).
-   - **Data iklan**: Iklan Saya → Download Data, periode **1 bulan penuh** (tanggal 1 – akhir
-     bulan). Mau beberapa bulan? Download **per bulan** — file 2 bulan sekaligus hanya berisi
-     totalnya dan tidak bisa dipecah per bulan. Download *Data Keseluruhan*, *Rincian Data Iklan Produk Otomatis*, dan (kalau memakai
-     grup iklan) *Semua Data Grup Iklan* — semuanya .csv dengan periode yang sama.
-Toko dipilih di **menu kanan atas** dan berlaku untuk semua halaman.
-
-2. **Upload**: cek nama toko di kotak oranye → pilih file Excel dan/atau PDF → cek preview →
-   **Simpan ke …**.
-3. **HPP**: isi HPP untuk produk yang masih merah (produk baru otomatis masuk dari upload).
-   HPP diisi **per 1 unit yang dijual di Shopee** — untuk paket grosir, isi HPP per paket.
-   Kalau HPP diisi *setelah* upload, buka **Rekap** dan tekan **Hitung ulang HPP** untuk bulan itu.
-4. **Iklan**: pilih semua file .csv iklan sekaligus (boleh beberapa bulan; dikelompokkan per periode
-   otomatis) → **Simpan ke …**. Biaya Iklan Shopee bulan itu
-   terisi otomatis dari *Data Keseluruhan*. Untuk cek mingguan, upload data iklan 7 hari — periode
-   yang bukan 1 bulan penuh hanya untuk analisis dan **tidak** mengubah Biaya.
-   - Mau lihat beberapa bulan sekaligus (mis. Juli + Agustus)? Di **Periode iklan** pilih
-     **Gabungkan beberapa bulan…** → pilih dari/sampai bulan. Produk yang sama dijumlahkan, dan ada
-     tabel **Per bulan** untuk membandingkan biaya, ROAS, dan untung tiap bulan. Yang digabung hanya
-     data iklan 1 bulan penuh (data mingguan tidak ikut, supaya tidak dobel).
-   - Upload export pesanan untuk periode yang sama dulu: laporan iklan Shopee ikut menghitung
-     pesanan yang kemudian **batal**, dan aplikasi menguranginya dari data pesanan (**ROAS nyata**).
-   - **Saran target ROAS di Shopee** = angka untuk diisi di pengaturan iklan supaya masih untung 5%
-     dari harga jual setelah iklan. Potongan Shopee diambil dari laporan penghasilan (kalau belum
-     ada, dipakai 15%). Target 5% dan 20% bisa diubah di `src/lib/adsMath.ts`.
-5. **Biaya**: isi Meta Ads, packaging, lain-lain (iklan Shopee sudah terisi dari langkah 4). Kalau
-   tidak ada biaya, simpan Rp0.
-6. **Rekap**: pilih bulan (atau "Lihat beberapa bulan").
-   - **Kotak untung bersih** dibaca seperti nota: uang masuk dari Shopee − modal barang terjual −
-     biaya = **untung bersih**. Ini dari barang yang *sudah sampai & uangnya cair* di bulan itu.
-     Tombol **ⓘ Kenapa …?** menjelaskan kenapa jumlah barang terjual beda dengan barang dipesan.
-   - Tab **Semua pesanan**: semua pesanan yang *dibuat* di bulan itu (selesai, masih dikirim,
-     batal), plus **perkiraan untung** dari pesanan yang selesai. Perkiraan, karena Shopee hanya
-     mencatat uang cair per hari, bukan per pesanan.
-   - Tab **Per produk**: barang terjual dan modal per produk, plus daftar barang retur.
-   - Tab **Per bulan** (kalau melihat beberapa bulan).
-
-   Kalau statusnya **✅ Angka final**, untung bersih adalah angka
-   pasti. Kalau **⚠️ Belum lengkap**, ikuti daftar yang ditampilkan (mis. upload export pesanan
-   bulan sebelumnya, isi HPP, isi biaya).
+1. **Download dari Shopee Seller Centre**:
+   - **Export pesanan** (.xlsx): Pesanan Saya → Export, status **Semua**, rentang dari pertengahan
+     bulan sebelumnya sampai akhir bulan ini.
+   - **Laporan penghasilan** (.pdf): Keuangan → Penghasilan Saya → laporan bulanan.
+   - **Data iklan** (.csv): Iklan Saya → Download Data, periode **1 bulan penuh**: *Data
+     Keseluruhan*, *Rincian Data Iklan Produk Otomatis*, dan *Semua Data Grup Iklan* (kalau
+     memakai grup iklan). Untuk beberapa bulan, download per bulan; file periode panjang tidak bisa
+     dipecah per bulan.
+2. **Upload**: file Excel dan PDF → cek preview → **Simpan ke …**.
+3. **HPP**: isi HPP produk yang masih merah (per 1 unit yang dijual di Shopee; paket grosir = per
+   paket). HPP diisi setelah upload → **Rekap → Hitung ulang HPP**.
+4. **Iklan**: pilih semua file .csv sekaligus → **Simpan**. Data 1 bulan penuh mengisi Biaya Iklan
+   Shopee otomatis. Pilih **Gabungkan beberapa bulan…** untuk analisis beberapa bulan sekaligus.
+5. **Biaya**: isi Meta Ads, packaging, lain-lain (Rp0 kalau tidak ada).
+6. **Rekap**: cek status **✅ Angka final**; kalau **⚠️ Belum lengkap**, ikuti daftar yang muncul.
 
 Aturan penting:
 - **Upload file yang sama berkali-kali aman** — tidak ada data dobel.
 - **HPP dikunci saat upload.** Mengubah HPP tidak mengubah profit bulan yang sudah tersimpan,
   kecuali lewat tombol **Hitung ulang HPP**.
+- Target analisis iklan (untung 5% setelah iklan, harga 20%) ada di `src/lib/adsMath.ts`.
 
 ## 5. Menjalankan di komputer sendiri (developer)
 
@@ -178,7 +154,7 @@ Butuh Node.js 22 atau lebih baru.
 npm install
 cp .env.example .env.local   # lalu isi URL dan anon key Supabase
 npm run dev                  # buka http://localhost:5173
-npm test                     # test parser, format, status bulan
+npm test                     # test parser, format, status bulan, analisis iklan
 npm run build                # build production ke dist/
 ```
 
@@ -232,7 +208,7 @@ hitung). Setelah memperbaiki, jalankan `npm test`.
 supabase/migrations/   Skema database, RLS, fungsi upload, view rekap
 src/lib/shopeeColumns.ts  Pemetaan kolom Shopee (satu-satunya tempat yang perlu diubah)
 src/lib/parsers/       Parser export pesanan (.xlsx), laporan penghasilan (.pdf), data iklan (.csv)
-src/lib/monthStatus.ts Logika status "Angka final / Belum lengkap"
+src/lib/monthStatus.ts Logika status "Angka final / Belum lengkap" (termasuk uang cair geser 1–2 hari)
 src/lib/adsMath.ts     Analisis iklan: ROAS nyata, balik modal, saran ROAS, label
 src/pages/             Halaman Login, Upload, HPP, Biaya, Rekap, Iklan
 tests/                 Test Vitest + fixture dummy
