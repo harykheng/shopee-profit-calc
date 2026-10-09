@@ -8,8 +8,10 @@ import {
   PRICE_TARGET_MARGIN,
   XTRA_FEE_RATE,
   analyzeAds,
+  priceLadder,
   productKey,
   simulatePrice,
+  type PriceLadderRow,
   type SuggestedPrice,
 } from '../lib/adsMath'
 import {
@@ -144,6 +146,20 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
       })
     : null
 
+  // Produk baru: modal sudah ada tapi harga jual belum ditentukan → sarankan harga & target ROAS.
+  const ladder =
+    hpp !== null && hpp > 0 && (price === null || price === 0) && realisticRoas !== null && realisticRoas > 0
+      ? priceLadder({
+          hpp,
+          adminRate: (adminPct ?? 0) / 100,
+          xtra,
+          processFee: processFee ?? 0,
+          packaging: packaging ?? 0,
+          realisticRoas,
+        })
+      : null
+  const recRow = ladder?.rows.find((x) => x.price === ladder.recommended) ?? null
+
   return (
     <>
       <PageTitle subtitle="Sebelum jualan atau ganti harga: hitung untung per order, ROAS minimum supaya iklan tidak rugi, dan harga jual yang masuk akal. Bisa pilih produk yang sudah di-upload supaya angkanya terisi otomatis, atau hitung satu target ROAS untuk grup iklan.">
@@ -220,8 +236,34 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                   )}
                 </p>
               </>
+            ) : ladder && hpp !== null ? (
+              recRow ? (
+                <>
+                  <h2 className="font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+                    Modal <span className="num">{formatRupiah(hpp)}</span>: jual minimal{' '}
+                    <span className="num text-lime">{formatRupiah(recRow.price)}</span>, isi target ROAS{' '}
+                    <span className="num text-lime">{recRow.targetRoas !== null ? formatRoas(roundUp2(recRow.targetRoas)) : '-'}</span>.
+                  </h2>
+                  <p className="mt-3 max-w-3xl text-lg text-on-field-muted">
+                    Harga terendah yang masih untung 5% setelah iklan kalau ROAS iklan biasanya{' '}
+                    <span className="num">{decimal(realisticRoas ?? 0)}</span>. Pilih harga lain di tabel, atau isi harga jual sendiri.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+                    Dengan ROAS iklan <span className="num">{decimal(realisticRoas ?? 0)}</span>,{' '}
+                    <span className="text-coral-soft">berapa pun harganya iklan tidak bisa untung 5%</span>.
+                  </h2>
+                  <p className="mt-3 text-lg text-on-field-muted">
+                    Potongan Shopee ditambah biaya iklan sudah lebih besar dari harga. Jual tanpa iklan, atau cek lagi ROAS realistisnya.
+                  </p>
+                </>
+              )
             ) : (
-              <p className="font-display text-2xl font-bold text-on-field-muted">Isi HPP dan harga jual untuk melihat untungnya.</p>
+              <p className="font-display text-2xl font-bold text-on-field-muted">
+                Isi modal (HPP) dulu. Harga jual boleh dikosongkan untuk melihat saran harga.
+              </p>
             )}
           </div>
 
@@ -235,7 +277,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                 >
                   <RupiahInput value={hpp} onCommit={setHpp} ariaLabel="HPP per unit jual" />
                 </Field>
-                <Field label="Harga jual" note={notes.price}>
+                <Field label="Harga jual" hint="Kosongkan untuk melihat saran harga dari modal." note={notes.price}>
                   <RupiahInput value={price} onCommit={setPrice} ariaLabel="Harga jual" />
                 </Field>
                 <Field label="Biaya admin" note={notes.fees}>
@@ -303,9 +345,17 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
             </Card>
 
             <div className="min-w-0 space-y-6">
-              {!r ? (
-                <Alert title="Isi HPP dan harga jual untuk melihat hasilnya.">
-                  Angka diperbarui setelah kolom ditinggalkan atau tombol Enter ditekan.
+              {!r && ladder ? (
+                <PriceLadderCard
+                  rows={ladder.rows}
+                  recommended={ladder.recommended}
+                  realisticRoas={realisticRoas ?? 0}
+                  onPick={setPrice}
+                />
+              ) : !r ? (
+                <Alert title="Isi HPP dulu.">
+                  Harga jual boleh dikosongkan: nanti muncul saran harga dan target ROAS-nya. Angka diperbarui setelah kolom
+                  ditinggalkan atau tombol Enter ditekan.
                 </Alert>
               ) : (
                 <>
@@ -489,6 +539,74 @@ async function loadLatestAdRoas(storeId: number): Promise<AdRoasData | null> {
   const b = formatDate(latest.period_end)
   const periodLabel = latest.period_start.slice(0, 7) === latest.period_end.slice(0, 7) ? `${a.split(' ')[0]}–${b}` : `${a} – ${b}`
   return { periodLabel, byProduct }
+}
+
+const LADDER_TAGS: Record<PriceLadderRow['tags'][number], string> = {
+  balik_modal: 'Balik modal setelah iklan',
+  disarankan: 'Disarankan',
+  untung_20: 'Untung 20% sebelum iklan',
+}
+
+/** Pilihan harga jual untuk modal yang diisi; "Pakai" mengisi harga jual di kiri. */
+function PriceLadderCard({
+  rows,
+  recommended,
+  realisticRoas,
+  onPick,
+}: {
+  rows: PriceLadderRow[]
+  recommended: number | null
+  realisticRoas: number
+  onPick: (price: number) => void
+}) {
+  return (
+    <Card title="Pilih harga jual">
+      <p className="-mt-2 mb-4 text-sm text-ink-muted">
+        Semua harga dibulatkan ke atas ke Rp1.000. Target ROAS = yang diisi di Shopee supaya untung 5% setelah iklan.
+      </p>
+      <ul className="space-y-2">
+        {rows.map((x) => {
+          const rec = x.price === recommended
+          return (
+            <li
+              key={x.price}
+              className={`grid items-center gap-x-4 gap-y-2 rounded-2xl px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] ${
+                rec ? 'bg-stamp-tint' : 'border border-line'
+              }`}
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="num font-display text-2xl font-bold">{formatRupiah(x.price)}</span>
+                  {x.tags.map((t) =>
+                    t === 'disarankan' ? (
+                      <Stamp key={t} tone="final" className="!text-xs">
+                        {LADDER_TAGS[t]}
+                      </Stamp>
+                    ) : (
+                      <span key={t} className="rounded-full bg-counter px-2.5 py-0.5 text-xs font-semibold text-ink-soft">
+                        {LADDER_TAGS[t]}
+                      </span>
+                    ),
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-ink-soft">
+                  Untung <b className="num">{formatRupiah(x.profit)}</b> ({formatPercent(x.margin * 100)}) sebelum iklan · isi target ROAS{' '}
+                  <b className="num">{x.targetRoas !== null ? formatRoas(roundUp2(x.targetRoas)) : 'tidak mungkin'}</b> · di ROAS{' '}
+                  <span className="num">{decimal(realisticRoas)}</span>{' '}
+                  <b className={`num ${x.profitAtRealistic >= 0 ? 'text-gain' : 'text-loss'}`}>
+                    {x.profitAtRealistic >= 0 ? 'untung' : 'rugi'} {formatRupiah(Math.abs(x.profitAtRealistic))}
+                  </b>
+                </p>
+              </div>
+              <Button variant={rec ? 'primary' : 'secondary'} onClick={() => onPick(x.price)} className="justify-self-start sm:justify-self-end">
+                Pakai
+              </Button>
+            </li>
+          )
+        })}
+      </ul>
+    </Card>
+  )
 }
 
 const MAX_RESULTS = 30

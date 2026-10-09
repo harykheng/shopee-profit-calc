@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  priceLadder,
   profitAtRoas,
   roundUpToThousand,
   simulateAdGroup,
@@ -142,5 +143,31 @@ describe('simulateAdGroup', () => {
     expect(g.mixTargetRoas).toBeNull()
     expect(g.recommended).toBe('safe')
     expect(g.recommendedRoas).toBeCloseTo(g.safeTargetRoas as number, 6)
+  })
+})
+
+describe('priceLadder (saran harga dari modal)', () => {
+  const fees = { adminRate: 0.0825, xtra: true, processFee: 1250, packaging: 0, realisticRoas: 5.5 }
+
+  it('modal 5.000: jual Rp10.000, target ROAS ±4,94', () => {
+    const l = priceLadder({ ...fees, hpp: 5000 })
+    expect(l.recommended).toBe(10_000)
+    expect(l.rows.map((r) => r.price)).toEqual([9_000, 10_000, 11_000, 12_000, 15_000])
+    const rec = l.rows.find((r) => r.price === 10_000)!
+    expect(rec.tags).toEqual(['disarankan', 'untung_20'])
+    expect(Math.abs(rec.profit - 2_525)).toBeLessThanOrEqual(1)
+    expect(rec.targetRoas).toBeCloseTo(4.938, 2)
+    expect(rec.profitAtRealistic).toBeGreaterThan(0)
+    // Harga balik modal di ROAS realistis: untungnya setelah iklan ±0.
+    const be = l.rows[0]
+    expect(be.tags).toContain('balik_modal')
+    expect(Math.abs(be.profitAtRealistic)).toBeLessThan(50)
+  })
+
+  it('ROAS realistis terlalu rendah → tidak ada harga yang disarankan, tetap ada harga untung 20%', () => {
+    // 1 − 8,25% − 4% − 1/1,2 − 5% < 0: berapa pun harganya, iklan tidak bisa untung 5%.
+    const l = priceLadder({ ...fees, realisticRoas: 1.2, hpp: 5000 })
+    expect(l.recommended).toBeNull()
+    expect(l.rows.some((r) => r.tags.includes('untung_20'))).toBe(true)
   })
 })

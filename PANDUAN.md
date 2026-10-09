@@ -342,13 +342,34 @@ memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
 | Kolom | Isi | Bawaan |
 |---|---|---|
 | **HPP per unit jual** | Modal per 1 unit yang dijual di Shopee. Paket/bundling: HPP per paket. | – |
-| **Harga jual** | Harga jual per unit/paket | – |
+| **Harga jual** | Harga jual per unit/paket. **Kosongkan** untuk melihat saran harga dari modal (lihat di bawah). | – |
 | **Biaya admin** | Persen biaya admin kategori produk itu (boleh pakai koma, mis. 8,25) | 8,25% |
 | **Ikut Gratis Ongkir XTRA** | Centang kalau produk ikut program ini (potongan 4%) | dicentang |
 | **Biaya proses pesanan** | Biaya tetap per order dari Shopee | Rp1.250 |
 | **Packaging per order** | Bubble wrap, lakban, kardus, dll. per order | Rp0 |
 | **ROAS realistis** | ROAS yang biasa didapat di iklan (lihat halaman Iklan) | 5,5 |
 | **ROAS aktual** (opsional) | ROAS nyata iklan produk ini, kalau iklannya sudah jalan | kosong |
+
+### Belum tahu mau jual berapa? (saran harga dari modal)
+
+Untuk produk baru: isi **HPP** saja dan biarkan **Harga jual** kosong. Halaman langsung menjawab,
+mis. **"Modal Rp5.000: jual minimal Rp10.000, isi target ROAS 4,94."**, dan menampilkan kartu
+**Pilih harga jual**:
+
+| Harga | Arti |
+|---|---|
+| **Balik modal setelah iklan** | Harga terendah yang tidak rugi kalau iklan mendapat ROAS realistis. Untungnya ±Rp0, jangan di bawah ini. |
+| **Disarankan** | Harga terendah yang masih **untung 5% setelah iklan** di ROAS realistis. |
+| **Untung 20% sebelum iklan** | Harga supaya untung 20% kalau tanpa iklan. |
+| +10%, +20%, +50% | Beberapa harga di atasnya, untuk melihat seberapa longgar target ROAS-nya. |
+
+Di setiap harga tertulis untung per order, **target ROAS yang diisi di Shopee**, dan untung/rugi
+kalau iklan mendapat ROAS realistis. Tekan **Pakai** untuk memakai harga itu; rinciannya langsung
+muncul seperti biasa. Semua harga dibulatkan ke atas ke Rp1.000.
+
+Contoh modal Rp5.000 (admin 8,25%, ikut XTRA, proses Rp1.250, ROAS realistis 5,5): Rp9.000 butuh
+ROAS 7,52 (terlalu tinggi), **Rp10.000 cukup ROAS 4,94**, Rp12.000 cukup ROAS 3,27. Untuk barang
+murah, biaya proses Rp1.250 per order terasa berat, jadi harganya biasanya perlu ±2× modal.
 
 ### Memakai produk yang sudah di-upload
 

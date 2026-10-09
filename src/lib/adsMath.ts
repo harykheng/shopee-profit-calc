@@ -540,3 +540,59 @@ export function simulateAdGroup(input: {
 export function profitAtRoas(row: { price: number; profit: number }, roas: number): number {
   return row.profit - row.price / roas
 }
+
+// --- Saran harga dari modal (produk baru, harga belum ditentukan) ---------------
+
+export type PriceLadderTag = 'balik_modal' | 'disarankan' | 'untung_20'
+
+export interface PriceLadderRow {
+  price: number
+  tags: PriceLadderTag[]
+  /** Untung per order sebelum iklan dan marginnya. */
+  profit: number
+  margin: number
+  /** ROAS balik modal; null kalau harga ini sudah rugi tanpa iklan. */
+  bepRoas: number | null
+  /** Target ROAS untuk diisi di Shopee (untung 5% setelah iklan); null = tidak mungkin. */
+  targetRoas: number | null
+  /** Untung per order kalau iklan mendapat ROAS realistis. */
+  profitAtRealistic: number
+}
+
+/**
+ * Pilihan harga jual untuk satu modal: harga balik modal & harga yang disarankan
+ * (untung 5% setelah iklan di ROAS realistis), harga untung 20%, lalu beberapa harga
+ * di atasnya (+10%, +20%, +50% dari harga yang disarankan). Semua dibulatkan ke atas ke Rp1.000.
+ */
+export function priceLadder(input: Omit<PriceSimInput, 'price' | 'actualRoas'>): {
+  recommended: number | null
+  rows: PriceLadderRow[]
+} {
+  const base = simulatePrice({ ...input, price: 1 })
+  const be = base.priceBreakEven?.rounded ?? null
+  const rec = base.priceTargetProfit?.rounded ?? null
+  const m20 = base.priceTargetMargin?.rounded ?? null
+  const anchor = rec ?? m20
+  const candidates = new Set<number>()
+  for (const p of [be, rec, m20]) if (p !== null && p > 0) candidates.add(p)
+  if (anchor !== null) for (const f of [1.1, 1.2, 1.5]) candidates.add(roundUpToThousand(anchor * f))
+  const rows = [...candidates]
+    .sort((a, b) => a - b)
+    .map((price): PriceLadderRow => {
+      const r = simulatePrice({ ...input, price })
+      const tags: PriceLadderTag[] = []
+      if (price === be) tags.push('balik_modal')
+      if (price === rec) tags.push('disarankan')
+      if (price === m20) tags.push('untung_20')
+      return {
+        price,
+        tags,
+        profit: r.profit,
+        margin: r.margin,
+        bepRoas: r.bepRoas,
+        targetRoas: r.targetRoas,
+        profitAtRealistic: r.profit - price / input.realisticRoas,
+      }
+    })
+  return { recommended: rec, rows }
+}
