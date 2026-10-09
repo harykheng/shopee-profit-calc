@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
-import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, Stamp, selectClass, type StampTone } from '../components/ui'
+import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, Stamp, type StampTone } from '../components/ui'
 import { IconAlertCircle, IconCheck, IconInfo, IconUpload } from '../components/icons'
 import {
   fetchAdReports,
@@ -23,10 +23,12 @@ import {
   type AdVerdict,
   type AdsAnalysis,
 } from '../lib/adsMath'
-import { addMonths, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, monthEnd, wibDay } from '../lib/format'
+import { addMonths, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort, monthEnd, wibDay } from '../lib/format'
 import { ParseError } from '../lib/parsers/common'
 import { parseAdsCsv, type AdsParseResult } from '../lib/parsers/ads'
 import { navigate } from '../lib/router'
+import { FieldSelect } from '../components/pickers'
+import { WordsRise } from '../components/motion'
 import type { AdReport, Store } from '../lib/types'
 
 type ParsedFile = { fileName: string; result?: AdsParseResult; error?: unknown }
@@ -116,7 +118,7 @@ function expenseNote(g: FileGroup): { tone: 'info' | 'warning' | 'success'; text
   return { tone: 'info', text: 'Bukan 1 bulan penuh: hanya untuk analisis, Biaya tidak diubah.' }
 }
 
-interface Period {
+export interface Period {
   key: string
   start: string
   end: string
@@ -257,16 +259,11 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
         <Alert title="Belum ada data iklan untuk toko ini.">Upload file iklan di atas untuk mulai.</Alert>
       ) : (
         <>
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <label htmlFor="ads-period" className="font-semibold">
-              Periode iklan:
+          <div className="on-field mb-8 flex flex-wrap items-center gap-3 text-on-field">
+            <label htmlFor="ads-period" className="text-on-field-muted">
+              Periode iklan
             </label>
-            <select
-              id="ads-period"
-              value={selected ?? ''}
-              onChange={(e) => setSelected(e.target.value)}
-              className={selectClass}
-            >
+            <FieldSelect id="ads-period" value={selected ?? ''} onChange={(e) => setSelected(e.target.value)}>
               {periods.map((p) => (
                 <option key={p.key} value={p.key}>
                   {formatPeriod(p.start, p.end)}
@@ -274,28 +271,28 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
                 </option>
               ))}
               {fullMonths.length >= 2 && <option value={COMBINED}>Gabungkan beberapa bulan…</option>}
-            </select>
+            </FieldSelect>
             {selected === COMBINED && (
               <>
-                <label className="flex items-center gap-2 text-ink-soft">
+                <label className="flex items-center gap-2 text-on-field-muted">
                   Dari
-                  <select value={from} onChange={(e) => setRange({ from: e.target.value, to })} className={selectClass}>
+                  <FieldSelect value={from} onChange={(e) => setRange({ from: e.target.value, to })}>
                     {fullMonths.map((x) => (
                       <option key={x.month} value={x.month}>
                         {formatMonth(x.month)}
                       </option>
                     ))}
-                  </select>
+                  </FieldSelect>
                 </label>
-                <label className="flex items-center gap-2 text-ink-soft">
+                <label className="flex items-center gap-2 text-on-field-muted">
                   sampai
-                  <select value={to} onChange={(e) => setRange({ from, to: e.target.value })} className={selectClass}>
+                  <FieldSelect value={to} onChange={(e) => setRange({ from, to: e.target.value })}>
                     {fullMonths.map((x) => (
                       <option key={x.month} value={x.month}>
                         {formatMonth(x.month)}
                       </option>
                     ))}
-                  </select>
+                  </FieldSelect>
                 </label>
               </>
             )}
@@ -424,7 +421,7 @@ function UploadCard({
 
   if (!(open ?? !hasData)) {
     return (
-      <section className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-paper px-5 py-3 shadow-sheet">
+      <section className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-paper px-5 py-3 shadow-sheet">
         <p>
           <span className="font-semibold">Data iklan baru?</span>{' '}
           <span className="text-ink-muted">Upload file CSV per bulan atau per minggu.</span>
@@ -613,13 +610,69 @@ function UploadCard({
 
 // --- Analisis -----------------------------------------------------------------
 
-interface Loaded {
+export interface Loaded {
   analysis: AdsAnalysis
   feeRate: number
   feeFrom: string | null
   hasOrders: boolean
   /** Untuk gabungan beberapa bulan: hasil per bulan. */
   perMonth?: { month: string; analysis: AdsAnalysis }[]
+}
+
+/** Muat & hitung analisis iklan satu periode (dipakai halaman Iklan dan bab Iklan di Rekap). */
+export async function loadAdsAnalysis(storeId: number, period: Period): Promise<Loaded> {
+  const monthStart = `${period.start.slice(0, 7)}-01`
+  const lastMonth = `${period.end.slice(0, 7)}-01`
+  const [reports, items, products, incomeDays] = await Promise.all([
+    fetchAdRows(period.reports),
+    fetchItemsCreatedBetween(storeId, period.start, period.end),
+    fetchProducts(storeId),
+    fetchIncomeDays(storeId, addMonths(monthStart, -3), monthEnd(lastMonth)),
+  ])
+
+  // Potongan Shopee: bulan periode iklan; kalau belum ada, 3 bulan sebelumnya; kalau tidak ada juga, 15%.
+  const inPeriod = incomeDays.filter((d) => d.released_date >= monthStart)
+  let feeRate = feeRateFromIncome(inPeriod)
+  let feeFrom: string | null = null
+  if (feeRate !== null) {
+    feeFrom = monthStart === lastMonth ? formatMonth(monthStart) : `${formatMonth(monthStart)} – ${formatMonth(lastMonth)}`
+  } else {
+    feeRate = feeRateFromIncome(incomeDays)
+    if (feeRate !== null) feeFrom = '3 bulan sebelumnya'
+  }
+
+  const hppBySku = new Map(products.map((p) => [p.sku, p.hpp === null ? null : Number(p.hpp)]))
+  const fallback = new Map<string, number[]>()
+  for (const p of products) {
+    if (p.hpp === null) continue
+    const k = productKey(p.product_name)
+    fallback.set(k, [...(fallback.get(k) ?? []), Number(p.hpp)])
+  }
+  const fallbackHpp = new Map([...fallback].map(([k, v]) => [k, v.reduce((s, x) => s + x, 0) / v.length]))
+
+  const toLine = (i: (typeof items)[number]) => ({
+    product_name: i.product_name,
+    status_group: i.status_group,
+    qty: Number(i.qty),
+    subtotal: Number(i.subtotal),
+    hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
+  })
+  const rate = feeRate ?? DEFAULT_FEE_RATE
+  const analysis = analyzeAds({ reports, orders: items.map(toLine), feeRate: rate, fallbackHpp })
+  // Gabungan: hitung juga per bulan (data iklan & pesanan bulan itu saja) untuk dibandingkan.
+  const perMonth =
+    period.months && period.months.length > 1
+      ? period.months.map((m) => ({
+          month: m,
+          analysis: analyzeAds({
+            reports: reports.filter((r) => r.period === `${m}|${monthEnd(m)}`),
+            orders: items.filter((i) => i.created_at && wibDay(i.created_at).slice(0, 7) === m.slice(0, 7)).map(toLine),
+            feeRate: rate,
+            fallbackHpp,
+          }),
+        }))
+      : undefined
+  return { analysis, feeRate: rate, feeFrom, hasOrders: items.length > 0, perMonth }
 }
 
 function Analysis({ storeId, period }: { storeId: number; period: Period }) {
@@ -629,60 +682,9 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      const monthStart = `${period.start.slice(0, 7)}-01`
-      const lastMonth = `${period.end.slice(0, 7)}-01`
-      const [reports, items, products, incomeDays] = await Promise.all([
-        fetchAdRows(period.reports),
-        fetchItemsCreatedBetween(storeId, period.start, period.end),
-        fetchProducts(storeId),
-        fetchIncomeDays(storeId, addMonths(monthStart, -3), monthEnd(lastMonth)),
-      ])
-
-      // Potongan Shopee: bulan periode iklan; kalau belum ada, 3 bulan sebelumnya; kalau tidak ada juga, 15%.
-      const inPeriod = incomeDays.filter((d) => d.released_date >= monthStart)
-      let feeRate = feeRateFromIncome(inPeriod)
-      let feeFrom: string | null = null
-      if (feeRate !== null) {
-        feeFrom = monthStart === lastMonth ? formatMonth(monthStart) : `${formatMonth(monthStart)} – ${formatMonth(lastMonth)}`
-      } else {
-        feeRate = feeRateFromIncome(incomeDays)
-        if (feeRate !== null) feeFrom = '3 bulan sebelumnya'
-      }
-
-      const hppBySku = new Map(products.map((p) => [p.sku, p.hpp === null ? null : Number(p.hpp)]))
-      const fallback = new Map<string, number[]>()
-      for (const p of products) {
-        if (p.hpp === null) continue
-        const k = productKey(p.product_name)
-        fallback.set(k, [...(fallback.get(k) ?? []), Number(p.hpp)])
-      }
-      const fallbackHpp = new Map([...fallback].map(([k, v]) => [k, v.reduce((s, x) => s + x, 0) / v.length]))
-
-      const toLine = (i: (typeof items)[number]) => ({
-        product_name: i.product_name,
-        status_group: i.status_group,
-        qty: Number(i.qty),
-        subtotal: Number(i.subtotal),
-        hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
-      })
-      const rate = feeRate ?? DEFAULT_FEE_RATE
-      const analysis = analyzeAds({ reports, orders: items.map(toLine), feeRate: rate, fallbackHpp })
-      // Gabungan: hitung juga per bulan (data iklan & pesanan bulan itu saja) untuk dibandingkan.
-      const perMonth =
-        period.months && period.months.length > 1
-          ? period.months.map((m) => ({
-              month: m,
-              analysis: analyzeAds({
-                reports: reports.filter((r) => r.period === `${m}|${monthEnd(m)}`),
-                orders: items.filter((i) => i.created_at && wibDay(i.created_at).slice(0, 7) === m.slice(0, 7)).map(toLine),
-                feeRate: rate,
-                fallbackHpp,
-              }),
-            }))
-          : undefined
-      if (!cancelled) setData({ analysis, feeRate: rate, feeFrom, hasOrders: items.length > 0, perMonth })
-    })().catch((e) => !cancelled && setError(e))
+    loadAdsAnalysis(storeId, period)
+      .then((loaded) => !cancelled && setData(loaded))
+      .catch((e) => !cancelled && setError(e))
     return () => {
       cancelled = true
     }
@@ -711,6 +713,7 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
 
   return (
     <div className="space-y-6">
+      <AdsStory analysis={a} period={period} />
       <SummaryCard data={data} period={period} />
       {data.perMonth && <PerMonthCard rows={data.perMonth} />}
 
@@ -783,7 +786,7 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
       </div>
 
       {noSales.length > 0 && (filter === 'semua' || filter === 'belum_cukup') && (
-        <details className="rounded-lg border border-line bg-paper p-5 shadow-sheet">
+        <details className="rounded-3xl bg-paper p-5 shadow-sheet">
           <summary className="cursor-pointer font-semibold">
             {noSales.length} produk lain belum ada penjualan — total biaya{' '}
             {formatRupiah(noSales.reduce((s, p) => s + p.spend, 0))}
@@ -813,8 +816,10 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`min-h-11 rounded-md border px-3.5 font-medium transition-colors duration-150 ${
-        active ? 'border-ink bg-ink text-white' : 'border-line bg-paper text-ink-soft hover:border-ink-muted hover:text-ink'
+      className={`on-field min-h-11 rounded-full border px-4 font-semibold transition duration-150 active:scale-[0.97] ${
+        active
+          ? 'border-on-field bg-on-field text-field'
+          : 'border-on-field/30 bg-white/10 text-on-field hover:border-on-field/70 hover:bg-white/15'
       }`}
     >
       {children}
@@ -852,6 +857,37 @@ function PerMonthCard({ rows }: { rows: { month: string; analysis: AdsAnalysis }
         </table>
       </div>
     </Card>
+  )
+}
+
+/** Jawabannya dulu, sebagai kalimat di atas bidang biru: iklan periode ini untung/rugi berapa. */
+function AdsStory({ analysis: a, period }: { analysis: AdsAnalysis; period: Period }) {
+  const month = fullMonthOf(period.start, period.end)
+  const label =
+    period.months && period.months.length > 1
+      ? `${formatMonth(period.months[0])} – ${formatMonth(period.months[period.months.length - 1])}`
+      : month
+        ? formatMonth(month)
+        : formatPeriod(period.start, period.end)
+  const loss = a.profitAfterAds < 0
+  const takedown = a.products.filter((p) => p.verdict === 'takedown').length
+  return (
+    <div className="on-field text-on-field">
+      <h2 className="font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
+        <WordsRise text={`${label}, iklan ${loss ? 'rugi' : 'untung'}`} />{' '}
+        <span className={`num ${loss ? 'text-coral-soft' : 'text-lime'}`}>{formatRupiahShort(Math.abs(a.profitAfterAds))}</span>
+      </h2>
+      <p className="mt-3 text-lg text-on-field-muted">
+        {takedown > 0 ? (
+          <>
+            <b className="text-on-field">{formatNumber(takedown)} iklan sebaiknya dimatikan</b> (label Takedown di bawah).
+          </>
+        ) : (
+          'Tidak ada iklan yang perlu dimatikan.'
+        )}{' '}
+        Biaya iklan <span className="num">{formatRupiah(a.totalSpend)}</span>.
+      </p>
+    </div>
   )
 }
 
@@ -962,7 +998,7 @@ function ProductCard({ p, months, stampDelay = 0 }: { p: AdProductResult; months
   const v = VERDICTS[p.verdict]
   const sold = Math.round(p.netSold)
   return (
-    <article className="flex flex-col rounded-lg border border-line bg-paper p-5 shadow-sheet">
+    <article className="flex flex-col rounded-3xl bg-paper p-5 shadow-sheet">
       <div className="flex items-start justify-between gap-3">
         <h3 className="line-clamp-2 min-w-0 font-semibold leading-snug" title={p.name}>
           {p.name}
@@ -1075,7 +1111,7 @@ function Row({ label, value, strong, tone }: { label: string; value: string; str
 
 function HowToRead({ feeRate }: { feeRate: number }) {
   return (
-    <details className="rounded-lg border border-line bg-paper p-5 shadow-sheet">
+    <details className="rounded-3xl bg-paper p-5 shadow-sheet">
       <summary className="flex cursor-pointer items-center gap-2 font-semibold">
         <IconInfo size={18} className="text-stamp" />
         Cara baca angka-angka ini

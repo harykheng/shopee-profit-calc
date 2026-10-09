@@ -127,9 +127,9 @@ export function ExpensesPage({
             ))}
           </div>
 
-          <div className="mt-6 flex flex-wrap items-baseline justify-between gap-3 border-t-2 border-dashed border-rule pt-4">
-            <span className="font-bold uppercase tracking-wide">Total biaya</span>
-            <strong className="num text-2xl font-bold">{formatRupiah(total)}</strong>
+          <div className="mt-6 flex flex-wrap items-baseline justify-between gap-3 rounded-2xl bg-stamp-tint px-4 py-3">
+            <span className="font-display text-lg font-bold">Total biaya</span>
+            <strong className="num font-display text-2xl font-bold">{formatRupiah(total)}</strong>
           </div>
 
           {/* Pesan status di BAWAH tombol, supaya tombol tidak bergeser saat ditekan. */}

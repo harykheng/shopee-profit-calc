@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { roundUpToThousand, simulatePrice, targetRoasFromMargin, type PriceSimInput } from '../src/lib/adsMath'
+import {
+  priceLadder,
+  profitAtRoas,
+  roundUpToThousand,
+  simulateAdGroup,
+  simulatePrice,
+  targetRoasFromMargin,
+  type PriceSimInput,
+} from '../src/lib/adsMath'
 
 // Admin 8,25%, XTRA ON, proses 1.250, packaging 0, ROAS realistis 5,5.
 const base: Omit<PriceSimInput, 'hpp' | 'price'> = {
@@ -75,5 +83,91 @@ describe('roundUpToThousand', () => {
     expect(roundUpToThousand(68_879.3)).toBe(69_000)
     expect(roundUpToThousand(69_000)).toBe(69_000)
     expect(roundUpToThousand(69_000.4)).toBe(70_000)
+  })
+})
+
+describe('simulateAdGroup', () => {
+  const fees = { adminRate: 0.0825, xtra: true }
+  // Untung per order sebelum iklan (proses 1.250, packaging 0):
+  // A: harga 65.000, HPP 46.668 → ±9.120 (margin 14,0%)  → target sendiri 1/(0,140−0,05) ≈ 11,1
+  // B: harga 50.000, HPP 25.000 → ±19.163 (margin 38,3%) → target sendiri ≈ 3,0
+  const A = { ...fees, price: 65_000, hpp: 46_668 }
+  const B = { ...fees, price: 50_000, hpp: 25_000 }
+
+  it('target sesuai porsi memakai margin gabungan; target aman = target tertinggi', () => {
+    const g = simulateAdGroup({ rows: [{ ...A, qty: 10 }, { ...B, qty: 30 }], processFee: 1250, packaging: 0 })
+    const a = g.rows[0]
+    const b = g.rows[1]
+    expect(a.targetRoas).toBeCloseTo(1 / (a.margin - 0.05), 6)
+    expect(b.targetRoas).toBeCloseTo(1 / (b.margin - 0.05), 6)
+    const gmv = 65_000 * 10 + 50_000 * 30
+    const profit = a.profit * 10 + b.profit * 30
+    expect(g.gmv).toBeCloseTo(gmv, 6)
+    expect(g.mixBepRoas).toBeCloseTo(gmv / profit, 6)
+    expect(g.mixTargetRoas).toBeCloseTo(1 / (profit / gmv - 0.05), 6)
+    expect(g.safeTargetRoas).toBeCloseTo(a.targetRoas as number, 6)
+    // Porsi diketahui semua → yang disarankan target sesuai porsi, dan selalu ≤ target aman.
+    expect(g.recommended).toBe('mix')
+    expect(g.mixTargetRoas as number).toBeLessThan(g.safeTargetRoas as number)
+    // Di ROAS grup, produk A (margin tipis) rugi; B tetap untung.
+    expect(profitAtRoas({ price: 65_000, profit: a.profit }, g.mixTargetRoas as number)).toBeLessThan(0)
+    expect(profitAtRoas({ price: 50_000, profit: b.profit }, g.mixTargetRoas as number)).toBeGreaterThan(0)
+  })
+
+  it('produk baru (porsi belum diketahui) → disarankan target aman, porsinya pakai rata-rata', () => {
+    const g = simulateAdGroup({ rows: [{ ...A, qty: null }, { ...B, qty: 30 }], processFee: 1250, packaging: 0 })
+    expect(g.hasUnknownQty).toBe(true)
+    expect(g.rows[0].weightEstimated).toBe(true)
+    expect(g.rows[0].weight).toBe(30)
+    expect(g.recommended).toBe('safe')
+    expect(g.recommendedRoas).toBeCloseTo(g.rows[0].targetRoas as number, 6)
+  })
+
+  it('ada produk yang margin-nya ≤ 5% → target aman tidak ada, tetap kasih target porsi', () => {
+    const thin = { ...fees, price: 65_000, hpp: 53_000 }
+    const g = simulateAdGroup({ rows: [{ ...thin, qty: 5 }, { ...B, qty: 30 }], processFee: 1250, packaging: 0 })
+    expect(g.rows[0].targetRoas).toBeNull()
+    expect(g.safeTargetRoas).toBeNull()
+    expect(g.mixTargetRoas).not.toBeNull()
+    expect(g.recommended).toBe('mix')
+  })
+
+  it('semua produk baru → porsi sama rata (1 : 1)', () => {
+    const g = simulateAdGroup({ rows: [{ ...A, qty: null }, { ...B, qty: null }], processFee: 1250, packaging: 0 })
+    expect(g.rows.map((r) => r.weight)).toEqual([1, 1])
+    expect(g.recommended).toBe('safe')
+  })
+
+  it('porsi nol semua → target porsi tidak bisa dihitung, disarankan target aman', () => {
+    const g = simulateAdGroup({ rows: [{ ...A, qty: 0 }, { ...B, qty: 0 }], processFee: 1250, packaging: 0 })
+    expect(g.mixTargetRoas).toBeNull()
+    expect(g.recommended).toBe('safe')
+    expect(g.recommendedRoas).toBeCloseTo(g.safeTargetRoas as number, 6)
+  })
+})
+
+describe('priceLadder (saran harga dari modal)', () => {
+  const fees = { adminRate: 0.0825, xtra: true, processFee: 1250, packaging: 0, realisticRoas: 5.5 }
+
+  it('modal 5.000: jual Rp10.000, target ROAS ±4,94', () => {
+    const l = priceLadder({ ...fees, hpp: 5000 })
+    expect(l.recommended).toBe(10_000)
+    expect(l.rows.map((r) => r.price)).toEqual([9_000, 10_000, 11_000, 12_000, 15_000])
+    const rec = l.rows.find((r) => r.price === 10_000)!
+    expect(rec.tags).toEqual(['disarankan', 'untung_20'])
+    expect(Math.abs(rec.profit - 2_525)).toBeLessThanOrEqual(1)
+    expect(rec.targetRoas).toBeCloseTo(4.938, 2)
+    expect(rec.profitAtRealistic).toBeGreaterThan(0)
+    // Harga balik modal di ROAS realistis: untungnya setelah iklan ±0.
+    const be = l.rows[0]
+    expect(be.tags).toContain('balik_modal')
+    expect(Math.abs(be.profitAtRealistic)).toBeLessThan(50)
+  })
+
+  it('ROAS realistis terlalu rendah → tidak ada harga yang disarankan, tetap ada harga untung 20%', () => {
+    // 1 − 8,25% − 4% − 1/1,2 − 5% < 0: berapa pun harganya, iklan tidak bisa untung 5%.
+    const l = priceLadder({ ...fees, realisticRoas: 1.2, hpp: 5000 })
+    expect(l.recommended).toBeNull()
+    expect(l.rows.some((r) => r.tags.includes('untung_20'))).toBe(true)
   })
 })

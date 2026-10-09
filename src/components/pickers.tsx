@@ -1,8 +1,21 @@
-import { useState } from 'react'
+import { useState, type SelectHTMLAttributes } from 'react'
 import { parseRupiah } from '../lib/parsers/common'
 import { MONTH_NAMES, addMonths, currentMonth, formatMonth, toMonth } from '../lib/format'
 import type { Store } from '../lib/types'
-import { selectClass } from './ui'
+import { IconChevronDown } from './icons'
+
+/** Dropdown berbentuk pil untuk dipakai langsung di atas bidang biru (bulan di Rekap & Biaya). */
+export function FieldSelect({ className = '', ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <span className="relative inline-block">
+      <select
+        {...props}
+        className={`min-h-11 cursor-pointer appearance-none rounded-full border border-on-field/35 bg-white/10 pl-4 pr-10 font-semibold text-on-field transition-colors hover:border-on-field/70 hover:bg-white/15 [&>option]:text-ink ${className}`}
+      />
+      <IconChevronDown size={18} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-on-field-muted" />
+    </span>
+  )
+}
 
 /** Pilihan toko berupa tombol besar. */
 export function StorePicker({
@@ -54,11 +67,10 @@ export function MonthPicker({
   const years: number[] = []
   for (let yr = thisYear + 1; yr >= 2020; yr--) years.push(yr)
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {label && <span className="font-medium text-ink-soft">{label}</span>}
-      <select
+    <div className="on-field flex flex-wrap items-center gap-2">
+      {label && <span className="font-medium text-on-field-muted">{label}</span>}
+      <FieldSelect
         aria-label={label ? `${label} (bulan)` : 'Bulan'}
-        className={selectClass}
         value={m}
         onChange={(e) => onChange(toMonth(y, Number(e.target.value)))}
       >
@@ -67,10 +79,9 @@ export function MonthPicker({
             {name}
           </option>
         ))}
-      </select>
-      <select
+      </FieldSelect>
+      <FieldSelect
         aria-label={label ? `${label} (tahun)` : 'Tahun'}
-        className={selectClass}
         value={y}
         onChange={(e) => onChange(toMonth(Number(e.target.value), m))}
       >
@@ -79,7 +90,7 @@ export function MonthPicker({
             {yr}
           </option>
         ))}
-      </select>
+      </FieldSelect>
     </div>
   )
 }
@@ -101,15 +112,15 @@ export function MonthSelect({
   for (let i = 0; i < 24; i++) options.push(addMonths(now, -i))
   if (!options.includes(value)) options.push(value)
   return (
-    <label className="flex items-center gap-2">
-      <span className="text-ink-soft">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className={`${selectClass} font-bold ${className}`}>
+    <label className="on-field flex items-center gap-2">
+      <span className="text-on-field-muted">{label}</span>
+      <FieldSelect value={value} onChange={(e) => onChange(e.target.value)} className={`font-bold ${className}`}>
         {options.map((m) => (
           <option key={m} value={m}>
             {formatMonth(m)}
           </option>
         ))}
-      </select>
+      </FieldSelect>
     </label>
   )
 }
@@ -175,7 +186,7 @@ export function RupiahInput({
         onKeyDown={(e) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
         }}
-        className={`num min-h-11 w-full rounded-md border pl-10 pr-3 text-right text-base transition-colors placeholder:font-sans placeholder:text-ink-muted focus:outline-none focus:ring-2 ${
+        className={`num min-h-11 w-full rounded-xl border pl-10 pr-3 text-right text-base transition-colors placeholder:font-sans placeholder:text-ink-muted focus:outline-none focus:ring-2 ${
           invalid
             ? 'border-loss ring-loss/20'
             : highlight

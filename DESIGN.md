@@ -1,274 +1,267 @@
 ---
 name: Profit Shopee
-description: Internal profit, ads and price tool for two Shopee beauty stores, read like a store receipt.
+description: Internal profit, ads and price tool for two Shopee beauty stores. Every page answers first in a sentence, then shows its working.
 colors:
-  stamp-ink: "#3a3fb8"
-  stamp-ink-deep: "#2c309b"
-  stamp-wash: "#ecedfb"
-  receipt-ink: "#17202b"
-  receipt-ink-soft: "#3a4553"
-  receipt-ink-muted: "#5a6574"
-  rail-ink: "#141b25"
-  rail-ink-raised: "#222c3a"
-  rail-text: "#c5cdd8"
-  counter-grey: "#eceef2"
-  paper-white: "#ffffff"
-  hairline: "#d8dce3"
-  tear-rule: "#aeb5c0"
-  loss-red: "#b3261e"
-  loss-wash: "#fdeceb"
-  gain-green: "#146c43"
-  gain-wash: "#e5f3eb"
-  warn-amber: "#8a5300"
-  warn-wash: "#fff3d9"
+  field: "#2b2fa6"
+  field-deep: "#1d2079"
+  field-raised: "#3b3fb4"
+  on-field: "#f6f4ff"
+  on-field-muted: "#c3c5f2"
+  lime: "#d7f45a"
+  coral: "#c4361e"
+  coral-soft: "#ff9b85"
+  paper: "#ffffff"
+  counter: "#eef0f7"
+  line: "#dfe2ee"
+  rule: "#b4b9cf"
+  ink: "#16173d"
+  ink-soft: "#3b3d63"
+  ink-muted: "#5d6088"
+  stamp: "#3a3fb8"
+  stamp-strong: "#2c309b"
+  stamp-tint: "#ecedfb"
+  loss: "#b3261e"
+  loss-tint: "#fdeceb"
+  gain: "#146c43"
+  gain-tint: "#e5f3eb"
+  warn: "#8a5300"
+  warn-tint: "#fff3d9"
   warn-line: "#ebc06a"
-  info-blue: "#1d4f86"
-  info-wash: "#e8f0fa"
+  info: "#1d4f86"
+  info-tint: "#e8f0fa"
 typography:
+  hero-figure:
+    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "8.5rem"
+    fontWeight: 800
+    lineHeight: 0.9
+    letterSpacing: "-0.05em"
+    fontFeature: "tnum"
+  story:
+    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "3.75rem"
+    fontWeight: 700
+    lineHeight: 1.04
+    letterSpacing: "-0.025em"
   headline:
-    fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.875rem"
-    fontWeight: 600
-    lineHeight: 1.2
+    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "3rem"
+    fontWeight: 700
+    lineHeight: 1.05
+    letterSpacing: "-0.025em"
+  chapter:
+    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "2.25rem"
+    fontWeight: 700
+    lineHeight: 1.1
     letterSpacing: "-0.025em"
   title:
-    fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "1.25rem"
+    fontWeight: 700
+    lineHeight: 1.3
+  kicker:
+    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1.125rem"
-    fontWeight: 600
+    fontWeight: 700
     lineHeight: 1.4
-    letterSpacing: "-0.025em"
   body:
     fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.5
-  label:
-    fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 700
-    letterSpacing: "0.1em"
   figure:
-    fontFamily: "Azeret Mono, ui-monospace, Menlo, Consolas, monospace"
+    fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
-    letterSpacing: "-0.01em"
-    fontFeature: "tnum"
-  figure-total:
-    fontFamily: "Azeret Mono, ui-monospace, Menlo, Consolas, monospace"
-    fontSize: "2.25rem"
-    fontWeight: 700
-    letterSpacing: "-0.01em"
     fontFeature: "tnum"
 rounded:
-  stamp: "3px"
-  control: "6px"
-  sheet: "8px"
+  control: "12px"
+  pill: "9999px"
+  well: "16px"
+  sheet: "24px"
+  chapter: "32px"
 spacing:
   xs: "4px"
   sm: "8px"
   md: "16px"
   lg: "24px"
   xl: "40px"
+  chapter-gap: "56px"
 components:
   button-primary:
-    backgroundColor: "{colors.stamp-ink}"
-    textColor: "{colors.paper-white}"
-    rounded: "{rounded.control}"
-    padding: "0 16px"
+    backgroundColor: "{colors.stamp}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.pill}"
+    padding: "0 20px"
     height: "44px"
-  button-primary-hover:
-    backgroundColor: "{colors.stamp-ink-deep}"
   button-secondary:
-    backgroundColor: "{colors.paper-white}"
-    textColor: "{colors.receipt-ink}"
-    rounded: "{rounded.control}"
-    padding: "0 16px"
+    backgroundColor: "{colors.stamp-tint}"
+    textColor: "{colors.stamp-strong}"
+    rounded: "{rounded.pill}"
+    padding: "0 20px"
     height: "44px"
   input:
-    backgroundColor: "{colors.paper-white}"
-    textColor: "{colors.receipt-ink}"
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.control}"
+    height: "44px"
+  field-select:
+    backgroundColor: "{colors.field-raised}"
+    textColor: "{colors.on-field}"
+    rounded: "{rounded.pill}"
     height: "44px"
   sheet:
-    backgroundColor: "{colors.paper-white}"
+    backgroundColor: "{colors.paper}"
     rounded: "{rounded.sheet}"
-    padding: "24px"
+    padding: "28px"
   nav-item-active:
-    backgroundColor: "{colors.paper-white}"
-    textColor: "{colors.receipt-ink}"
-    rounded: "{rounded.control}"
-    height: "44px"
+    backgroundColor: "{colors.on-field}"
+    textColor: "{colors.field}"
+    rounded: "{rounded.pill}"
+    height: "40px"
   nav-item:
-    backgroundColor: "{colors.rail-ink}"
-    textColor: "{colors.rail-text}"
-    rounded: "{rounded.control}"
-    height: "44px"
-  filter-chip-active:
-    backgroundColor: "{colors.receipt-ink}"
-    textColor: "{colors.paper-white}"
-    rounded: "{rounded.control}"
-    height: "44px"
-  stamp:
-    textColor: "{colors.loss-red}"
-    typography: "{typography.label}"
-    rounded: "{rounded.stamp}"
-    padding: "2px 8px"
+    backgroundColor: "{colors.field}"
+    textColor: "{colors.on-field-muted}"
+    rounded: "{rounded.pill}"
+    height: "40px"
+  bottom-bar-marker:
+    backgroundColor: "{colors.lime}"
+    textColor: "{colors.field-deep}"
+    rounded: "{rounded.pill}"
+  sticker-final:
+    backgroundColor: "{colors.lime}"
+    textColor: "{colors.field-deep}"
+    rounded: "{rounded.pill}"
+    padding: "4px 12px"
+  sticker-loss:
+    backgroundColor: "{colors.coral}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.pill}"
+    padding: "4px 12px"
+  ads-chapter:
+    backgroundColor: "{colors.coral}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.chapter}"
+    padding: "36px"
 ---
 
 # Design System: Profit Shopee
 
 ## Overview
 
-**Creative North Star: "The Store Receipt (Nota Kasir)"**
+**Creative North Star: "Cerita Bulan Ini" (this month's story)**
 
-Every answer the app gives is printed as a nota: itemised lines, an operator column (`+`, `−`, `=`, `≈`), a dashed tear rule, and a total. The family already trusts receipts, so profit, ad performance and price checks borrow that reading order instead of a dashboard of metric tiles. Sheets of white receipt paper sit on a cool grey counter; a blue-black ink rail holds the navigation; verdicts are pressed on top as rubber stamps.
+The app does not look like a dashboard. Every page answers its question first, as a sentence set large on one committed field of ink blue: "Agustus 2026, Harel Beauty untung **Rp2,78 juta**." The working (the arithmetic, the tables, the forms) follows on rounded white sheets. Rekap is told in chapters: Bab 1 Untung, Bab 2 Dari mana angkanya, Bab 3 Iklan, Bab 4 Pesanan & produk. Iklan opens with "Juli 2026, iklan rugi Rp283 ribu"; Simulasi Harga with "Dijual Rp198.200, untung Rp9.671 per order", which updates while the numbers are typed.
 
-It is an Operate surface first. Navigation, buttons, inputs, tabs and tables stay standard web controls; the world only lends the palette, the two-family type pairing, a moderately dense rhythm, and one signature move (the stamp). Laptop is the primary device, iPad and phone must keep working without horizontal scroll.
+It was chosen by the user from three rendered previews (Resi & Kardus, Cerita Bulan Ini, Papan Toko), replacing the earlier "Nota kasir" receipt system, which they found "masih terlalu dashboard". The structures that worked there stay: answer before line items, operator column in the arithmetic, verdict labels, celebration on a real result.
 
 **Key Characteristics:**
-- White sheets on a cool grey counter; one blue-black rail.
-- Every Rupiah, percentage, ROAS and quantity set in a tabular monospace.
-- Dashed tear rule before every total.
-- Verdicts (Angka final, Takedown, Hero, Iklan rugi) as double-ruled, slightly tilted stamps.
-- Colour carries meaning only: stamp ink for action and selection, red loss, green gain, amber attention.
+- One saturated field for the whole page; colour commits at page scale, not as scattered accents.
+- Answers are sentences in a display face; the one figure the reader came for is lime (or light coral when it is a loss).
+- Work happens on white sheets with plain Public Sans and tabular numerals.
+- Verdicts are colour stickers that pop on; real results get a small paper-confetti burst.
+- Operate rules still hold: standard controls, 44px targets, plain Indonesian, no horizontal scroll from 360px.
 
 ## Colors
 
-A restrained receipt palette: cool neutrals, one stamp-ink accent, and four state inks.
+**The Field-and-Sheet Rule.** Text sitting directly on the blue field uses On Field (`#f6f4ff`) or On Field Muted (`#c3c5f2`) and is wrapped in an element with the `on-field` class (which also turns the focus ring lime). Text on a white sheet uses the ink scale. Never put ink on the field or on-field colours on a sheet.
 
-### Primary
-- **Stamp Ink** (`stamp-ink`): primary buttons, focus outline, selected tab underline, links, the active nav icon. Never decorative fill.
-- **Deep Stamp Ink** (`stamp-ink-deep`): hover and pressed state of primary buttons.
-- **Stamp Wash** (`stamp-wash`): text selection, the "result" row of the sold-items flow.
+### Field
+- **Field** (`field`, #2b2fa6): page background everywhere, including Login.
+- **Field Deep** (`field-deep`, #1d2079): bottom bar on phones/iPad; text on lime.
+- **Field Raised** (`field-raised`, #3b3fb4): scrollbar thumb; pills drawn with `bg-white/10` read the same.
+- **On Field / On Field Muted**: sentences, chapter titles, labels on the field (9.4:1 and 6.1:1).
+- **Lime** (`lime`, #d7f45a): the answer figure, chapter kickers ("Bab 1 · Untung"), the bottom-bar marker, the final/gain sticker, the focus ring on the field (8.2:1 on Field).
+- **Coral Soft** (`coral-soft`, #ff9b85): a loss figure written on the field (5.0:1). Never the deep coral there (2.5:1).
+- **Coral** (`coral`, #c4361e): the Iklan chapter card in Rekap, the loss sticker, the "Dengan iklan, rugi" card in Simulasi. Text on it is white (5.4:1); the kicker uses #ffe4dc at large size only.
 
-### Neutral
-- **Receipt Ink** (`receipt-ink`): body text and totals.
-- **Soft Ink** (`receipt-ink-soft`) and **Muted Ink** (`receipt-ink-muted`): secondary text, line details, table headers, operator column.
-- **Rail Ink** (`rail-ink`) with **Raised Rail** (`rail-ink-raised`) and **Rail Text** (`rail-text`): the navigation rail / top bar and the store picker on it.
-- **Counter Grey** (`counter-grey`): page ground and quiet wells (advice boxes, explanations).
-- **Paper White** (`paper-white`): every sheet, input and secondary button.
-- **Hairline** (`hairline`): sheet borders, row dividers. **Tear Rule** (`tear-rule`): dashed tear lines.
-
-### State
-- **Loss Red** / **Loss Wash**: negative money, Takedown, Iklan rugi, errors.
-- **Gain Green** / **Gain Wash**: positive results, Angka final, Hero/Aman, saved.
-- **Warn Amber** / **Warn Wash** / **Warn Line**: Belum lengkap, ROAS terlalu kecil, missing data.
-- **Info Blue** / **Info Wash**: neutral notices and "where this number came from" notes.
-
-**The Meaning-Only Rule.** Stamp ink, red, green and amber are never used for decoration. If a colour does not tell the reader to act, that money was lost, gained, or needs attention, it is a neutral.
-
-**The Counter-and-Paper Rule.** The page ground stays Counter Grey and content sits on Paper White sheets. No tinted sheets except the state washes for alerts and the ad-result box.
+### Sheets
+- **Paper** (#ffffff) sheets; **Counter** (#eef0f7) wells and table washes; **Line** (#dfe2ee) hairlines; **Rule** (#b4b9cf) dashed dividers.
+- **Ink** (#16173d), **Ink Soft** (#3b3d63), **Ink Muted** (#5d6088): text on sheets.
+- **Stamp** (#3a3fb8) / **Stamp Strong** / **Stamp Tint** (#ecedfb): primary buttons, links and selection on sheets; Stamp Tint also fills the total pills.
+- **Status**: Loss, Gain, Warn, Info with their tints, unchanged meanings (rugi, untung, perlu perhatian, informasi). Each always carries a word or icon, never colour alone.
 
 ## Typography
 
-**Body Font:** Public Sans (with ui-sans-serif, system-ui)
-**Figure Font:** Azeret Mono (with ui-monospace, Menlo, Consolas)
-
-**Character:** A plain, administrative sans for words, like a printed form; a tabular mono for every figure, like a cash-register printout. Both are self-hosted from `public/fonts` (OFL).
+**Display Font:** Bricolage Grotesque (self-hosted, OFL; latin + latin-ext) for every sentence, chapter title, page title, sheet title, total and sticker.
+**Body Font:** Public Sans (self-hosted, OFL) for everything else, figures included (`.num` = tabular numerals so columns line up).
 
 ### Hierarchy
-- **Headline** (600, 1.875rem on ≥640px / 1.5rem below, 1.2): page titles. On Rekap the nota title ("Untung bersih Agustus 2026") steps down to a 1.125–1.25rem Soft Ink label because the figure under it is the headline.
-- **Title** (600, 1.125rem, 1.4): sheet titles.
-- **Body** (400, 1rem, 1.5): all copy; subtitles capped at 70ch.
-- **Small** (400, 0.875rem): line details under each nota line, hints, table headers.
-- **Label** (700, 0.875rem, 0.1em, uppercase): stamps and the "UNTUNG BERSIH" total label.
-- **Figure** (Azeret Mono 600, 1.125rem, tabular): nota amounts, table cells, input values.
-- **Figure Total** (Azeret Mono 700, 1.875–2.25rem, tabular): the one total per nota.
-
-**The Figures-Are-Mono Rule.** Every money amount, percentage, ROAS and count is set in Azeret Mono with tabular numerals so columns align like a receipt. Words, including words that sit in a figure column ("belum diisi", "tidak mungkin"), stay in Public Sans.
-
-**The No-Costume Rule.** Mono is for figures only: not for headings, buttons, stamps or labels.
+- **Hero Figure** (800, 8.5rem on ≥640px / 4.5rem below, 0.9, −0.05em): the one answer figure in Rekap Bab 1, written short ("Rp2,78 juta", `formatRupiahShort`, rounded down) with the exact amount in the next sentence.
+- **Story** (700, 3.75rem / 2.25rem): the Bab 1 sentence; Iklan and Simulasi answer lines use 3rem / 1.875rem.
+- **Headline** (700, 3rem / 2.25rem): page titles (`PageTitle`).
+- **Chapter** (700, 2.25rem / 1.875rem): "Dari mana angkanya", "Pesanan & produk".
+- **Kicker** (700, 1.125rem, lime): "Bab 2 · Hitungannya".
+- **Title** (700, 1.25rem): sheet titles.
+- **Body** (400, 1rem, 1.5) and **Figure** (600, 1.125rem, tabular) on sheets.
 
 ## Layout
 
-- **Shell:** at ≥1024px a fixed-width rail (15.5rem) on the left with brand, store picker, two nav groups ("Lihat hasil": Rekap, Iklan, Simulasi Harga; "Input bulanan": Upload, HPP, Biaya) and the account at the bottom; the rail is sticky and its colour runs the full page height. Below 1024px a sticky ink top bar with brand, store picker and logout (icon only under 640px), and a fixed ink bottom bar holding all six nav items so they are in thumb reach and never scroll out of view; the page gets bottom padding (plus the safe-area inset) so the bar never covers the last control.
-- **Content:** max width 72rem, padding 16px → 24px (≥640px) → 40px (≥1024px). Rekap's nota and its tabs share a 56rem column so the receipt reads as one strip.
-- **Grids:** product cards in two columns at ≥1024px; Simulasi Harga puts inputs (22rem) beside the results.
-- **Rhythm:** 4px base; 12–20px between related rows, 24px between sheets; more space above a heading than below it.
-- **Touch:** every interactive control is at least 44px tall.
+- **Shell:** sticky top bar on the field at every width: brand, store pill, logout. From 1024px the six nav pills sit in it (Rekap, Iklan, Simulasi, Upload, HPP, Biaya) with one sliding marker. Below 1024px the nav moves to a fixed Field Deep bottom bar of six equal cells (icon over short label) with a lime marker; the page reserves room for it plus the safe-area inset. The brand text hides under 640px so the store name fits.
+- **Content:** max 72rem, 16 / 24 / 32px side padding.
+- **Rekap chapters:** 56px apart. Bab 1 is two columns from 1024px (sentence + hero figure left at ~70%, the "Dari setiap Rp100" bar right); one column below. Bab 2 and the tabs of Bab 4 are sheets under a chapter title; Bab 3 is the coral card.
+- **Answer first:** Iklan puts its answer line between the period select and the summary sheet; Simulasi puts its live answer line between the product picker and the input/results grid.
 
 ## Elevation & Depth
 
-Flat paper on a counter. Depth is a single soft sheet shadow plus a hairline border; nothing floats higher except the HPP recalculation dialog.
-
-### Shadow Vocabulary
-- **Sheet** (`box-shadow: 0 1px 2px rgb(23 32 43 / 0.06), 0 2px 8px rgb(23 32 43 / 0.05)`): every sheet and product card.
-- **Dialog** (Tailwind `shadow-xl`): the modal dialog only, over an ink scrim at 40%.
-
-**The One-Sheet-Deep Rule.** Sheets never nest inside sheets. Inside a sheet, group with hairline dividers, a tear rule, or a Counter Grey well.
+Two levels: the field, and sheets on it with one soft shadow (`--shadow-sheet`: 0 2px 4px / 0 14px 34px in field-tinted black). No nested sheets; wells inside sheets use Counter or Stamp Tint without shadow.
 
 ## Shapes
 
-Small, practical radii: 3px for stamps, 6px for controls (buttons, inputs, chips, nav items, wells), 8px for sheets. Dividers are 1px hairlines; tear rules are 2px dashed in Tear Rule grey. Stamps use a 3px double border.
+Pills (9999px) for buttons, nav, selects on the field, tabs and stickers; 12px for inputs; 16px for wells and total pills; 24px for sheets; 32px for the coral chapter card.
 
 ## Components
 
 ### Buttons
-- **Shape:** gently squared (6px), 44px tall, 16px side padding, semibold 1rem, optional 18px line icon on the left.
-- **Primary:** Stamp Ink fill, white text; hover/pressed Deep Stamp Ink; disabled at 40% opacity.
-- **Secondary:** Paper White with a Hairline border, Receipt Ink text; hover darkens the border to Muted Ink.
-- **Danger:** Loss Red fill, white text.
-- **Focus:** 2px Stamp Ink outline, 2px offset (global `:focus-visible`).
+- **Primary:** Stamp fill, white text, pill, 44px. **Secondary:** Stamp Tint fill, Stamp Strong text. **Danger:** Loss fill. Press scales to 97%.
 
-### Filter chips
-- **Style:** 44px, 6px radius, Hairline border on Paper White, Soft Ink text; counts in the figure font.
-- **Active:** Receipt Ink fill with white text.
+### Field controls
+- **Field select** (`FieldSelect` in `pickers.tsx`): pill with a 35% On Field border on a 10% white wash, On Field text, chevron icon; used for Bulan (Rekap, Biaya), Periode iklan, and the store picker in the top bar. Focus ring lime.
+- **Tabs (Rekap Bab 4):** pills inside a 10% white track; the active tab is On Field with Field text.
+- **Filter chips (Iklan):** pills on the field; active is On Field with Field text.
 
-### Sheets
-- **Corner Style:** 8px. **Background:** Paper White. **Border:** 1px Hairline. **Shadow:** Sheet. **Padding:** 20px, 24–28px from 640px.
+### Sheets, inputs, alerts
+- **Sheet** (`Card`): Paper, 24px radius, 20 / 28px padding, display-face title.
+- **Inputs:** 44px, 12px radius, Line border, Stamp focus ring; money right-aligned with a muted "Rp". Text fields share `inputClass`.
+- **Alerts:** 16px radius, tinted border and wash, line icon; readable on the field and on sheets.
 
-### Inputs / Fields
-- **Style:** 44px, 6px radius, Hairline border, Paper White, values in the figure font, right-aligned for money with a muted "Rp" prefix or "%" suffix.
-- **Hover:** border to Muted Ink. **Focus:** border Stamp Ink plus a 2px Stamp Ink ring at 25%.
-- **Error:** Loss Red border and a one-line red hint under the field. Source notes ("↳ Dari halaman HPP") are Info Blue with a corner-arrow line icon.
-- **Text fields** (email, notes, search) share one class (`inputClass` in `ui.tsx`): same box, words in the sans face, muted placeholder. Search fields carry an 18px search icon inside on the left.
-- **Missing values** (HPP not yet filled): the money field turns Loss tint with a soft Loss border, and the row is washed Loss tint so gaps are findable while scrolling.
-- **File picker:** a dashed Hairline well holding a primary "Pilih file" button with an upload icon and the chosen file name (truncated) beside it. Long names wrap anywhere so phones never scroll sideways.
+### Arithmetic (`NotaLine`)
+- Operator column (`+ − = ≈`), label with a detail line, amount right-aligned in figures; on phones the amount drops under its label. Totals are a Stamp Tint pill ("= Untung bersih", "≈ Perkiraan untung", "= Untung per order", "Total biaya") with the amount in the display face; Simulasi colours its pill gain/loss.
 
-### Input pages (Upload, HPP, Biaya, Login)
-- **Upload:** a Stamp-tint banner names the store being written to; two sheets side by side at ≥1024px (Excel, PDF); the save result is a sheet with a "TERSIMPAN" stamp and counts in figures.
-- **Biaya:** a small nota: one row per cost (label, money field, note), then a tear rule and "TOTAL BIAYA" in Figure Total. Unsaved changes show a Warn line with an alert icon.
-- **Login:** one centred sheet on the counter with an ink receipt badge; nothing else.
+### Part-to-whole bar ("Dari setiap Rp100 yang masuk")
+- One bar split into modal (10% white), biaya (35% white), untung (lime), sized by their true share of the money in; labelled inside only when a part is at least 12% (others are named in the caption). Vertical from 1024px, horizontal below. Hidden with a plain sentence when the month is a loss (the parts no longer sum to 100).
 
-### Navigation
-- **Rail item:** 44px, 6px radius, 18px line icon + label, Rail Text on Rail Ink; hover lightens to white on a 5% white wash.
-- **Active:** Paper White pill with Receipt Ink text and a Stamp Ink icon. The pill is one shared indicator that slides to the chosen item (rail and bottom bar alike); link colours fade over the same 260ms.
-- **Mobile / iPad:** six equal cells in the ink bottom bar: 18px icon above a short label ("Simulasi"); the active cell puts the icon in a small Paper White pill with Stamp Ink, its label turns white.
+### Sticker (`Stamp`)
+- Display face, 700, pill, slight −3° tilt, solid fill: final/gain = lime on Field Deep, warn = amber (#ffcf5c) on brown, loss = coral on white, neutral = Counter on Ink Soft. Text, never an image.
 
-### Nota (signature)
-- A sheet whose body is a three-column grid: operator (`+ − = ≈`, muted mono), label with a small detail line, amount (figure font, right-aligned). Rows divided by hairlines; a dashed tear rule above the first line and before the total; the total row uses the uppercase label and Figure Total. Used for Untung bersih (Rekap), Perkiraan untung, ad summaries, each ad product card, and Rincian per order (Simulasi Harga).
-- **Answer first (Rekap):** the Untung bersih sheet opens with the figure itself (Figure font, 2.25rem / 3rem from 640px) under a small title, with the margin and any "Belum final" note beneath it, so the answer is read before any line item, also on a phone without scrolling. The nota lines follow, and the closing "= UNTUNG BERSIH" row repeats the amount at line-item scale only to close the arithmetic. Below 640px the large totals elsewhere (Perkiraan untung) drop under their label instead of squeezing it.
-
-### Stamp (signature)
-- Uppercase Public Sans 700, 0.875rem, 0.1em tracking, 3px double border in the state ink, translucent paper fill, tilted −2° (upright when used inline in explanations or tables). Tones: final/gain = Gain Green, warn = Warn Amber, loss = Loss Red, neutral = Muted Ink. It is text, readable by screen readers, never an image or texture.
-
-### Alerts
-- 6px radius, 1px tinted border, state wash background, a 20px line icon in the state ink, title in Receipt Ink, body in Soft Ink. No side stripes.
+### Iklan chapter (Rekap Bab 3)
+- Coral card: kicker, the answer sentence ("Iklan rugi Rp283 ribu. 4 iklan sebaiknya dimatikan."), the exact figure, up to three takedown products as white-wash tiles, and a white pill to the Iklan page. Only for a single month with a full-month ad report; otherwise it invites an upload.
 
 ## Motion
 
-Motion only marks a state change or a result, never decoration, and every effect lives in `src/index.css` and `src/components/motion.tsx` (no motion library). With the device's reduced-motion setting all of it is off: figures show their final value, stamps are simply there, no confetti.
+Motion marks an answer arriving or a state changing. All of it lives in `src/index.css` and `src/components/motion.tsx` (no library) and is off under `prefers-reduced-motion`: sentences appear whole, figures show their final value, stickers are simply there, no confetti.
 
-- **Stamping** (`.stamp-in`, built into `Stamp`): the stamp drops in about 1.7× large and slightly twisted, overshoots to 0.93, settles (420ms). A verdict that changes re-stamps (keyed by its tone, e.g. "Iklan rugi" → "Iklan untung" in Simulasi Harga). Lists stagger by 60ms per card, capped at 8.
-- **Printing** (`.print-in`, `.print-last`): nota lines appear one after another from the top, 70ms apart, the closing total last, like a receipt leaving the printer. Only when a nota first renders (new data or another month), never on hover or re-render.
-- **Counting** (`useCountUp`): the Rekap headline figure rolls up to its value (700ms, ease-out); the Untung bersih stamp lands after it.
-- **Celebration** (`Confetti`): square paper scraps in stamp, gain, amber, rule and ink burst from a stamp once: every time an upload is saved (from TERSIMPAN), and the first time a month is seen as ANGKA FINAL in this browser (remembered in localStorage). The layer is clipped to the viewport so the page never widens.
-- **Feedback:** buttons press to 97% (nav cells 95%); opened panels (status checklist, "Kenapa …?", the ad upload form) fade down 4px in 200ms; a new page or Rekap tab fades up 4px in 180ms.
+- **Words rise** (`WordsRise`, `.word-rise`): answer sentences rise word by word, 55ms apart (520ms each).
+- **Counting** (`useCountUp`): the hero figure rolls up to its value (700ms ease-out).
+- **Bar grows** (`.grow-split`): the Rp100 bar segments grow from the base (vertical) or the left (horizontal), 140ms apart.
+- **Sticker pop** (`.stamp-in`): from 30% with a twist, overshoot to 114%, settle (460ms). Iklan cards stagger 60ms per card; Simulasi's verdict card re-appears when the verdict flips.
+- **Printing** (`.print-in`, `.print-last`): arithmetic lines appear one after another, the total last.
+- **Celebration** (`Confetti`): paper scraps burst once from the sticker: after every saved upload, and the first time a month shows ANGKA FINAL in this browser. Clipped to the viewport, mounted on `<body>`.
+- **Feedback:** nav marker slides (260ms) with link colours fading in step; buttons press to 97%; opened panels fade down 4px; pages and tabs fade up 4px.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** print results as a nota: operator column, tear rule, one total.
-- **Do** put every figure in Azeret Mono with tabular numerals and every word in Public Sans.
-- **Do** use a stamp for a verdict (status, ad label, ad result) and nowhere else.
-- **Do** keep controls standard and at least 44px tall.
+- **Do** answer in a sentence on the field before showing any table, and give the exact figure right after a rounded one.
+- **Do** keep working content on white sheets and wrap anything on the field in `on-field`.
+- **Do** use lime only for the answer, kickers, the marker and positive stickers; use coral-soft for losses on the field.
+- **Do** keep controls standard, pill-shaped and at least 44px tall.
 - **Do** tie any new motion to a state change and add it to the reduced-motion block.
-- **Do** use the line icons in `src/components/icons.tsx` (24px grid, 1.75 stroke) for any new icon.
 
 ### Don't:
-- **Don't** use emoji or unicode glyphs as icons or status markers.
-- **Don't** nest sheets, or add coloured side stripes to cards or alerts.
-- **Don't** use stamp ink, red, green or amber for decoration.
-- **Don't** set headings, buttons, stamps or labels in the monospace.
-- **Don't** fake paper or ink texture (no grain, torn-edge images or ink-bleed effects); the receipt is expressed through structure and type.
-- **Don't** animate routine page loads beyond the short fade, loop anything, or fire confetti for anything but a save or a first ANGKA FINAL.
+- **Don't** build grids of metric tiles; one answer per chapter.
+- **Don't** put ink text on the field or deep coral text on the field.
+- **Don't** nest sheets or add coloured side stripes.
+- **Don't** use emoji or unicode glyphs as icons or status markers; use `src/components/icons.tsx`.
+- **Don't** loop animations or fire confetti for anything but a save or a first ANGKA FINAL.

@@ -42,11 +42,11 @@ Hal penting yang perlu diingat:
   hari yang sama dengan pesanan selesai.
 - **Modal hanya dari barang yang selesai** di bulan itu. Barang batal dan barang retur tidak
   dihitung.
-- **Toko dipilih di pilihan Toko pada menu** (menu samping di laptop, bar atas di HP/iPad) dan
+- **Toko dipilih di pilihan Toko pada menu** (di bar paling atas, di laptop maupun HP/iPad) dan
   berlaku untuk semua halaman. Selalu cek nama toko sebelum upload.
 - **Menu dibagi dua:** *Lihat hasil* (Rekap, Iklan, Simulasi Harga) dan *Input bulanan* (Upload, HPP,
-  Biaya). Di HP/iPad keenam menu ada di **bawah layar**. Aplikasi langsung terbuka di **Rekap**,
-  dan angka **untung bersih** tampil paling atas.
+  Biaya). Di laptop menunya ada di **bar atas**; di HP/iPad keenam menu ada di **bawah layar**.
+  Aplikasi langsung terbuka di **Rekap**, dan angka **untung bersih** tampil paling atas.
 
 ---
 
@@ -162,9 +162,21 @@ Biaya di luar laporan penghasilan Shopee, per toko per bulan:
 
 Pilih bulan di atas. Untuk melihat beberapa bulan, pilih **"Lihat beberapa bulan"**.
 
-### Kotak untung bersih (nota)
+Rekap dibaca seperti cerita, dari atas ke bawah:
 
-Dibaca dari atas ke bawah seperti nota:
+| Bab | Isi |
+|---|---|
+| **Bab 1 · Untung** | Kalimat besar, mis. "Agustus 2026, Harel Beauty untung **Rp2,78 juta**", lalu angka tepatnya (Rp2.785.162), status bulan, dan batang **"Dari setiap Rp100 yang masuk"** (berapa untuk modal, biaya, dan berapa yang jadi untung). Kalau rugi, kalimatnya bilang "rugi". |
+| **Bab 2 · Dari mana angkanya** | Hitungannya (lihat di bawah). |
+| **Bab 3 · Iklan** | Ringkasan iklan bulan yang sama (untung/rugi setelah iklan, iklan yang sebaiknya dimatikan). Hanya muncul kalau melihat satu bulan; kalau belum ada data iklan 1 bulan penuh, ada ajakan untuk upload. |
+| **Bab 4 · Pesanan & produk** | Tab-tab rincian (lihat di bawah). |
+
+> Angka besar di Bab 1 dibulatkan ke bawah supaya mudah dibaca ("Rp2,78 juta"). Angka pastinya
+> selalu ada di kalimat "Tepatnya …" dan di Bab 2.
+
+### Dari mana angkanya (Bab 2)
+
+Dibaca dari atas ke bawah:
 
 ```
   Uang masuk dari Shopee      Rp…   (uang yang cair bulan ini, refund sudah dipotong)
@@ -195,7 +207,7 @@ Yang dicek:
 > pesanan selesai malam hari, Shopee mencairkan uangnya besok. Datanya sudah cocok dan tidak
 > menghalangi status final.
 
-### Tab-tab di bawah nota
+### Tab-tab di Bab 4
 
 | Tab | Isi |
 |---|---|
@@ -243,7 +255,10 @@ Kalau digabung, produk A dinilai dari data Juli + Agustus.
 - Yang ikut digabung hanya data iklan **1 bulan penuh** (data mingguan tidak ikut, supaya tidak
   dobel).
 
-### Nota iklan (paling atas)
+### Ringkasan iklan (paling atas)
+
+Paling atas ada kalimat jawaban, mis. **"Juli 2026, iklan rugi Rp283 ribu"** dan berapa iklan yang
+sebaiknya dimatikan. Di bawahnya rinciannya:
 
 ```
 Biaya iklan                                   Rp…
@@ -307,7 +322,8 @@ Iklan tidak akan bisa memberi untung 5% (atau ROAS yang dibutuhkan di atas 50). 
 Dipakai **sebelum jualan produk baru atau sebelum ganti harga**. Isi beberapa angka (atau pilih
 produk yang sudah pernah di-upload), hasilnya langsung keluar. Angka simulasi **tidak disimpan**;
 kalau halaman ditutup, isinya hilang. Yang bisa disimpan hanya **% admin dan XTRA per produk**
-(lihat di bawah).
+(lihat di bawah). Untuk **grup iklan** (beberapa produk dengan satu target ROAS), lihat bagian
+"Grup iklan" di bawah.
 
 Bedanya dengan halaman Iklan: halaman Iklan menilai yang **sudah terjadi** (dari data upload),
 sedangkan Simulasi Harga menghitung **sebelum** terjadi. Potongan Shopee dihitung **per komponen**
@@ -326,13 +342,34 @@ memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
 | Kolom | Isi | Bawaan |
 |---|---|---|
 | **HPP per unit jual** | Modal per 1 unit yang dijual di Shopee. Paket/bundling: HPP per paket. | – |
-| **Harga jual** | Harga jual per unit/paket | – |
+| **Harga jual** | Harga jual per unit/paket. **Kosongkan** untuk melihat saran harga dari modal (lihat di bawah). | – |
 | **Biaya admin** | Persen biaya admin kategori produk itu (boleh pakai koma, mis. 8,25) | 8,25% |
 | **Ikut Gratis Ongkir XTRA** | Centang kalau produk ikut program ini (potongan 4%) | dicentang |
 | **Biaya proses pesanan** | Biaya tetap per order dari Shopee | Rp1.250 |
 | **Packaging per order** | Bubble wrap, lakban, kardus, dll. per order | Rp0 |
 | **ROAS realistis** | ROAS yang biasa didapat di iklan (lihat halaman Iklan) | 5,5 |
 | **ROAS aktual** (opsional) | ROAS nyata iklan produk ini, kalau iklannya sudah jalan | kosong |
+
+### Belum tahu mau jual berapa? (saran harga dari modal)
+
+Untuk produk baru: isi **HPP** saja dan biarkan **Harga jual** kosong. Halaman langsung menjawab,
+mis. **"Modal Rp5.000: jual minimal Rp10.000, isi target ROAS 4,94."**, dan menampilkan kartu
+**Pilih harga jual**:
+
+| Harga | Arti |
+|---|---|
+| **Balik modal setelah iklan** | Harga terendah yang tidak rugi kalau iklan mendapat ROAS realistis. Untungnya ±Rp0, jangan di bawah ini. |
+| **Disarankan** | Harga terendah yang masih **untung 5% setelah iklan** di ROAS realistis. |
+| **Untung 20% sebelum iklan** | Harga supaya untung 20% kalau tanpa iklan. |
+| +10%, +20%, +50% | Beberapa harga di atasnya, untuk melihat seberapa longgar target ROAS-nya. |
+
+Di setiap harga tertulis untung per order, **target ROAS yang diisi di Shopee**, dan untung/rugi
+kalau iklan mendapat ROAS realistis. Tekan **Pakai** untuk memakai harga itu; rinciannya langsung
+muncul seperti biasa. Semua harga dibulatkan ke atas ke Rp1.000.
+
+Contoh modal Rp5.000 (admin 8,25%, ikut XTRA, proses Rp1.250, ROAS realistis 5,5): Rp9.000 butuh
+ROAS 7,52 (terlalu tinggi), **Rp10.000 cukup ROAS 4,94**, Rp12.000 cukup ROAS 3,27. Untuk barang
+murah, biaya proses Rp1.250 per order terasa berat, jadi harganya biasanya perlu ±2× modal.
 
 ### Memakai produk yang sudah di-upload
 
@@ -397,6 +434,40 @@ Contoh: HPP Rp46.668, harga Rp65.000, admin 8,25%, ikut XTRA, ROAS aktual 6,94:
 - untung per order ±Rp9.120;
 - biaya iklan per order ±Rp9.366;
 - jadi **iklan rugi ±Rp246 per order**. Balik modal butuh ROAS 7,13, sedangkan ROAS aktual baru 6,94.
+
+### Grup iklan (beberapa produk, satu target ROAS)
+
+Di Shopee, beberapa produk bisa dijadikan **satu grup iklan dengan satu target ROAS**. Pilih tab
+**"Grup iklan (beberapa produk)"** di atas halaman Simulasi untuk menghitung target ROAS yang
+diisi di Shopee untuk grup itu. Grup **tidak disimpan**; pilih produknya lagi setiap kali.
+
+**Cara pakai:**
+1. Ketik nama produk, lalu pilih. Harga jual, HPP, dan jumlah terjual terisi otomatis dari bulan
+   pesanan terbaru yang sudah di-upload (harga & HPP = rata-rata variasi yang terjual). Semua angka
+   bisa diubah.
+2. Produk yang **belum pernah terjual** (produk baru): pilih **"+ Produk baru (belum ada di data)"**,
+   lalu isi nama, harga jual, dan HPP-nya. Kolom **Terjual / bulan** boleh dikosongkan.
+3. Biaya proses pesanan, packaging, dan ROAS realistis di kanan berlaku untuk semua produk di grup.
+
+**Dua target yang dihitung:**
+
+| Target | Artinya | Kapan dipakai |
+|---|---|---|
+| **Sesuai porsi penjualan** | Grup secara keseluruhan untung 5% setelah iklan, kalau porsi penjualannya seperti kolom "Terjual / bulan". Lebih rendah, jadi iklan lebih leluasa. | Semua produk sudah punya data penjualan. |
+| **Aman untuk semua produk** | Setiap produk tetap untung 5% setelah iklan, berapa pun porsinya. Sama dengan target produk yang untungnya paling tipis. | Ada produk baru / porsinya belum diketahui. |
+
+Kalimat besar di atas ("Isi target ROAS grup: …") sudah memilihkan salah satunya. Di bawahnya
+tertulis produk mana yang **menentukan target aman** dan berapa targetnya kalau produk itu
+dipisah ke grup/iklan sendiri.
+
+**Kenapa ada produk yang ditandai merah?** Dengan satu ROAS untuk semua produk, produk yang
+untungnya tipis bisa rugi walaupun grupnya untung. Di tiap produk tertulis untung/rugi per order
+di ROAS grup. Pilihannya: pisahkan produk itu ke grup lain, naikkan harganya, atau pakai target
+aman.
+
+> Kalau target grup jauh di atas ROAS realistis, Shopee akan menahan belanja iklan supaya target
+> tercapai, jadi iklan grup jarang tampil. Biasanya itu tanda ada produk yang untungnya terlalu tipis
+> untuk ikut grup.
 
 ---
 

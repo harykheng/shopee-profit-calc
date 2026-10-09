@@ -8,7 +8,7 @@ const VARIANTS: Record<Variant, string> = {
   primary:
     'bg-stamp text-white hover:bg-stamp-strong active:bg-stamp-strong disabled:bg-stamp/40 disabled:text-white/90',
   secondary:
-    'bg-paper text-ink border border-line hover:border-ink-muted hover:bg-counter/60 active:bg-counter disabled:text-ink-muted disabled:border-line disabled:bg-paper',
+    'bg-stamp-tint text-stamp-strong hover:bg-[#dfe1fa] active:bg-[#d4d7f7] disabled:bg-counter disabled:text-ink-muted',
   danger: 'bg-loss text-white hover:bg-loss/90 active:bg-loss/80 disabled:bg-loss/40',
 }
 
@@ -21,7 +21,7 @@ export function Button({
     <button
       type="button"
       {...props}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-4 text-base font-semibold transition duration-150 enabled:active:scale-[0.97] disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-base font-semibold transition duration-150 enabled:active:scale-[0.97] disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
     />
   )
 }
@@ -29,8 +29,8 @@ export function Button({
 /** Lembar kertas (nota) di atas meja. */
 export function Card({ title, children, className = '' }: { title?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-lg border border-line bg-paper p-5 shadow-sheet sm:p-6 ${className}`}>
-      {title && <h2 className="mb-4 text-lg font-semibold tracking-tight">{title}</h2>}
+    <section className={`rounded-3xl bg-paper p-5 shadow-sheet sm:p-7 ${className}`}>
+      {title && <h2 className="mb-4 font-display text-xl font-bold tracking-tight">{title}</h2>}
       {children}
     </section>
   )
@@ -55,7 +55,7 @@ const ICONS: Record<Tone, typeof IconInfo> = {
 export function Alert({ tone = 'info', title, children }: { tone?: Tone; title?: ReactNode; children?: ReactNode }) {
   const Icon = ICONS[tone]
   return (
-    <div className={`rounded-md border px-4 py-3 ${TONES[tone]}`} role={tone === 'error' ? 'alert' : undefined}>
+    <div className={`rounded-2xl border px-4 py-3 ${TONES[tone]}`} role={tone === 'error' ? 'alert' : undefined}>
       <div className="flex gap-3">
         <Icon className="mt-0.5 shrink-0" />
         <div className="min-w-0 flex-1 text-ink [overflow-wrap:anywhere]">
@@ -86,8 +86,8 @@ export function ErrorBox({ error }: { error: unknown }) {
 
 export function Spinner({ label = 'Memuat…' }: { label?: string }) {
   return (
-    <p className="flex items-center gap-3 py-6 text-ink-muted">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-stamp" />
+    <p className="flex items-center gap-3 py-6 text-on-field-muted">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/25 border-t-lime" />
       {label}
     </p>
   )
@@ -95,9 +95,9 @@ export function Spinner({ label = 'Memuat…' }: { label?: string }) {
 
 export function PageTitle({ children, subtitle }: { children: ReactNode; subtitle?: ReactNode }) {
   return (
-    <div className="mb-6">
-      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{children}</h1>
-      {subtitle && <p className="mt-1.5 max-w-[70ch] text-ink-soft">{subtitle}</p>}
+    <div className="on-field mb-8 text-on-field">
+      <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">{children}</h1>
+      {subtitle && <p className="mt-3 max-w-[62ch] text-lg text-on-field-muted">{subtitle}</p>}
     </div>
   )
 }
@@ -105,16 +105,16 @@ export function PageTitle({ children, subtitle }: { children: ReactNode; subtitl
 export type StampTone = 'final' | 'warn' | 'loss' | 'gain' | 'neutral'
 
 const STAMP_TONES: Record<StampTone, string> = {
-  final: 'text-gain border-gain',
-  gain: 'text-gain border-gain',
-  warn: 'text-warn border-warn',
-  loss: 'text-loss border-loss',
-  neutral: 'text-ink-muted border-ink-muted',
+  final: 'bg-lime text-field-deep',
+  gain: 'bg-lime text-field-deep',
+  warn: 'bg-[#ffcf5c] text-[#4a2c00]',
+  loss: 'bg-coral text-white',
+  neutral: 'bg-counter text-ink-soft',
 }
 
 /**
- * Cap stempel: vonis di atas nota (FINAL, TAKEDOWN, HERO, IKLAN RUGI, …).
- * Teks biasa (bisa dibaca screen reader), hanya diberi bingkai ganda dan sedikit miring.
+ * Stiker vonis (ANGKA FINAL, TAKEDOWN, HERO, IKLAN RUGI, …): label berwarna penuh yang
+ * "ditempel" sedikit miring. Teks biasa (bisa dibaca screen reader).
  */
 export function Stamp({
   tone,
@@ -133,8 +133,8 @@ export function Stamp({
   return (
     <span
       style={delay ? ({ '--stamp-delay': `${delay}ms` } as CSSProperties) : undefined}
-      className={`stamp-in inline-flex items-center gap-1.5 rounded-[3px] border-[3px] border-double bg-paper/80 px-2 py-0.5 text-sm font-bold uppercase tracking-[0.1em] ${
-        tilt ? '-rotate-2' : ''
+      className={`stamp-in inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-display text-sm font-bold tracking-tight shadow-[0_2px_0_rgb(16_18_70/0.18)] ${
+        tilt ? '-rotate-3' : ''
       } ${STAMP_TONES[tone]} ${className}`}
     >
       {children}
@@ -143,8 +143,8 @@ export function Stamp({
 }
 
 export const selectClass =
-  'min-h-11 rounded-md border border-line bg-paper px-3 text-base text-ink transition-colors hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'
+  'min-h-11 rounded-xl border border-line bg-paper px-3 text-base text-ink transition-colors hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'
 
 /** Kotak isian teks biasa (email, catatan, cari). */
 export const inputClass =
-  'min-h-11 w-full rounded-md border border-line bg-paper px-3 text-base text-ink transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'
+  'min-h-11 w-full rounded-xl border border-line bg-paper px-3 text-base text-ink transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'

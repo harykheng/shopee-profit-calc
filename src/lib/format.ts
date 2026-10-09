@@ -9,6 +9,24 @@ export function formatRupiah(value: number | null | undefined): string {
   return (n < 0 ? '-Rp' : 'Rp') + NUMBER.format(Math.abs(n))
 }
 
+/**
+ * Rupiah singkat untuk angka besar di judul: 2785162 → "Rp2,78 juta", 150000 → "Rp150 ribu",
+ * 1250000000 → "Rp1,25 miliar". Di bawah seribu sama dengan formatRupiah.
+ */
+export function formatRupiahShort(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '-'
+  const sign = value < 0 ? '-' : ''
+  const abs = Math.abs(value)
+  const unit = (n: number, divisor: number, name: string, digits: number) => {
+    const scaled = Math.floor((n / divisor) * 10 ** digits) / 10 ** digits
+    return `${sign}Rp${scaled.toLocaleString('id-ID', { maximumFractionDigits: digits })} ${name}`
+  }
+  if (abs >= 1e9) return unit(abs, 1e9, 'miliar', 2)
+  if (abs >= 1e6) return unit(abs, 1e6, 'juta', 2)
+  if (abs >= 1e3) return unit(abs, 1e3, 'ribu', 0)
+  return formatRupiah(value)
+}
+
 export function formatNumber(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '-'
   return NUMBER.format(value)

@@ -163,3 +163,18 @@ export function useCelebrateOnce(key: string | null, delay = 0): string | null {
   }, [key, delay])
   return fire
 }
+
+/** Kalimat judul yang kata-katanya naik satu per satu (sekali saat muncul). */
+export function WordsRise({ text, step = 55 }: { text: string; step?: number }) {
+  const words = text.split(' ')
+  return (
+    <>
+      {words.map((w, i) => (
+        <span key={i} className="word-rise" style={{ animationDelay: `${i * step}ms` }}>
+          {w}
+          {i < words.length - 1 ? ' ' : ''}
+        </span>
+      ))}
+    </>
+  )
+}

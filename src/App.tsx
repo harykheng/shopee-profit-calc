@@ -15,10 +15,8 @@ import { ROUTES, readHash, type Route } from './lib/router'
 import { useActiveIndicator } from './components/motion'
 import { IconCalculator, IconChevronDown, IconLogout, IconMegaphone, IconReceipt, IconStore, IconTag, IconUpload, IconWallet } from './components/icons'
 
-const NAV_GROUPS: { title: string; routes: Route[] }[] = [
-  { title: 'Lihat hasil', routes: ['rekap', 'iklan', 'simulasi'] },
-  { title: 'Input bulanan', routes: ['upload', 'hpp', 'biaya'] },
-]
+// Hasil dulu (Rekap, Iklan, Simulasi), lalu input bulanan (Upload, HPP, Biaya).
+const NAV_ORDER: Route[] = ['rekap', 'iklan', 'simulasi', 'upload', 'hpp', 'biaya']
 
 const NAV_ICONS: Record<Route, typeof IconUpload> = {
   rekap: IconReceipt,
@@ -29,7 +27,7 @@ const NAV_ICONS: Record<Route, typeof IconUpload> = {
   biaya: IconWallet,
 }
 
-function NavLink({ route, current, variant }: { route: Route; current: boolean; variant: 'rail' | 'bottom' }) {
+function NavLink({ route, current, variant }: { route: Route; current: boolean; variant: 'top' | 'bottom' }) {
   const r = ROUTES.find((x) => x.route === route)
   const Icon = NAV_ICONS[route]
   if (!r) return null
@@ -38,14 +36,14 @@ function NavLink({ route, current, variant }: { route: Route; current: boolean; 
       <a
         href={`#/${route}`}
         aria-current={current ? 'page' : undefined}
-        className={`relative flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-medium transition duration-[260ms] active:scale-95 ${
-          current ? 'text-white' : 'text-rail-text hover:text-white'
+        className={`relative flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-semibold transition duration-[260ms] active:scale-95 ${
+          current ? 'text-on-field' : 'text-on-field-muted hover:text-on-field'
         }`}
       >
         <span
           data-pill
-          className={`flex h-7 w-12 items-center justify-center rounded-md transition-colors duration-[260ms] ${
-            current ? 'text-stamp' : ''
+          className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-[260ms] ${
+            current ? 'text-field-deep' : ''
           }`}
         >
           <Icon size={18} />
@@ -58,12 +56,12 @@ function NavLink({ route, current, variant }: { route: Route; current: boolean; 
     <a
       href={`#/${route}`}
       aria-current={current ? 'page' : undefined}
-      className={`relative flex min-h-11 items-center gap-3 whitespace-nowrap rounded-md px-3 font-medium transition-colors duration-[260ms] ${
-        current ? 'text-ink' : 'text-rail-text hover:bg-white/5 hover:text-white'
+      className={`relative flex min-h-10 items-center gap-2 whitespace-nowrap rounded-full px-4 font-semibold transition-colors duration-[260ms] ${
+        current ? 'text-field' : 'text-on-field-muted hover:text-on-field'
       }`}
     >
-      <Icon size={18} className={current ? 'text-stamp' : ''} />
-      {r.label}
+      <Icon size={17} />
+      {r.short ?? r.label}
     </a>
   )
 }
@@ -117,13 +115,13 @@ export default function App() {
 
 function MainApp({ email }: { email: string }) {
   const [{ route, params }, setLocation] = useState(readHash)
-  const railRef = useRef<HTMLElement>(null)
+  const topRef = useRef<HTMLElement>(null)
   const barRef = useRef<HTMLElement>(null)
   // Latar menu aktif bergeser ke menu yang baru dipilih.
-  const railIndicator = useActiveIndicator(railRef, route, (active, box) => {
+  const topIndicator = useActiveIndicator(topRef, route, (active, box) => {
     const a = active.getBoundingClientRect()
     const b = box.getBoundingClientRect()
-    return { top: a.top - b.top + box.scrollTop, left: a.left - b.left, width: a.width, height: a.height }
+    return { top: a.top - b.top, left: a.left - b.left, width: a.width, height: a.height }
   })
   const barIndicator = useActiveIndicator(barRef, route, (active, box) => {
     const a = (active.querySelector<HTMLElement>('[data-pill]') ?? active).getBoundingClientRect()
@@ -154,21 +152,16 @@ function MainApp({ email }: { email: string }) {
     saveStoreId(id)
   }
 
-  const storeSelect = (variant: 'rail' | 'bar') =>
+  const storeSelect =
     stores && stores.length > 0 ? (
-      <label className={variant === 'rail' ? 'block' : 'min-w-0'}>
-        <span className={variant === 'rail' ? 'mb-1.5 block text-xs font-medium text-rail-text' : 'sr-only'}>Toko</span>
+      <label className="min-w-0">
+        <span className="sr-only">Toko</span>
         <span className="relative block">
-          <IconStore
-            size={18}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-rail-text"
-          />
+          <IconStore size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-field-muted" />
           <select
             value={storeId ?? ''}
             onChange={(e) => setStoreId(Number(e.target.value))}
-            className={`min-h-11 w-full cursor-pointer appearance-none truncate rounded-md border border-white/10 bg-rail-raised pl-10 pr-9 text-base font-semibold text-white transition-colors hover:border-white/25 focus:border-white/40 focus:outline-none ${
-              variant === 'bar' ? 'max-w-[12rem]' : ''
-            }`}
+            className="min-h-10 w-full max-w-[12rem] cursor-pointer appearance-none truncate rounded-full border border-on-field/35 bg-transparent pl-9 pr-8 font-semibold text-on-field transition-colors hover:border-on-field/70 [&>option]:text-ink"
           >
             {stores.map((s) => (
               <option key={s.id} value={s.id}>
@@ -176,93 +169,62 @@ function MainApp({ email }: { email: string }) {
               </option>
             ))}
           </select>
-          <IconChevronDown
-            size={18}
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-rail-text"
-          />
+          <IconChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-field-muted" />
         </span>
       </label>
     ) : null
 
-  const logout = (
-    <button
-      type="button"
-      onClick={() => supabase.auth.signOut()}
-      className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-rail-text transition-colors hover:bg-white/5 hover:text-white"
-    >
-      <IconLogout size={18} />
-      <span className="max-sm:sr-only">Keluar</span>
-    </button>
-  )
-
   return (
-    <div className="min-h-screen pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:pb-0">
-      {/* Laptop: rel samping (latar penuh setinggi halaman, isinya menempel di atas). */}
-      <div className="hidden bg-rail lg:block">
-        <aside className="sticky top-0 flex h-screen flex-col px-4 py-5 text-rail-text">
-          <a href="#/rekap" className="flex items-center gap-2.5 rounded-md px-2 py-1 text-white">
-            <IconReceipt size={22} />
-            <span className="text-lg font-semibold tracking-tight">Profit Shopee</span>
+    <div className="min-h-screen pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <header className="on-field sticky top-0 z-10 bg-field/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
+          <a href="#/rekap" className="shrink-0 font-display text-xl font-bold tracking-tight text-on-field max-sm:sr-only">
+            Profit Shopee
           </a>
-          <div className="mt-6">{storeSelect('rail')}</div>
-          <nav ref={railRef} aria-label="Menu utama" className="relative mt-6 flex flex-1 flex-col gap-5 overflow-y-auto">
-            {railIndicator && (
-              <span aria-hidden="true" className="nav-indicator absolute rounded-md bg-paper" style={railIndicator} />
+          {storeSelect}
+          <nav ref={topRef} aria-label="Menu utama" className="relative ml-auto hidden lg:block">
+            {topIndicator && (
+              <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-on-field" style={topIndicator} />
             )}
-            {NAV_GROUPS.map((g) => (
-              <div key={g.title}>
-                <p className="mb-1.5 px-3 text-xs font-medium text-rail-text/80">{g.title}</p>
-                <ul className="flex flex-col gap-0.5">
-                  {g.routes.map((r) => (
-                    <li key={r}>
-                      <NavLink route={r} current={route === r} variant="rail" />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            <ul className="flex gap-1">
+              {NAV_ORDER.map((r) => (
+                <li key={r}>
+                  <NavLink route={r} current={route === r} variant="top" />
+                </li>
+              ))}
+            </ul>
           </nav>
-          <div className="border-t border-white/10 pt-4">
-            <p className="truncate px-3 pb-2 text-sm text-rail-text/80" title={email}>
-              {email}
-            </p>
-            {logout}
-          </div>
-        </aside>
-      </div>
+          <button
+            type="button"
+            onClick={() => supabase.auth.signOut()}
+            title={`Keluar (${email})`}
+            className="ml-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-field-muted transition-colors hover:bg-white/10 hover:text-on-field lg:ml-1"
+          >
+            <IconLogout size={19} />
+            <span className="sr-only">Keluar</span>
+          </button>
+        </div>
+      </header>
 
-      <div className="min-w-0">
-        {/* HP & iPad: bar atas untuk toko & keluar, menu di bawah layar (mudah dijangkau jempol). */}
-        <header className="sticky top-0 z-10 bg-rail text-rail-text lg:hidden">
-          <div className="flex items-center gap-3 px-4 py-2.5">
-            <a href="#/rekap" className="flex shrink-0 items-center gap-2 text-white">
-              <IconReceipt size={20} />
-              <span className="font-semibold tracking-tight">Profit</span>
-            </a>
-            <div className="ml-auto flex min-w-0 items-center gap-1">
-              {storeSelect('bar')}
-              {logout}
-            </div>
-          </div>
-        </header>
-        <nav
-          ref={barRef}
-          aria-label="Menu utama"
-          className="fixed inset-x-0 bottom-0 z-10 bg-rail pb-[env(safe-area-inset-bottom)] lg:hidden"
-        >
-          {barIndicator && (
-            <span aria-hidden="true" className="nav-indicator absolute rounded-md bg-paper" style={barIndicator} />
-          )}
-          <ul className="mx-auto grid max-w-2xl grid-cols-6 px-1">
-            {NAV_GROUPS.flatMap((g) => g.routes).map((r) => (
-              <li key={r}>
-                <NavLink route={r} current={route === r} variant="bottom" />
-              </li>
-            ))}
-          </ul>
-        </nav>
+      {/* HP & iPad: menu di bawah layar, mudah dijangkau jempol. */}
+      <nav
+        ref={barRef}
+        aria-label="Menu utama"
+        className="on-field fixed inset-x-0 bottom-0 z-10 bg-field-deep pb-[env(safe-area-inset-bottom)] lg:hidden"
+      >
+        {barIndicator && (
+          <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-lime" style={barIndicator} />
+        )}
+        <ul className="mx-auto grid max-w-2xl grid-cols-6 px-1">
+          {NAV_ORDER.map((r) => (
+            <li key={r}>
+              <NavLink route={r} current={route === r} variant="bottom" />
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
         {storesError ? (
           <ErrorBox error={storesError} />
         ) : !stores ? (
@@ -292,7 +254,6 @@ function MainApp({ email }: { email: string }) {
           </div>
         )}
       </main>
-      </div>
     </div>
   )
 }

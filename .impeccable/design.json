@@ -1,86 +1,127 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-06T05:40:38+00:00",
+  "generatedAt": "2026-10-06T15:39:27+00:00",
   "title": "Design System: Profit Shopee",
   "extensions": {
     "colorMeta": {
-      "stamp-ink": {
+      "field": {
         "role": "primary",
-        "displayName": "Stamp Ink",
+        "displayName": "Field",
         "tonalRamp": [
-          "#1c1f5e",
-          "#23267a",
-          "#2c309b",
-          "#3a3fb8",
-          "#4f53c8",
-          "#7c80dd",
-          "#b0b3ee",
-          "#ecedfb"
+          "#14165a",
+          "#1d2079",
+          "#2b2fa6",
+          "#3b3fb4",
+          "#5357c6",
+          "#8a8ddb",
+          "#c3c5f2",
+          "#f6f4ff"
         ]
       },
-      "receipt-ink": {
-        "role": "neutral",
-        "displayName": "Receipt Ink"
+      "lime": {
+        "role": "accent",
+        "displayName": "Lime"
       },
-      "rail-ink": {
-        "role": "neutral",
-        "displayName": "Rail Ink"
-      },
-      "counter-grey": {
-        "role": "neutral",
-        "displayName": "Counter Grey"
-      },
-      "paper-white": {
-        "role": "neutral",
-        "displayName": "Paper White"
-      },
-      "loss-red": {
+      "coral": {
         "role": "error",
-        "displayName": "Loss Red"
+        "displayName": "Coral (chapter & loss sticker)"
       },
-      "gain-green": {
+      "coral-soft": {
+        "role": "error",
+        "displayName": "Coral Soft (loss text on field)"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink"
+      },
+      "stamp": {
+        "role": "secondary",
+        "displayName": "Stamp (actions on sheets)"
+      },
+      "loss": {
+        "role": "error",
+        "displayName": "Loss"
+      },
+      "gain": {
         "role": "success",
-        "displayName": "Gain Green"
+        "displayName": "Gain"
       },
-      "warn-amber": {
+      "warn": {
         "role": "warning",
-        "displayName": "Warn Amber"
+        "displayName": "Warn"
       },
-      "info-blue": {
+      "info": {
         "role": "info",
-        "displayName": "Info Blue"
+        "displayName": "Info"
       }
     },
     "typographyMeta": {
+      "hero-figure": {
+        "displayName": "Hero Figure",
+        "purpose": "The one answer figure (Rekap Bab 1), short form with the exact amount beside it."
+      },
+      "story": {
+        "displayName": "Story",
+        "purpose": "Answer sentences on the field."
+      },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Page titles and the nota title."
+        "purpose": "Page titles."
+      },
+      "chapter": {
+        "displayName": "Chapter",
+        "purpose": "Rekap chapter titles."
+      },
+      "kicker": {
+        "displayName": "Kicker",
+        "purpose": "Lime 'Bab N · …' line above a chapter."
       },
       "figure": {
         "displayName": "Figure",
-        "purpose": "Every Rupiah, %, ROAS and count; tabular numerals."
-      },
-      "figure-total": {
-        "displayName": "Figure Total",
-        "purpose": "The single total of a nota."
-      },
-      "label": {
-        "displayName": "Label",
-        "purpose": "Stamps and the uppercase total label."
+        "purpose": "Amounts on sheets; tabular numerals."
       }
     },
     "shadows": [
       {
         "name": "sheet",
-        "value": "0 1px 2px rgb(23 32 43 / 0.06), 0 2px 8px rgb(23 32 43 / 0.05)",
-        "purpose": "Every sheet and product card."
+        "value": "0 2px 4px rgb(16 18 70 / 0.12), 0 14px 34px rgb(16 18 70 / 0.18)",
+        "purpose": "Every sheet and card on the field."
       }
     ],
     "motion": [
       {
-        "name": "state",
-        "value": "150ms ease",
-        "purpose": "Colour and border changes on hover, chevron rotation; no entrance animations."
+        "name": "words-rise",
+        "value": "520ms cubic-bezier(.2,.8,.25,1), 55ms per word",
+        "purpose": "Answer sentences arriving."
+      },
+      {
+        "name": "count-up",
+        "value": "700ms ease-out cubic",
+        "purpose": "Hero figure rolling to its value."
+      },
+      {
+        "name": "sticker-pop",
+        "value": "460ms cubic-bezier(.2,.8,.3,1)",
+        "purpose": "Verdict stickers landing; staggered 60ms in lists."
+      },
+      {
+        "name": "bar-grow",
+        "value": "620ms, 140ms per segment",
+        "purpose": "Rp100 part-to-whole bar."
+      },
+      {
+        "name": "nav-marker",
+        "value": "260ms cubic-bezier(.3,.7,.2,1)",
+        "purpose": "Sliding active-page marker."
+      },
+      {
+        "name": "confetti",
+        "value": "1100ms, once",
+        "purpose": "Saved upload; first ANGKA FINAL per month."
       }
     ],
     "breakpoints": [
@@ -90,7 +131,7 @@
       },
       {
         "name": "lg",
-        "value": "1024px (rail navigation)"
+        "value": "1024px (top-bar nav; bottom bar below)"
       }
     ]
   },
@@ -99,93 +140,93 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Main action on a sheet (Simpan, Pilih file).",
+      "description": "Main action on a sheet (Simpan, Pilih file, Masuk).",
       "html": "<button class=\"ds-btn-primary\">Simpan biaya</button>",
-      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:0;border-radius:6px;background:#3a3fb8;color:#fff;font:600 1rem/1 'Public Sans',system-ui,sans-serif;cursor:pointer;transition:background .15s} .ds-btn-primary:hover,.ds-btn-primary:active{background:#2c309b} .ds-btn-primary:focus-visible{outline:2px solid #3a3fb8;outline-offset:2px}"
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border:0;border-radius:9999px;background:#3a3fb8;color:#fff;font:600 1rem/1 'Public Sans',system-ui,sans-serif;cursor:pointer;transition:background .15s,transform .15s} .ds-btn-primary:hover{background:#2c309b} .ds-btn-primary:active{transform:scale(.97)} .ds-btn-primary:focus-visible{outline:2px solid #3a3fb8;outline-offset:2px}"
     },
     {
-      "name": "Secondary Button",
-      "kind": "button",
-      "refersTo": "button-secondary",
-      "description": "Secondary action (Isi HPP, Batal, Ganti / isi manual).",
-      "html": "<button class=\"ds-btn-secondary\">Isi HPP</button>",
-      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid #d8dce3;border-radius:6px;background:#fff;color:#17202b;font:600 1rem/1 'Public Sans',system-ui,sans-serif;cursor:pointer;transition:border-color .15s,background .15s} .ds-btn-secondary:hover{border-color:#5a6574;background:#f5f6f8} .ds-btn-secondary:focus-visible{outline:2px solid #3a3fb8;outline-offset:2px}"
-    },
-    {
-      "name": "Money Input",
+      "name": "Field Select",
       "kind": "input",
-      "refersTo": "input",
-      "description": "Rupiah field with Rp prefix, figures right-aligned in the mono.",
-      "html": "<label class=\"ds-money\"><span>Rp</span><input value=\"198.200\" aria-label=\"Harga jual\"></label>",
-      "css": ".ds-money{position:relative;display:block;width:16rem} .ds-money span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#5a6574;font:400 1rem 'Azeret Mono',ui-monospace,monospace} .ds-money input{box-sizing:border-box;width:100%;min-height:44px;padding:0 12px 0 40px;border:1px solid #d8dce3;border-radius:6px;background:#fff;color:#17202b;text-align:right;font:400 1rem 'Azeret Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums} .ds-money input:hover{border-color:#5a6574} .ds-money input:focus{outline:none;border-color:#3a3fb8;box-shadow:0 0 0 2px rgb(58 63 184 / .25)}"
+      "refersTo": "field-select",
+      "description": "Pill select used directly on the field (Bulan, Periode iklan, Toko).",
+      "html": "<div class=\"ds-field\"><select class=\"ds-field-select\"><option>Agustus 2026</option></select></div>",
+      "css": ".ds-field{background:#2b2fa6;padding:16px} .ds-field-select{min-height:44px;padding:0 40px 0 16px;border:1px solid rgb(246 244 255 / .35);border-radius:9999px;background:rgb(255 255 255 / .1);color:#f6f4ff;font:600 1rem 'Public Sans',system-ui,sans-serif} .ds-field-select:focus-visible{outline:2px solid #d7f45a;outline-offset:2px}"
     },
     {
-      "name": "Rail Navigation",
-      "kind": "nav",
-      "refersTo": "nav-item",
-      "description": "Ink rail with the active page as a paper pill (laptop). Below 1024px the same items sit in a fixed ink bottom bar: icon over a short label, active icon in a small paper pill.",
-      "html": "<nav class=\"ds-rail\"><a class=\"ds-rail-item is-active\" href=\"#\">Rekap</a><a class=\"ds-rail-item\" href=\"#\">Iklan</a><a class=\"ds-rail-item\" href=\"#\">Simulasi Harga</a></nav>",
-      "css": ".ds-rail{display:flex;flex-direction:column;gap:2px;width:14rem;padding:16px;background:#141b25} .ds-rail-item{display:flex;align-items:center;min-height:44px;padding:0 12px;border-radius:6px;color:#c5cdd8;font:500 1rem 'Public Sans',system-ui,sans-serif;text-decoration:none;transition:background .15s,color .15s} .ds-rail-item:hover{background:rgb(255 255 255 / .05);color:#fff} .ds-rail-item.is-active{background:#fff;color:#17202b} .ds-rail-item:focus-visible{outline:2px solid #3a3fb8;outline-offset:2px}"
+      "name": "Answer Sentence",
+      "kind": "text",
+      "refersTo": "story",
+      "description": "Rekap Bab 1: the answer as a sentence with the figure in lime.",
+      "html": "<div class=\"ds-field\"><p class=\"ds-kicker\">Bab 1 · Untung</p><h1 class=\"ds-story\">Agustus 2026, Harel Beauty untung</h1><p class=\"ds-hero\">Rp2,78 juta</p></div>",
+      "css": ".ds-field{background:#2b2fa6;padding:24px;color:#f6f4ff} .ds-kicker{font:700 1.125rem 'Bricolage Grotesque',sans-serif;color:#d7f45a;margin:0} .ds-story{font:700 3.75rem/1.04 'Bricolage Grotesque',sans-serif;letter-spacing:-.025em;margin:12px 0 0} .ds-hero{font:800 8.5rem/.9 'Bricolage Grotesque',sans-serif;letter-spacing:-.05em;color:#d7f45a;margin:12px 0 0;font-variant-numeric:tabular-nums}"
     },
     {
-      "name": "Filter Chip",
-      "kind": "chip",
-      "refersTo": "filter-chip-active",
-      "description": "Filters ad products by label; count in the figure font.",
-      "html": "<div class=\"ds-chips\"><button class=\"ds-chip is-on\">Semua (10)</button><button class=\"ds-chip\">Takedown (7)</button></div>",
-      "css": ".ds-chips{display:flex;gap:8px} .ds-chip{min-height:44px;padding:0 14px;border:1px solid #d8dce3;border-radius:6px;background:#fff;color:#3a4553;font:500 1rem 'Public Sans',system-ui,sans-serif;cursor:pointer;transition:border-color .15s,color .15s} .ds-chip:hover{border-color:#5a6574;color:#17202b} .ds-chip.is-on{background:#17202b;border-color:#17202b;color:#fff}"
+      "name": "Sticker",
+      "kind": "badge",
+      "refersTo": "sticker-final",
+      "description": "Verdict label that pops on (Angka final, Takedown, Hero, Iklan rugi).",
+      "html": "<span class=\"ds-sticker\">Angka final</span> <span class=\"ds-sticker ds-sticker-loss\">Takedown</span>",
+      "css": ".ds-sticker{display:inline-flex;padding:4px 12px;border-radius:9999px;background:#d7f45a;color:#1d2079;font:700 .875rem 'Bricolage Grotesque',sans-serif;transform:rotate(-3deg);box-shadow:0 2px 0 rgb(16 18 70 / .18)} .ds-sticker-loss{background:#c4361e;color:#fff}"
     },
     {
-      "name": "Stamp",
-      "kind": "custom",
-      "refersTo": "stamp",
-      "description": "Verdict stamp: Angka final, Takedown, Hero, Iklan rugi.",
-      "html": "<span class=\"ds-stamp ds-stamp-loss\">Takedown</span> <span class=\"ds-stamp ds-stamp-gain\">Angka final</span>",
-      "css": ".ds-stamp{display:inline-flex;align-items:center;padding:2px 8px;border:3px double currentColor;border-radius:3px;background:rgb(255 255 255 / .8);font:700 .875rem 'Public Sans',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;transform:rotate(-2deg)} .ds-stamp-loss{color:#b3261e} .ds-stamp-gain{color:#146c43}"
-    },
-    {
-      "name": "Nota",
+      "name": "Total Pill",
       "kind": "card",
       "refersTo": "sheet",
-      "description": "Signature receipt sheet: operator column, tear rule, one total.",
-      "html": "<section class=\"ds-nota\"><div class=\"ds-row\"><span class=\"op\">+</span><span>Uang masuk dari Shopee</span><b>Rp13.771.357</b></div><div class=\"ds-row\"><span class=\"op\">−</span><span>Modal barang terjual</span><b>Rp9.532.551</b></div><div class=\"ds-total\"><span class=\"op\">=</span><span>UNTUNG BERSIH</span><b>Rp4.088.806</b></div></section>",
-      "css": ".ds-nota{width:30rem;padding:24px;border:1px solid #d8dce3;border-radius:8px;background:#fff;box-shadow:0 1px 2px rgb(23 32 43 / .06),0 2px 8px rgb(23 32 43 / .05);color:#17202b;font:400 1rem/1.5 'Public Sans',system-ui,sans-serif} .ds-row,.ds-total{display:grid;grid-template-columns:1.5rem 1fr auto;gap:8px;align-items:baseline;padding:12px 0} .ds-row+.ds-row{border-top:1px solid #d8dce3} .ds-row:first-child{border-top:2px dashed #aeb5c0} .ds-total{border-top:2px dashed #aeb5c0;font-weight:700;letter-spacing:.03em} .ds-nota .op{color:#5a6574;text-align:center;font-family:'Azeret Mono',ui-monospace,monospace} .ds-nota b{font:600 1.125rem 'Azeret Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums} .ds-total b{font-size:2rem;font-weight:700}"
+      "description": "Closing total of an arithmetic block on a sheet.",
+      "html": "<div class=\"ds-total\"><span>= Untung bersih</span><b>Rp2.785.162</b></div>",
+      "css": ".ds-total{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:12px 16px;border-radius:16px;background:#ecedfb;color:#16173d;font:700 1.125rem 'Bricolage Grotesque',sans-serif} .ds-total b{font-size:1.5rem;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Iklan Chapter",
+      "kind": "card",
+      "refersTo": "ads-chapter",
+      "description": "Coral chapter card in Rekap summarising the month's ads.",
+      "html": "<section class=\"ds-ads\"><p>Bab 3 · Iklan Juli 2026</p><h2>Iklan rugi Rp283 ribu. 4 iklan sebaiknya dimatikan.</h2></section>",
+      "css": ".ds-ads{background:#c4361e;color:#fff;border-radius:32px;padding:36px} .ds-ads p{margin:0;color:#ffe4dc;font:700 1.125rem 'Bricolage Grotesque',sans-serif} .ds-ads h2{margin:8px 0 0;font:700 3rem/1.1 'Bricolage Grotesque',sans-serif;letter-spacing:-.025em}"
+    },
+    {
+      "name": "Bottom Bar",
+      "kind": "nav",
+      "refersTo": "bottom-bar-marker",
+      "description": "Phone/iPad navigation: six cells on Field Deep with a lime marker.",
+      "html": "<nav class=\"ds-bar\"><a class=\"is-active\"><i></i>Rekap</a><a><i></i>Iklan</a><a><i></i>Simulasi</a></nav>",
+      "css": ".ds-bar{display:grid;grid-template-columns:repeat(3,1fr);background:#1d2079} .ds-bar a{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:56px;justify-content:center;color:#c3c5f2;font:600 .75rem 'Public Sans',sans-serif} .ds-bar i{width:48px;height:28px;border-radius:9999px} .ds-bar a.is-active{color:#f6f4ff} .ds-bar a.is-active i{background:#d7f45a}"
     }
   ],
   "narrative": {
-    "northStar": "The Store Receipt (Nota Kasir)",
+    "northStar": "Cerita Bulan Ini (this month's story)",
     "keyCharacteristics": [
-      "White sheets on a cool grey counter; one blue-black rail.",
-      "Every Rupiah, percentage, ROAS and quantity set in a tabular monospace.",
-      "Dashed tear rule before every total.",
-      "Verdicts (Angka final, Takedown, Hero, Iklan rugi) as double-ruled, slightly tilted stamps.",
-      "Colour carries meaning only: stamp ink for action and selection, red loss, green gain, amber attention."
+      "One committed ink-blue field for the whole page; white sheets for the work.",
+      "Every page answers first in a sentence; the figure the reader came for is lime (coral-soft for a loss).",
+      "Rekap is told in chapters: Untung, Dari mana angkanya, Iklan, Pesanan & produk.",
+      "Verdicts are colour stickers that pop on; real results get a small paper-confetti burst.",
+      "Standard, pill-shaped controls at 44px; all motion off under reduced motion."
     ],
     "rules": [
       {
-        "name": "The Meaning-Only Rule",
+        "name": "The Field-and-Sheet Rule",
         "section": "colors",
-        "body": "Stamp ink, red, green and amber are never used for decoration. If a colour does not tell the reader to act, that money was lost, gained, or needs attention, it is a neutral."
+        "body": "On the field use On Field colours inside an `on-field` wrapper; on sheets use the ink scale. Never mix."
       },
       {
-        "name": "The Counter-and-Paper Rule",
+        "name": "The Answer-First Rule",
+        "section": "layout",
+        "body": "Every page states its answer as a sentence on the field before any table; a rounded figure is always followed by the exact one."
+      },
+      {
+        "name": "The One-Answer Rule",
+        "section": "layout",
+        "body": "One answer per chapter. No grids of metric tiles."
+      },
+      {
+        "name": "The Loss-Contrast Rule",
         "section": "colors",
-        "body": "The page ground stays Counter Grey and content sits on Paper White sheets. No tinted sheets except the state washes for alerts and the ad-result box."
+        "body": "Losses on the field use Coral Soft (5:1); deep Coral is only a background with white text (5.4:1)."
       },
       {
-        "name": "The Figures-Are-Mono Rule",
-        "section": "typography",
-        "body": "Every money amount, percentage, ROAS and count is set in Azeret Mono with tabular numerals so columns align like a receipt. Words, including words that sit in a figure column (\"belum diisi\", \"tidak mungkin\"), stay in Public Sans."
-      },
-      {
-        "name": "The No-Costume Rule",
-        "section": "typography",
-        "body": "Mono is for figures only: not for headings, buttons, stamps or labels."
-      },
-      {
-        "name": "The One-Sheet-Deep Rule",
-        "section": "elevation",
-        "body": "Sheets never nest inside sheets. Inside a sheet, group with hairline dividers, a tear rule, or a Counter Grey well."
+        "name": "The Earned-Motion Rule",
+        "section": "motion",
+        "body": "Motion marks an answer arriving or a state changing, never loops, and is listed in the reduced-motion block."
       }
     ]
   }

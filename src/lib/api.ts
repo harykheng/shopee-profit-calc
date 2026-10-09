@@ -116,6 +116,20 @@ export async function fetchLastSalePrice(storeId: number, sku: string) {
   return r ? { price: Math.round(Number(r.subtotal) / Number(r.qty)), date: r.created_at } : null
 }
 
+/** Tanggal pesanan terbaru toko ini (null kalau belum ada pesanan). Dipakai untuk porsi penjualan grup iklan. */
+export async function fetchLatestOrderDate(storeId: number): Promise<string | null> {
+  const rows = check(
+    await supabase
+      .from('order_items')
+      .select('created_at')
+      .eq('store_id', storeId)
+      .not('created_at', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1),
+  ) as { created_at: string }[]
+  return rows[0]?.created_at ?? null
+}
+
 /** Simpan % admin & XTRA untuk semua variasi dengan nama produk ini (Simulasi Harga). */
 export async function saveProductFees(storeId: number, productName: string, adminPct: number, xtra: boolean) {
   check(

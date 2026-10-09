@@ -36,7 +36,7 @@ change", not generic analytics.
 
 ## Operating Context
 
-- Most used pages, in order of importance: **Rekap** (monthly net profit "nota"), **Iklan** (ad
+- Most used pages, in order of importance: **Rekap** (the monthly net profit, told as a short story in chapters), **Iklan** (ad
   verdicts per product), **Simulasi Harga** (price simulation). Upload, HPP and Biaya are the
   monthly input routine.
 - Store is chosen once in the header and applies to every page.
@@ -49,7 +49,7 @@ change", not generic analytics.
 - Stack: React + Vite + Tailwind CSS v4, Supabase (Postgres, Auth, RLS), SheetJS and pdf.js in the
   browser, Vitest, deployed on Vercel from GitHub. No new runtime dependencies without the owner's
   approval.
-- Pages: Upload, HPP, Biaya, Rekap (nota + tabs Semua pesanan / Per produk / Per bulan), Iklan
+- Pages: Upload, HPP, Biaya, Rekap (chapters: Untung, Dari mana angkanya, Iklan, Pesanan & produk tabs), Iklan
   (upload, period or combined months, per-product cards with labels Hero / Aman / ROAS terlalu
   kecil / Takedown / Data belum cukup / HPP belum diisi), Simulasi Harga.
 - Closed auth: three manual accounts, no public signup.

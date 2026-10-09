@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Card, ErrorBox, PageTitle, Stamp } from '../components/ui'
-import { IconCheck, IconCornerDownRight, IconSearch } from '../components/icons'
+import { IconCheck, IconSearch } from '../components/icons'
 import { RupiahInput } from '../components/pickers'
 import {
   ADS_TARGET_PROFIT,
@@ -8,8 +8,10 @@ import {
   PRICE_TARGET_MARGIN,
   XTRA_FEE_RATE,
   analyzeAds,
+  priceLadder,
   productKey,
   simulatePrice,
+  type PriceLadderRow,
   type SuggestedPrice,
 } from '../lib/adsMath'
 import {
@@ -24,28 +26,10 @@ import { formatDate, formatPercent, formatRupiah } from '../lib/format'
 import { navigate } from '../lib/router'
 import type { Product, Store } from '../lib/types'
 import { NotaLine } from './RecapPage'
+import { AdGroupSim } from './AdGroupSim'
+import { DEFAULTS, DecimalInput, Field, Result, TOO_THIN, decimal, formatRoas, roundUp2 } from './simShared'
 
 // Semua dihitung di browser. Yang disimpan hanya % admin & XTRA per produk (tombol Simpan).
-
-const DEFAULTS = {
-  adminPct: 8.25,
-  xtra: true,
-  processFee: 1250,
-  packaging: 0,
-  realisticRoas: 5.5,
-}
-
-const TOO_THIN = 'tidak mungkin, untung per barang terlalu tipis'
-
-const decimal = (v: number, digits = 2) =>
-  new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: digits }).format(v)
-
-/** ROAS 2 desimal: 7.1276 → "7,13". */
-const formatRoas = (v: number) =>
-  new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)
-
-/** Target dibulatkan ke atas (lebih aman): 10.711 → 10,72. */
-const roundUp2 = (v: number) => Math.ceil(v * 100 - 1e-9) / 100
 
 export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: number | null }) {
   const store = stores.find((s) => s.id === storeId) ?? null
@@ -57,6 +41,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
   const [packaging, setPackaging] = useState<number | null>(DEFAULTS.packaging)
   const [realisticRoas, setRealisticRoas] = useState<number | null>(DEFAULTS.realisticRoas)
   const [actualRoas, setActualRoas] = useState<number | null>(null)
+  const [mode, setMode] = useState<'satu' | 'grup'>('satu')
 
   // Pilih produk yang sudah di-upload (opsional).
   const [products, setProducts] = useState<Product[] | null>(null)
@@ -161,247 +146,350 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
       })
     : null
 
+  // Produk baru: modal sudah ada tapi harga jual belum ditentukan → sarankan harga & target ROAS.
+  const ladder =
+    hpp !== null && hpp > 0 && (price === null || price === 0) && realisticRoas !== null && realisticRoas > 0
+      ? priceLadder({
+          hpp,
+          adminRate: (adminPct ?? 0) / 100,
+          xtra,
+          processFee: processFee ?? 0,
+          packaging: packaging ?? 0,
+          realisticRoas,
+        })
+      : null
+  const recRow = ladder?.rows.find((x) => x.price === ladder.recommended) ?? null
+
   return (
     <>
-      <PageTitle subtitle="Sebelum jualan atau ganti harga: hitung untung per order, ROAS minimum supaya iklan tidak rugi, dan harga jual yang masuk akal. Bisa pilih produk yang sudah di-upload supaya angkanya terisi otomatis.">
+      <PageTitle subtitle="Sebelum jualan atau ganti harga: hitung untung per order, ROAS minimum supaya iklan tidak rugi, dan harga jual yang masuk akal. Bisa pilih produk yang sudah di-upload supaya angkanya terisi otomatis, atau hitung satu target ROAS untuk grup iklan.">
         Simulasi Harga — {store?.name ?? '-'}
       </PageTitle>
 
-      <Card title="Pilih produk (opsional)" className="mb-6">
-        {productsError ? (
-          <ErrorBox error={productsError} />
-        ) : (
-          <ProductPicker products={products} selected={selected} onPick={pick} onClear={clearPick} />
-        )}
-        {selected && selected.hpp === null && (
-          <div className="mt-3">
-            <Alert tone="warning" title="HPP produk ini belum diisi.">
-              <button type="button" className="font-semibold underline" onClick={() => navigate('hpp', { kosong: '1' })}>
-                Isi HPP
-              </button>{' '}
-              dulu, atau ketik HPP-nya di bawah.
-            </Alert>
-          </div>
-        )}
-      </Card>
+      {/* Satu produk atau satu grup iklan (beberapa produk, satu target ROAS). */}
+      <div role="tablist" aria-label="Jenis simulasi" className="on-field mb-8 flex w-fit max-w-full flex-wrap gap-1 rounded-full bg-white/10 p-1">
+        {(
+          [
+            ['satu', 'Satu produk'],
+            ['grup', 'Grup iklan (beberapa produk)'],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={mode === id}
+            onClick={() => setMode(id)}
+            className={`min-h-10 rounded-full px-4 font-semibold transition-colors duration-150 ${
+              mode === id ? 'bg-on-field text-field' : 'text-on-field-muted hover:text-on-field'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-        <Card title="Isi angka" className="self-start">
-          <div className="space-y-4">
-            <Field
-              label="HPP per unit jual"
-              hint="Paket/bundling: isi HPP per paket."
-              note={selected && selected.hpp !== null ? 'Dari halaman HPP.' : undefined}
-            >
-              <RupiahInput value={hpp} onCommit={setHpp} ariaLabel="HPP per unit jual" />
-            </Field>
-            <Field label="Harga jual" note={notes.price}>
-              <RupiahInput value={price} onCommit={setPrice} ariaLabel="Harga jual" />
-            </Field>
-            <Field label="Biaya admin" note={notes.fees}>
-              <DecimalInput
-                value={adminPct}
-                onCommit={(v) => {
-                  setAdminPct(v)
-                  setFeesSaved(false)
-                }}
-                ariaLabel="Biaya admin (persen)"
-                suffix="%"
-              />
-            </Field>
-            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-line px-3 transition-colors hover:border-ink-muted">
-              <input
-                type="checkbox"
-                checked={xtra}
-                onChange={(e) => {
-                  setXtra(e.target.checked)
-                  setFeesSaved(false)
-                }}
-                className="h-5 w-5"
-              />
-              <span>
-                Ikut Gratis Ongkir XTRA <span className="num text-ink-muted">({formatPercent(XTRA_FEE_RATE * 100)})</span>
-              </span>
-            </label>
-            {selected && (
-              <div>
-                <Button
-                  variant="secondary"
-                  className="w-full"
-                  onClick={saveFees}
-                  disabled={feesSaving || adminPct === null}
-                >
-                  {feesSaving ? 'Menyimpan…' : 'Simpan % admin & XTRA untuk produk ini'}
-                </Button>
-                <p className="mt-1 text-sm text-ink-muted">Berlaku untuk semua variasi produk ini.</p>
-                {feesSaved && (
-                  <p className="mt-1 flex items-center gap-1.5 font-semibold text-gain">
-                    <IconCheck size={18} />
-                    Tersimpan.
-                  </p>
-                )}
-                {feesError ? (
-                  <div className="mt-2">
-                    <ErrorBox error={feesError} />
-                  </div>
-                ) : null}
+      {mode === 'grup' ? (
+        <div key="grup" className="page-in">
+          <AdGroupSim storeId={storeId} products={products} />
+        </div>
+      ) : (
+        <div key="satu" className="page-in">
+
+          <Card title="Pilih produk (opsional)" className="mb-6">
+            {productsError ? (
+              <ErrorBox error={productsError} />
+            ) : (
+              <ProductPicker products={products} selected={selected} onPick={pick} onClear={clearPick} />
+            )}
+            {selected && selected.hpp === null && (
+              <div className="mt-3">
+                <Alert tone="warning" title="HPP produk ini belum diisi.">
+                  <button type="button" className="font-semibold underline" onClick={() => navigate('hpp', { kosong: '1' })}>
+                    Isi HPP
+                  </button>{' '}
+                  dulu, atau ketik HPP-nya di bawah.
+                </Alert>
               </div>
             )}
-            <Field label="Biaya proses pesanan" hint="Per order (tetap, bukan persen).">
-              <RupiahInput value={processFee} onCommit={setProcessFee} ariaLabel="Biaya proses pesanan" />
-            </Field>
-            <Field label="Packaging per order">
-              <RupiahInput value={packaging} onCommit={setPackaging} ariaLabel="Packaging per order" />
-            </Field>
-            <Field label="ROAS realistis" hint="ROAS yang biasa didapat di iklan.">
-              <DecimalInput value={realisticRoas} onCommit={setRealisticRoas} ariaLabel="ROAS realistis" />
-            </Field>
-            <Field label="ROAS aktual (opsional)" hint="ROAS nyata iklan produk ini, kalau sudah jalan." note={notes.roas}>
-              <DecimalInput value={actualRoas} onCommit={setActualRoas} ariaLabel="ROAS aktual" optional />
-            </Field>
-          </div>
-        </Card>
+          </Card>
 
-        <div className="min-w-0 space-y-6">
-          {!r ? (
-            <Alert title="Isi HPP dan harga jual untuk melihat hasilnya.">
-              Angka diperbarui setelah kolom ditinggalkan atau tombol Enter ditekan.
-            </Alert>
-          ) : (
-            <>
-              <Card title="Rincian per order">
-                <div>
-                  <NotaLine op="" label="Harga jual" detail="" amount={formatRupiah(price)} />
-                  <NotaLine
-                    op="−"
-                    label="Biaya admin"
-                    detail={`${decimal(adminPct ?? 0)}% × harga jual`}
-                    amount={formatRupiah(r.adminFee)}
+          {/* Jawabannya dulu, ikut berubah begitu angka diubah. */}
+          <div className="on-field mb-8 text-on-field" aria-live="polite">
+            {r && price !== null ? (
+              <>
+                <h2 className="font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+                  Dijual <span className="num">{formatRupiah(price)}</span>, {r.profitable ? 'untung' : 'rugi'}{' '}
+                  <span className={`num ${r.profitable ? 'text-lime' : 'text-coral-soft'}`}>{formatRupiah(Math.abs(r.profit))}</span> per order.
+                </h2>
+                <p className="mt-3 text-lg text-on-field-muted">
+                  {r.actual ? (
+                    <>
+                      Dengan iklan (ROAS {decimal(actualRoas ?? 0)}),{' '}
+                      <b className={r.actual.profitAfterAds >= 0 ? 'text-lime' : 'text-coral-soft'}>
+                        {r.actual.profitAfterAds >= 0 ? 'untung' : 'rugi'} {formatRupiah(Math.abs(r.actual.profitAfterAds))}
+                      </b>{' '}
+                      per order.
+                    </>
+                  ) : (
+                    'Sebelum iklan. Isi ROAS aktual untuk melihat hasil setelah iklan.'
+                  )}
+                </p>
+              </>
+            ) : ladder && hpp !== null ? (
+              recRow ? (
+                <>
+                  <h2 className="font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+                    Modal <span className="num">{formatRupiah(hpp)}</span>: jual minimal{' '}
+                    <span className="num text-lime">{formatRupiah(recRow.price)}</span>, isi target ROAS{' '}
+                    <span className="num text-lime">{recRow.targetRoas !== null ? formatRoas(roundUp2(recRow.targetRoas)) : '-'}</span>.
+                  </h2>
+                  <p className="mt-3 max-w-3xl text-lg text-on-field-muted">
+                    Harga terendah yang masih untung 5% setelah iklan kalau ROAS iklan biasanya{' '}
+                    <span className="num">{decimal(realisticRoas ?? 0)}</span>. Pilih harga lain di tabel, atau isi harga jual sendiri.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+                    Dengan ROAS iklan <span className="num">{decimal(realisticRoas ?? 0)}</span>,{' '}
+                    <span className="text-coral-soft">berapa pun harganya iklan tidak bisa untung 5%</span>.
+                  </h2>
+                  <p className="mt-3 text-lg text-on-field-muted">
+                    Potongan Shopee ditambah biaya iklan sudah lebih besar dari harga. Jual tanpa iklan, atau cek lagi ROAS realistisnya.
+                  </p>
+                </>
+              )
+            ) : (
+              <p className="font-display text-2xl font-bold text-on-field-muted">
+                Isi modal (HPP) dulu. Harga jual boleh dikosongkan untuk melihat saran harga.
+              </p>
+            )}
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+            <Card title="Isi angka" className="self-start">
+              <div className="space-y-4">
+                <Field
+                  label="HPP per unit jual"
+                  hint="Paket/bundling: isi HPP per paket."
+                  note={selected && selected.hpp !== null ? 'Dari halaman HPP.' : undefined}
+                >
+                  <RupiahInput value={hpp} onCommit={setHpp} ariaLabel="HPP per unit jual" />
+                </Field>
+                <Field label="Harga jual" hint="Kosongkan untuk melihat saran harga dari modal." note={notes.price}>
+                  <RupiahInput value={price} onCommit={setPrice} ariaLabel="Harga jual" />
+                </Field>
+                <Field label="Biaya admin" note={notes.fees}>
+                  <DecimalInput
+                    value={adminPct}
+                    onCommit={(v) => {
+                      setAdminPct(v)
+                      setFeesSaved(false)
+                    }}
+                    ariaLabel="Biaya admin (persen)"
+                    suffix="%"
                   />
-                  <NotaLine op="−" label="Biaya proses pesanan" detail="per order" amount={formatRupiah(r.processFee)} />
-                  <NotaLine
-                    op="−"
-                    label="Gratis Ongkir XTRA"
-                    detail={xtra ? `${formatPercent(XTRA_FEE_RATE * 100)} × harga jual` : 'tidak ikut'}
-                    amount={formatRupiah(r.xtraFee)}
+                </Field>
+                <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-line px-3 transition-colors hover:border-ink-muted">
+                  <input
+                    type="checkbox"
+                    checked={xtra}
+                    onChange={(e) => {
+                      setXtra(e.target.checked)
+                      setFeesSaved(false)
+                    }}
+                    className="h-5 w-5"
                   />
-                  <NotaLine op="−" label="Packaging" detail="per order" amount={formatRupiah(packaging ?? 0)} />
-                </div>
-                <div className="mt-1 border-t-2 border-dashed border-rule">
-                  <NotaLine
-                    op="="
-                    label="Penghasilan"
-                    detail={
-                      (packaging ?? 0) > 0
-                        ? `uang cair dari Shopee ${formatRupiah(r.income)}, dikurangi packaging`
-                        : `uang cair per order (potongan Shopee ${formatRupiah(r.totalFee)})`
-                    }
-                    amount={formatRupiah(r.income - (packaging ?? 0))}
-                  />
-                  <NotaLine op="−" label="HPP" detail="modal per unit jual" amount={formatRupiah(hpp)} />
-                </div>
-                <div className="mt-1 grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-2 border-t-2 border-dashed border-rule pt-3">
-                  <span className="num text-center text-xl font-bold text-ink-muted">=</span>
-                  <span className="font-bold uppercase tracking-wide">Untung per order</span>
-                  <span
-                    className={`num whitespace-nowrap text-right text-3xl font-bold ${
-                      r.profitable ? 'text-gain' : 'text-loss'
-                    }`}
-                  >
-                    {formatRupiah(r.profit)}
+                  <span>
+                    Ikut Gratis Ongkir XTRA <span className="num text-ink-muted">({formatPercent(XTRA_FEE_RATE * 100)})</span>
                   </span>
-                  <span />
-                  <span className="text-sm text-ink-muted">sebelum iklan</span>
-                  <span className={`num text-right font-medium ${r.profitable ? 'text-gain' : 'text-loss'}`}>
-                    {formatPercent(r.margin * 100)}
-                  </span>
-                </div>
-                {!r.profitable && (
-                  <div className="mt-4">
-                    <Alert tone="error" title="Harga ini sudah rugi tanpa iklan." />
+                </label>
+                {selected && (
+                  <div>
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={saveFees}
+                      disabled={feesSaving || adminPct === null}
+                    >
+                      {feesSaving ? 'Menyimpan…' : 'Simpan % admin & XTRA untuk produk ini'}
+                    </Button>
+                    <p className="mt-1 text-sm text-ink-muted">Berlaku untuk semua variasi produk ini.</p>
+                    {feesSaved && (
+                      <p className="mt-1 flex items-center gap-1.5 font-semibold text-gain">
+                        <IconCheck size={18} />
+                        Tersimpan.
+                      </p>
+                    )}
+                    {feesError ? (
+                      <div className="mt-2">
+                        <ErrorBox error={feesError} />
+                      </div>
+                    ) : null}
                   </div>
                 )}
-              </Card>
+                <Field label="Biaya proses pesanan" hint="Per order (tetap, bukan persen).">
+                  <RupiahInput value={processFee} onCommit={setProcessFee} ariaLabel="Biaya proses pesanan" />
+                </Field>
+                <Field label="Packaging per order">
+                  <RupiahInput value={packaging} onCommit={setPackaging} ariaLabel="Packaging per order" />
+                </Field>
+                <Field label="ROAS realistis" hint="ROAS yang biasa didapat di iklan.">
+                  <DecimalInput value={realisticRoas} onCommit={setRealisticRoas} ariaLabel="ROAS realistis" />
+                </Field>
+                <Field label="ROAS aktual (opsional)" hint="ROAS nyata iklan produk ini, kalau sudah jalan." note={notes.roas}>
+                  <DecimalInput value={actualRoas} onCommit={setActualRoas} ariaLabel="ROAS aktual" optional />
+                </Field>
+              </div>
+            </Card>
 
-              {r.actual && (
-                <div
-                  className={`rounded-lg border p-5 shadow-sheet ${
-                    r.actual.profitAfterAds >= 0 ? 'border-gain/30 bg-gain-tint' : 'border-loss/30 bg-loss-tint'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p
-                      className={`num text-2xl font-bold ${
-                        r.actual.profitAfterAds >= 0 ? 'text-gain' : 'text-loss'
+            <div className="min-w-0 space-y-6">
+              {!r && ladder ? (
+                <PriceLadderCard
+                  rows={ladder.rows}
+                  recommended={ladder.recommended}
+                  realisticRoas={realisticRoas ?? 0}
+                  onPick={setPrice}
+                />
+              ) : !r ? (
+                <Alert title="Isi HPP dulu.">
+                  Harga jual boleh dikosongkan: nanti muncul saran harga dan target ROAS-nya. Angka diperbarui setelah kolom
+                  ditinggalkan atau tombol Enter ditekan.
+                </Alert>
+              ) : (
+                <>
+                  <Card title="Rincian per order">
+                    <div>
+                      <NotaLine op="" label="Harga jual" detail="" amount={formatRupiah(price)} />
+                      <NotaLine
+                        op="−"
+                        label="Biaya admin"
+                        detail={`${decimal(adminPct ?? 0)}% × harga jual`}
+                        amount={formatRupiah(r.adminFee)}
+                      />
+                      <NotaLine op="−" label="Biaya proses pesanan" detail="per order" amount={formatRupiah(r.processFee)} />
+                      <NotaLine
+                        op="−"
+                        label="Gratis Ongkir XTRA"
+                        detail={xtra ? `${formatPercent(XTRA_FEE_RATE * 100)} × harga jual` : 'tidak ikut'}
+                        amount={formatRupiah(r.xtraFee)}
+                      />
+                      <NotaLine op="−" label="Packaging" detail="per order" amount={formatRupiah(packaging ?? 0)} />
+                    </div>
+                    <div className="mt-1 border-t-2 border-dashed border-rule">
+                      <NotaLine
+                        op="="
+                        label="Penghasilan"
+                        detail={
+                          (packaging ?? 0) > 0
+                            ? `uang cair dari Shopee ${formatRupiah(r.income)}, dikurangi packaging`
+                            : `uang cair per order (potongan Shopee ${formatRupiah(r.totalFee)})`
+                        }
+                        amount={formatRupiah(r.income - (packaging ?? 0))}
+                      />
+                      <NotaLine op="−" label="HPP" detail="modal per unit jual" amount={formatRupiah(hpp)} />
+                    </div>
+                    <div
+                      className={`mt-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1 rounded-2xl px-4 py-3 ${
+                        r.profitable ? 'bg-gain-tint' : 'bg-loss-tint'
                       }`}
                     >
-                      {formatRupiah(Math.abs(r.actual.profitAfterAds))}
-                      <span className="ml-1.5 font-sans text-base font-medium">per order</span>
-                    </p>
-                    {/* key: cap baru dicapkan setiap kali vonisnya berubah. */}
-                    <Stamp key={r.actual.profitAfterAds >= 0 ? 'gain' : 'loss'} tone={r.actual.profitAfterAds >= 0 ? 'gain' : 'loss'}>
-                      {r.actual.profitAfterAds >= 0 ? 'Iklan untung' : 'Iklan rugi'}
-                    </Stamp>
-                  </div>
-                  <p className="mt-2 text-ink-soft">
-                    Biaya iklan per order {formatRupiah(r.actual.adCost)} (harga jual ÷ ROAS aktual{' '}
-                    {decimal(actualRoas ?? 0)}). Untung setelah iklan = {formatRupiah(r.profit)} −{' '}
-                    {formatRupiah(r.actual.adCost)}.
-                  </p>
-                </div>
-              )}
+                      <span>
+                        <span className="block font-display text-lg font-bold">= Untung per order</span>
+                        <span className="block text-sm text-ink-muted">sebelum iklan</span>
+                      </span>
+                      <span className={`sm:text-right ${r.profitable ? 'text-gain' : 'text-loss'}`}>
+                        <span className="num block whitespace-nowrap font-display text-3xl font-bold tracking-tight">
+                          {formatRupiah(r.profit)}
+                        </span>
+                        <span className="num block text-sm font-semibold">{formatPercent(r.margin * 100)} dari harga jual</span>
+                      </span>
+                    </div>
+                    {!r.profitable && (
+                      <div className="mt-4">
+                        <Alert tone="error" title="Harga ini sudah rugi tanpa iklan." />
+                      </div>
+                    )}
+                  </Card>
 
-              <Card title="Hasil">
-                <dl className="divide-y divide-line/70">
-                  <Result
-                    label="Balik modal butuh ROAS"
-                    value={r.bepRoas !== null ? formatRoas(r.bepRoas) : 'Harga ini sudah rugi tanpa iklan'}
-                    bad={r.bepRoas === null}
-                    hint={r.bepRoas !== null ? 'Di bawah ROAS ini, iklan rugi.' : undefined}
-                  />
-                  <Result
-                    label="Saran target ROAS di Shopee"
-                    value={
-                      !r.profitable
-                        ? 'Harga ini sudah rugi tanpa iklan'
-                        : r.targetRoas !== null
-                          ? formatRoas(roundUp2(r.targetRoas))
-                          : TOO_THIN
-                    }
-                    bad={r.targetRoas === null}
-                    strong
-                    hint={
-                      r.profitable
-                        ? `Supaya masih untung ${formatPercent(ADS_TARGET_PROFIT * 100)} setelah iklan. Belum termasuk cadangan pesanan batal.`
-                        : undefined
-                    }
-                  />
-                  <Result
-                    label={`Harga minimum balik modal di ROAS ${decimal(realisticRoas ?? 0)}`}
-                    value={priceText(r.priceBreakEven)}
-                    bad={r.priceBreakEven === null}
-                    hint={exactHint(r.priceBreakEven, 'Di bawah harga ini, iklan dengan ROAS realistis pasti rugi.')}
-                  />
-                  <Result
-                    label={`Harga untuk untung ${formatPercent(ADS_TARGET_PROFIT * 100)} setelah iklan`}
-                    value={priceText(r.priceTargetProfit)}
-                    bad={r.priceTargetProfit === null}
-                    strong
-                    hint={exactHint(r.priceTargetProfit, `Dengan ROAS ${decimal(realisticRoas ?? 0)}.`)}
-                  />
-                  <Result
-                    label={`Harga untuk untung ${formatPercent(PRICE_TARGET_MARGIN * 100)}`}
-                    value={priceText(r.priceTargetMargin)}
-                    bad={r.priceTargetMargin === null}
-                    hint={exactHint(r.priceTargetMargin, 'Sebelum iklan.')}
-                  />
-                </dl>
-                <p className="mt-3 text-sm text-ink-muted">Saran harga dibulatkan ke atas ke Rp1.000.</p>
-              </Card>
-            </>
-          )}
+                  {r.actual && (
+                    // key: kartunya muncul ulang setiap kali vonisnya berubah (untung ↔ rugi).
+                    <div
+                      key={r.actual.profitAfterAds >= 0 ? 'gain' : 'loss'}
+                      className={`reveal rounded-3xl p-6 shadow-sheet sm:p-7 ${
+                        r.actual.profitAfterAds >= 0 ? 'bg-lime text-field-deep' : 'on-field bg-coral text-white'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <p className="font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+                          Dengan iklan, {r.actual.profitAfterAds >= 0 ? 'untung' : 'rugi'}{' '}
+                          <span className="num">{formatRupiah(Math.abs(r.actual.profitAfterAds))}</span>
+                          <span className="ml-1.5 font-sans text-lg font-semibold">per order</span>
+                        </p>
+                        <Stamp tone="neutral">{r.actual.profitAfterAds >= 0 ? 'Iklan untung' : 'Iklan rugi'}</Stamp>
+                      </div>
+                      <p className="mt-2">
+                        Biaya iklan per order {formatRupiah(r.actual.adCost)} (harga jual ÷ ROAS aktual{' '}
+                        {decimal(actualRoas ?? 0)}). Untung setelah iklan = {formatRupiah(r.profit)} −{' '}
+                        {formatRupiah(r.actual.adCost)}.
+                      </p>
+                    </div>
+                  )}
+
+                  <Card title="Hasil">
+                    <dl className="divide-y divide-line/70">
+                      <Result
+                        label="Balik modal butuh ROAS"
+                        value={r.bepRoas !== null ? formatRoas(r.bepRoas) : 'Harga ini sudah rugi tanpa iklan'}
+                        bad={r.bepRoas === null}
+                        hint={r.bepRoas !== null ? 'Di bawah ROAS ini, iklan rugi.' : undefined}
+                      />
+                      <Result
+                        label="Saran target ROAS di Shopee"
+                        value={
+                          !r.profitable
+                            ? 'Harga ini sudah rugi tanpa iklan'
+                            : r.targetRoas !== null
+                              ? formatRoas(roundUp2(r.targetRoas))
+                              : TOO_THIN
+                        }
+                        bad={r.targetRoas === null}
+                        strong
+                        hint={
+                          r.profitable
+                            ? `Supaya masih untung ${formatPercent(ADS_TARGET_PROFIT * 100)} setelah iklan. Belum termasuk cadangan pesanan batal.`
+                            : undefined
+                        }
+                      />
+                      <Result
+                        label={`Harga minimum balik modal di ROAS ${decimal(realisticRoas ?? 0)}`}
+                        value={priceText(r.priceBreakEven)}
+                        bad={r.priceBreakEven === null}
+                        hint={exactHint(r.priceBreakEven, 'Di bawah harga ini, iklan dengan ROAS realistis pasti rugi.')}
+                      />
+                      <Result
+                        label={`Harga untuk untung ${formatPercent(ADS_TARGET_PROFIT * 100)} setelah iklan`}
+                        value={priceText(r.priceTargetProfit)}
+                        bad={r.priceTargetProfit === null}
+                        strong
+                        hint={exactHint(r.priceTargetProfit, `Dengan ROAS ${decimal(realisticRoas ?? 0)}.`)}
+                      />
+                      <Result
+                        label={`Harga untuk untung ${formatPercent(PRICE_TARGET_MARGIN * 100)}`}
+                        value={priceText(r.priceTargetMargin)}
+                        bad={r.priceTargetMargin === null}
+                        hint={exactHint(r.priceTargetMargin, 'Sebelum iklan.')}
+                      />
+                    </dl>
+                    <p className="mt-3 text-sm text-ink-muted">Saran harga dibulatkan ke atas ke Rp1.000.</p>
+                  </Card>
+                </>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </>
   )
 }
@@ -414,32 +502,6 @@ function exactHint(p: SuggestedPrice | null, text: string): string {
   return p ? `${text} Persisnya ${formatRupiah(p.exact)}.` : text
 }
 
-function Field({
-  label,
-  hint,
-  note,
-  children,
-}: {
-  label: string
-  hint?: string
-  /** Asal angka yang terisi otomatis dari produk yang dipilih. */
-  note?: string
-  children: ReactNode
-}) {
-  return (
-    <div>
-      <p className="mb-1.5 font-medium">{label}</p>
-      {children}
-      {note && (
-        <p className="mt-1.5 flex gap-1.5 text-sm font-medium text-info">
-          <IconCornerDownRight size={16} className="mt-0.5 shrink-0" />
-          {note}
-        </p>
-      )}
-      {hint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
-    </div>
-  )
-}
 
 interface AdRoasData {
   periodLabel: string
@@ -477,6 +539,74 @@ async function loadLatestAdRoas(storeId: number): Promise<AdRoasData | null> {
   const b = formatDate(latest.period_end)
   const periodLabel = latest.period_start.slice(0, 7) === latest.period_end.slice(0, 7) ? `${a.split(' ')[0]}–${b}` : `${a} – ${b}`
   return { periodLabel, byProduct }
+}
+
+const LADDER_TAGS: Record<PriceLadderRow['tags'][number], string> = {
+  balik_modal: 'Balik modal setelah iklan',
+  disarankan: 'Disarankan',
+  untung_20: 'Untung 20% sebelum iklan',
+}
+
+/** Pilihan harga jual untuk modal yang diisi; "Pakai" mengisi harga jual di kiri. */
+function PriceLadderCard({
+  rows,
+  recommended,
+  realisticRoas,
+  onPick,
+}: {
+  rows: PriceLadderRow[]
+  recommended: number | null
+  realisticRoas: number
+  onPick: (price: number) => void
+}) {
+  return (
+    <Card title="Pilih harga jual">
+      <p className="-mt-2 mb-4 text-sm text-ink-muted">
+        Semua harga dibulatkan ke atas ke Rp1.000. Target ROAS = yang diisi di Shopee supaya untung 5% setelah iklan.
+      </p>
+      <ul className="space-y-2">
+        {rows.map((x) => {
+          const rec = x.price === recommended
+          return (
+            <li
+              key={x.price}
+              className={`grid items-center gap-x-4 gap-y-2 rounded-2xl px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] ${
+                rec ? 'bg-stamp-tint' : 'border border-line'
+              }`}
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="num font-display text-2xl font-bold">{formatRupiah(x.price)}</span>
+                  {x.tags.map((t) =>
+                    t === 'disarankan' ? (
+                      <Stamp key={t} tone="final" className="!text-xs">
+                        {LADDER_TAGS[t]}
+                      </Stamp>
+                    ) : (
+                      <span key={t} className="rounded-full bg-counter px-2.5 py-0.5 text-xs font-semibold text-ink-soft">
+                        {LADDER_TAGS[t]}
+                      </span>
+                    ),
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-ink-soft">
+                  Untung <b className="num">{formatRupiah(x.profit)}</b> ({formatPercent(x.margin * 100)}) sebelum iklan · isi target ROAS{' '}
+                  <b className="num">{x.targetRoas !== null ? formatRoas(roundUp2(x.targetRoas)) : 'tidak mungkin'}</b> · di ROAS{' '}
+                  <span className="num">{decimal(realisticRoas)}</span>{' '}
+                  <b className={`num ${x.profitAtRealistic >= 0 ? 'text-gain' : 'text-loss'}`}>
+                    {x.profitAtRealistic >= 0 ? 'untung' : 'rugi'} {formatRupiah(Math.abs(x.profitAtRealistic))}
+                  </b>
+                </p>
+              </div>
+              <Button variant={rec ? 'primary' : 'secondary'} onClick={() => onPick(x.price)} className="justify-self-start sm:justify-self-end">
+                Pakai
+              </Button>
+            </li>
+          )
+        })}
+      </ul>
+    </Card>
+  )
 }
 
 const MAX_RESULTS = 30
@@ -567,99 +697,4 @@ function ProductPicker({
   )
 }
 
-function Result({
-  label,
-  value,
-  hint,
-  strong,
-  bad,
-}: {
-  label: string
-  value: string
-  hint?: string
-  strong?: boolean
-  bad?: boolean
-}) {
-  return (
-    <div className="py-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <dt className="font-medium text-ink">{label}</dt>
-        <dd
-          className={`${bad ? 'font-medium text-loss' : strong ? 'num text-2xl font-bold' : 'num text-xl font-semibold'}`}
-        >
-          {value}
-        </dd>
-      </div>
-      {hint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
-    </div>
-  )
-}
 
-/** Input angka desimal (koma atau titik), mis. "8,25" atau "5.5". Diperbarui saat kolom ditinggalkan / Enter. */
-function DecimalInput({
-  value,
-  onCommit,
-  ariaLabel,
-  suffix,
-  optional,
-}: {
-  value: number | null
-  onCommit: (value: number | null) => void
-  ariaLabel: string
-  suffix?: string
-  optional?: boolean
-}) {
-  const format = (n: number | null) => (n === null ? '' : decimal(n, 4))
-  const [text, setText] = useState(format(value))
-  const [lastValue, setLastValue] = useState(value)
-  const [invalid, setInvalid] = useState(false)
-
-  // Sinkronkan kalau nilai dari luar berubah (mis. setelah memilih produk).
-  if (value !== lastValue) {
-    setLastValue(value)
-    setText(format(value))
-    setInvalid(false)
-  }
-
-  const commit = () => {
-    const t = text.trim()
-    if (t === '') {
-      setInvalid(false)
-      onCommit(null)
-      return
-    }
-    const n = Number(t.replace(',', '.'))
-    if (!/^\d+([.,]\d+)?$/.test(t) || !Number.isFinite(n) || n < 0) {
-      setInvalid(true)
-      return
-    }
-    setInvalid(false)
-    setText(format(n))
-    onCommit(n)
-  }
-
-  return (
-    <div className="relative">
-      <input
-        type="text"
-        inputMode="decimal"
-        aria-label={ariaLabel}
-        aria-invalid={invalid}
-        value={text}
-        placeholder={optional ? 'boleh dikosongkan' : 'belum diisi'}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-        }}
-        className={`num min-h-11 w-full rounded-md border px-3 text-right text-base transition-colors placeholder:font-sans placeholder:text-ink-muted focus:outline-none focus:ring-2 ${
-          suffix ? 'pr-9' : ''
-        } ${invalid ? 'border-loss ring-loss/20' : 'border-line bg-paper hover:border-ink-muted focus:border-stamp focus:ring-stamp/25'}`}
-      />
-      {suffix && (
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted">{suffix}</span>
-      )}
-      {invalid && <p className="mt-1 text-sm text-loss">Isi angka saja, mis. 8,25</p>}
-    </div>
-  )
-}
