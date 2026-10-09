@@ -433,3 +433,110 @@ export function simulatePrice(input: PriceSimInput): PriceSimResult {
     actual: adCost !== null ? { adCost, profitAfterAds: profit - adCost } : null,
   }
 }
+
+// --- Grup iklan (beberapa produk, satu target ROAS) ------------------------------
+
+export interface AdGroupRowInput {
+  hpp: number
+  price: number
+  adminRate: number
+  xtra: boolean
+  /** Perkiraan terjual per bulan; null = belum diketahui (mis. produk baru). */
+  qty: number | null
+}
+
+export interface AdGroupRowResult {
+  /** Untung per order sebelum iklan (sama dengan Simulasi satu produk). */
+  profit: number
+  margin: number
+  /** ROAS balik modal produk ini sendiri; null kalau sudah rugi tanpa iklan. */
+  bepRoas: number | null
+  /** Target ROAS produk ini sendiri (untung 5% setelah iklan); null = tidak mungkin. */
+  targetRoas: number | null
+  /** Porsi yang dipakai menghitung grup (qty, atau perkiraan kalau qty belum diketahui). */
+  weight: number
+  weightEstimated: boolean
+}
+
+export interface AdGroupResult {
+  rows: AdGroupRowResult[]
+  /** Perkiraan omzet & untung sebelum iklan per bulan dari porsi di atas. */
+  gmv: number
+  profit: number
+  /** ROAS balik modal grup sesuai porsi; null kalau grup sudah rugi tanpa iklan. */
+  mixBepRoas: number | null
+  /** Target ROAS grup sesuai porsi penjualan (untung 5% setelah iklan); null = tidak mungkin. */
+  mixTargetRoas: number | null
+  /** Target ROAS yang membuat SETIAP produk tetap untung 5% (= target tertinggi); null kalau ada produk yang tidak mungkin. */
+  safeTargetRoas: number | null
+  /** Ada produk yang porsi penjualannya belum diketahui. */
+  hasUnknownQty: boolean
+  /** Yang disarankan untuk diisi di Shopee. */
+  recommended: 'safe' | 'mix'
+  recommendedRoas: number | null
+}
+
+/**
+ * Satu target ROAS untuk beberapa produk sekaligus (Iklan Grup Shopee).
+ *
+ * Dengan satu ROAS R, biaya iklan tiap order = harga ÷ R, jadi untung grup per bulan
+ * = Σ porsi × (untung per order − harga ÷ R). Target sesuai porsi memakai margin gabungan
+ * (Σ porsi × untung ÷ Σ porsi × harga); target aman memakai target produk yang paling tinggi,
+ * sehingga tidak bergantung pada porsi penjualan. Kalau ada produk yang porsinya belum
+ * diketahui (produk baru), yang disarankan target aman.
+ */
+export function simulateAdGroup(input: {
+  rows: AdGroupRowInput[]
+  processFee: number
+  packaging: number
+}): AdGroupResult {
+  const known = input.rows.map((r) => r.qty).filter((q): q is number => q !== null && q > 0)
+  const fallbackWeight = known.length > 0 ? known.reduce((s, q) => s + q, 0) / known.length : 1
+  const rows = input.rows.map((r): AdGroupRowResult => {
+    const sim = simulatePrice({
+      hpp: r.hpp,
+      price: r.price,
+      adminRate: r.adminRate,
+      xtra: r.xtra,
+      processFee: input.processFee,
+      packaging: input.packaging,
+      realisticRoas: 1,
+    })
+    const estimated = r.qty === null
+    return {
+      profit: sim.profit,
+      margin: sim.margin,
+      bepRoas: sim.bepRoas,
+      targetRoas: sim.profitable ? targetRoasFromMargin(sim.margin, 0).shopeeTargetRoas : null,
+      weight: estimated ? fallbackWeight : Math.max(0, r.qty ?? 0),
+      weightEstimated: estimated,
+    }
+  })
+
+  const gmv = input.rows.reduce((s, r, i) => s + r.price * rows[i].weight, 0)
+  const profit = rows.reduce((s, r) => s + r.profit * r.weight, 0)
+  const mixMargin = gmv > 0 ? profit / gmv : null
+  const mixBepRoas = mixMargin !== null && profit > 0 ? gmv / profit : null
+  const mixTargetRoas = mixMargin !== null && profit > 0 ? targetRoasFromMargin(mixMargin, 0).shopeeTargetRoas : null
+  const safeTargetRoas =
+    rows.length > 0 && rows.every((r) => r.targetRoas !== null) ? Math.max(...rows.map((r) => r.targetRoas as number)) : null
+  const hasUnknownQty = rows.some((r) => r.weightEstimated)
+  // Porsi belum diketahui, atau porsinya nol semua (target porsi tidak bisa dihitung) → target aman.
+  const recommended = (hasUnknownQty || mixTargetRoas === null) && safeTargetRoas !== null ? 'safe' : 'mix'
+  return {
+    rows,
+    gmv,
+    profit,
+    mixBepRoas,
+    mixTargetRoas,
+    safeTargetRoas,
+    hasUnknownQty,
+    recommended,
+    recommendedRoas: recommended === 'safe' ? safeTargetRoas : mixTargetRoas,
+  }
+}
+
+/** Untung per order sebelum dan sesudah iklan di ROAS grup R (biaya iklan = harga ÷ R). */
+export function profitAtRoas(row: { price: number; profit: number }, roas: number): number {
+  return row.profit - row.price / roas
+}

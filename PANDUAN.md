@@ -322,7 +322,8 @@ Iklan tidak akan bisa memberi untung 5% (atau ROAS yang dibutuhkan di atas 50). 
 Dipakai **sebelum jualan produk baru atau sebelum ganti harga**. Isi beberapa angka (atau pilih
 produk yang sudah pernah di-upload), hasilnya langsung keluar. Angka simulasi **tidak disimpan**;
 kalau halaman ditutup, isinya hilang. Yang bisa disimpan hanya **% admin dan XTRA per produk**
-(lihat di bawah).
+(lihat di bawah). Untuk **grup iklan** (beberapa produk dengan satu target ROAS), lihat bagian
+"Grup iklan" di bawah.
 
 Bedanya dengan halaman Iklan: halaman Iklan menilai yang **sudah terjadi** (dari data upload),
 sedangkan Simulasi Harga menghitung **sebelum** terjadi. Potongan Shopee dihitung **per komponen**
@@ -412,6 +413,40 @@ Contoh: HPP Rp46.668, harga Rp65.000, admin 8,25%, ikut XTRA, ROAS aktual 6,94:
 - untung per order ±Rp9.120;
 - biaya iklan per order ±Rp9.366;
 - jadi **iklan rugi ±Rp246 per order**. Balik modal butuh ROAS 7,13, sedangkan ROAS aktual baru 6,94.
+
+### Grup iklan (beberapa produk, satu target ROAS)
+
+Di Shopee, beberapa produk bisa dijadikan **satu grup iklan dengan satu target ROAS**. Pilih tab
+**"Grup iklan (beberapa produk)"** di atas halaman Simulasi untuk menghitung target ROAS yang
+diisi di Shopee untuk grup itu. Grup **tidak disimpan**; pilih produknya lagi setiap kali.
+
+**Cara pakai:**
+1. Ketik nama produk, lalu pilih. Harga jual, HPP, dan jumlah terjual terisi otomatis dari bulan
+   pesanan terbaru yang sudah di-upload (harga & HPP = rata-rata variasi yang terjual). Semua angka
+   bisa diubah.
+2. Produk yang **belum pernah terjual** (produk baru): pilih **"+ Produk baru (belum ada di data)"**,
+   lalu isi nama, harga jual, dan HPP-nya. Kolom **Terjual / bulan** boleh dikosongkan.
+3. Biaya proses pesanan, packaging, dan ROAS realistis di kanan berlaku untuk semua produk di grup.
+
+**Dua target yang dihitung:**
+
+| Target | Artinya | Kapan dipakai |
+|---|---|---|
+| **Sesuai porsi penjualan** | Grup secara keseluruhan untung 5% setelah iklan, kalau porsi penjualannya seperti kolom "Terjual / bulan". Lebih rendah, jadi iklan lebih leluasa. | Semua produk sudah punya data penjualan. |
+| **Aman untuk semua produk** | Setiap produk tetap untung 5% setelah iklan, berapa pun porsinya. Sama dengan target produk yang untungnya paling tipis. | Ada produk baru / porsinya belum diketahui. |
+
+Kalimat besar di atas ("Isi target ROAS grup: …") sudah memilihkan salah satunya. Di bawahnya
+tertulis produk mana yang **menentukan target aman** dan berapa targetnya kalau produk itu
+dipisah ke grup/iklan sendiri.
+
+**Kenapa ada produk yang ditandai merah?** Dengan satu ROAS untuk semua produk, produk yang
+untungnya tipis bisa rugi walaupun grupnya untung. Di tiap produk tertulis untung/rugi per order
+di ROAS grup. Pilihannya: pisahkan produk itu ke grup lain, naikkan harganya, atau pakai target
+aman.
+
+> Kalau target grup jauh di atas ROAS realistis, Shopee akan menahan belanja iklan supaya target
+> tercapai, jadi iklan grup jarang tampil. Biasanya itu tanda ada produk yang untungnya terlalu tipis
+> untuk ikut grup.
 
 ---
 
