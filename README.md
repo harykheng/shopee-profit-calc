@@ -22,6 +22,8 @@ membaca file di browser, Vitest untuk test.
 > 📖 **Pemakai aplikasi** (pemilik, cici, adik): baca **[PANDUAN.md](PANDUAN.md)** — cara pakai
 > tiap halaman, cara membaca Rekap dan Iklan, dan pertanyaan yang sering muncul.
 > README ini untuk setup (Supabase, akun, Vercel) dan pengembangan.
+>
+> 🧭 **Developer / asisten AI**: ringkasan proyek, aturan, dan rumus ada di **[CONTEXT.md](CONTEXT.md)**.
 
 ---
 
