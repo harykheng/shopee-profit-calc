@@ -3,6 +3,7 @@ import { Alert, Button, Card, ErrorBox, PageTitle, ScrollX, Spinner, Stamp } fro
 import { IconStore, IconUpload } from '../components/icons'
 import { Confetti } from '../components/motion'
 import { fetchProducts, saveAdjustments, saveIncome, saveOrderItems } from '../lib/api'
+import { notifyDataChanged } from '../lib/events'
 import { navigate } from '../lib/router'
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from '../lib/format'
 import { ParseError, type ParseWarning } from '../lib/parsers/common'
@@ -116,6 +117,7 @@ export function UploadPage({
         }
       }
       setSummary(out)
+      notifyDataChanged()
       setOrders(null)
       setIncome(null)
       setInputKey((k) => k + 1)
@@ -221,7 +223,7 @@ function OrdersPreview({ parsed }: { parsed: Parsed<OrdersParseResult> | null })
   const [showAll, setShowAll] = useState(false)
   if (!parsed) return null
   if (parsed.loading) return <Spinner label="Membaca file…" />
-  if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} /></div>
+  if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} reportFile={{ kind: 'export pesanan', fileName: parsed.fileName }} /></div>
   const r = parsed.result!
   const statusEntries = Object.entries(r.byStatus).sort((a, b) => b[1] - a[1])
   const notDone = r.items.filter((i) => i.status_group !== 'selesai').length
@@ -288,7 +290,7 @@ function IncomePreview({
 }) {
   if (!parsed) return null
   if (parsed.loading) return <Spinner label="Membaca file…" />
-  if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} /></div>
+  if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} reportFile={{ kind: 'laporan penghasilan', fileName: parsed.fileName }} /></div>
   const r = parsed.result!
   const adjustmentsTotal = r.adjustments.reduce((s, a) => s + a.amount, 0)
   const shopMismatch =

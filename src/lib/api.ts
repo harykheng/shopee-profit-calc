@@ -177,6 +177,14 @@ export async function saveProductFees(
   )
 }
 
+/** Apakah toko ini pernah punya rekap (penghasilan, pesanan, atau biaya) di bulan sebelum `month`. */
+export async function hasRecapBefore(storeId: number, month: string): Promise<boolean> {
+  const rows = check(
+    await supabase.from('monthly_recap').select('month').eq('store_id', storeId).lt('month', month).limit(1),
+  ) as { month: string }[]
+  return rows.length > 0
+}
+
 // --- Pengaturan hitungan per toko -------------------------------------------
 
 /** Baris pengaturan toko; null kalau toko belum pernah menyimpan (artinya semua nilai bawaan). */

@@ -412,7 +412,44 @@ aman: seed tidak menambah apa pun.
 ### Sebelum pelanggan pertama
 
 - [ ] Project HitungCuan sudah di paket Pro (backup aktif).
+- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261015000000_store_settings.sql`
+      (cek: tabel `store_settings` dan `fee_categories` ada).
+- [ ] **`VITE_SUPPORT_WA` terisi** di variabel hosting (format `62…`), lalu deploy ulang. Tanpa itu
+      "Lupa password?", "Perpanjang lewat WhatsApp", dan "Laporkan file ini" hanya teks biasa. Cek:
+      buka halaman login, klik "Lupa password?", harus membuka WhatsApp ke nomormu. Build produksi
+      juga menulis peringatan di console browser kalau variabel ini kosong.
 - [ ] Dua akun uji dengan dua toko: masing-masing hanya melihat tokonya sendiri.
-- [ ] Toko dengan `active_until` kemarin menampilkan layar "Langganan habis", datanya tetap ada.
+- [ ] Toko dengan `active_until` kemarin menampilkan Rekap baca-saja dengan banner "Langganan habis";
+      upload dan perubahan data ditolak.
+- [ ] **File asli calon pelanggan sudah diuji** (lihat bagian di bawah).
 - [ ] Signup publik mati, dan tidak ada `service_role` key di variabel hosting atau di git.
 - [ ] Sudah berlatih `admin_add_customer` dan memperpanjang lewat SQL.
+
+### Menguji file asli calon pelanggan
+
+Parser dibangun dari file satu keluarga. Format export bisa berbeda untuk penjual lain (Shopee
+Mall/Star, kategori lain, bahasa akun, versi file Shopee). Ini risiko terbesar sebelum jualan luas,
+dan hanya bisa ditutup dengan file asli. **Uji 3–5 calon pelanggan dari jenis toko yang berbeda**
+(satu toko Star atau Mall, satu toko kecil, satu yang memakai iklan banyak).
+
+Cara paling aman: **jangan minta file dikirim ke kamu.** Export pesanan memuat nama dan alamat
+pembeli. Duduk bersama calon pelanggan (atau lewat layar bersama), buat toko uji untuk mereka
+(`admin_add_customer`), dan biarkan mereka upload sendiri. Aplikasi hanya membaca kolom yang
+dibutuhkan dan tidak menyimpan data pembeli.
+
+Untuk tiap toko, cek dan catat:
+
+| # | Cek | Lulus kalau |
+|---|---|---|
+| 1 | Upload export pesanan (.xlsx, status Semua) | Tidak ada error; jumlah pesanan/barang di pratinjau sama dengan di Seller Centre |
+| 2 | Upload laporan penghasilan (PDF) | Tidak ada error; total penghasilan di pratinjau sama dengan total di PDF |
+| 3 | Rekap bulan itu | Uang masuk sama dengan total PDF; tidak ada peringatan "uang cair yang pesanannya belum di-upload" selain yang memang wajar (pesanan bulan sebelumnya) |
+| 4 | Upload CSV iklan (ketiga jenis) | Total biaya sama dengan di Seller Centre; produk iklan cocok dengan produk di pesanan |
+| 5 | Nama toko di PDF vs nama toko di akun | Peringatan "Nama toko berbeda" hanya muncul kalau memang beda toko |
+| 6 | Potongan Shopee di Iklan (dari laporan penghasilan) | Wajar (sekitar 10–25%), bukan 15% bawaan |
+
+Kalau ada file yang gagal dibaca, aplikasi menampilkan tombol **Laporkan file ini ke pengelola lewat
+WhatsApp** (hanya nama file dan pesan error yang dikirim, isi file tidak). Catat: jenis file, pesan
+error di bagian "Detail teknis", jenis akun toko (Star/Mall/biasa), dan versi Seller Centre
+(tanggal export). Dengan itu parser bisa diperbaiki tanpa melihat data pembeli; fixture dummy
+bisa dibuat dengan `scripts/make-fixtures.mjs` untuk mereproduksi bentuk file yang bermasalah.

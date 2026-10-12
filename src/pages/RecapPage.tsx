@@ -21,7 +21,7 @@ import {
   type CreatedItem,
 } from '../lib/api'
 import { addMonths, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '../lib/format'
-import { monthStatus, type MonthStatus } from '../lib/monthStatus'
+import { monthStatus, monthTodos, type MonthStatus } from '../lib/monthStatus'
 import { estimateProfit, soldFlow, type FlowStep, type ProfitEstimate } from '../lib/recapMath'
 import { resolveSettings } from '../lib/storeSettings'
 import { navigate } from '../lib/router'
@@ -414,9 +414,9 @@ function NotaCard({
     { income: 0, adjustments: 0, modal: 0, returnedLoss: 0, expenses: 0, profit: 0, qty: 0 },
   )
   const statuses = data.months.map((m) => ({ month: m.month, status: monthStatus(m, data.reconciliation) }))
-  const todoCount = statuses.reduce((n, s) => n + todos(s.status).length, 0)
+  const todoCount = statuses.reduce((n, s) => n + monthTodos(s.status).length, 0)
   const allFinal = statuses.length > 0 && todoCount === 0
-  const firstTodo = statuses.flatMap((s) => todos(s.status))[0]
+  const firstTodo = statuses.flatMap((s) => monthTodos(s.status))[0]
   const [showStatus, setShowStatus] = useState(false)
 
   const releaseDays = data.reconciliation.filter(
@@ -852,23 +852,6 @@ export function NotaLine({ op, label, detail, amount }: { op: string; label: str
 }
 
 // --- Daftar centang status bulan ---------------------------------------------
-
-interface Todo {
-  key: string
-  /** Alasan singkat untuk baris "Belum final: …". */
-  short: string
-}
-
-function todos(s: MonthStatus): Todo[] {
-  const out: Todo[] = []
-  if (!s.hasIncome) out.push({ key: 'income', short: 'laporan penghasilan belum di-upload' })
-  if (s.missingOrders.days.length > 0) out.push({ key: 'orders', short: 'ada uang cair yang pesanannya belum di-upload' })
-  if (s.hasIncome && s.ordersWithoutIncome.days.length > 0)
-    out.push({ key: 'noincome', short: 'ada pesanan yang tidak ada di laporan penghasilan' })
-  if (s.missingHpp > 0) out.push({ key: 'hpp', short: 'ada barang yang HPP-nya kosong' })
-  if (!s.expensesFilled) out.push({ key: 'expenses', short: 'biaya belum diisi' })
-  return out
-}
 
 const dayList = (days: string[]) => days.map((d) => formatDate(d)).join(', ')
 

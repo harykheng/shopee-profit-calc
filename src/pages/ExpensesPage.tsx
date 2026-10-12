@@ -3,6 +3,7 @@ import { MonthPicker, RupiahInput } from '../components/pickers'
 import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, inputClass } from '../components/ui'
 import { IconAlertCircle } from '../components/icons'
 import { fetchExpenses, saveExpenses } from '../lib/api'
+import { notifyDataChanged } from '../lib/events'
 import { addMonths, currentMonth, formatMonth, formatRupiah } from '../lib/format'
 import { EXPENSE_CATEGORIES, type ExpenseCategory, type Store } from '../lib/types'
 
@@ -79,6 +80,7 @@ export function ExpensesPage({
         })),
       )
       setSaved(true)
+      notifyDataChanged()
       setDirty(false)
     } catch (e) {
       setSaveError(e)

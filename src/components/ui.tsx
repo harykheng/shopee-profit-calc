@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
-import { APP_NAME, supportUrl } from '../lib/brand'
+import { APP_NAME, hasSupportWhatsApp, supportUrl } from '../lib/brand'
 import { adminHint, errorText, friendlyError } from '../lib/errors'
 import { IconAlertCircle, IconCheckCircle, IconError, IconInfo } from './icons'
 
@@ -160,7 +160,17 @@ export function SupportLink({
 }
 
 /** Kotak error ramah + detail teknis yang bisa dibuka (untuk pengelola aplikasi). */
-export function ErrorBox({ error }: { error: unknown }) {
+export function ErrorBox({
+  error,
+  reportFile,
+}: {
+  error: unknown
+  /**
+   * Untuk file yang gagal dibaca: tampilkan tombol "Laporkan file ini ke pengelola" (WhatsApp, hanya nama
+   * file dan pesan error; isi file tidak pernah dikirim). `kind` mis. "export pesanan".
+   */
+  reportFile?: { kind: string; fileName: string }
+}) {
   // Petunjuk untuk pengelola (mis. migration belum dijalankan) hanya masuk console, tidak ke layar pelanggan.
   useEffect(() => {
     if (!error) return
@@ -175,6 +185,15 @@ export function ErrorBox({ error }: { error: unknown }) {
       {friendly.includes('pengelola aplikasi') && supportUrl('') && (
         <p className="mt-1">
           <SupportLink message={`Halo, ada kendala di ${APP_NAME}: ${friendly}`} />
+        </p>
+      )}
+      {reportFile && hasSupportWhatsApp && (
+        <p className="mt-2">
+          <SupportLink
+            message={`Halo, file ${reportFile.kind} saya gagal dibaca di ${APP_NAME}. Nama file: ${reportFile.fileName}. Pesan: ${friendly}`}
+          >
+            Laporkan file ini ke pengelola lewat WhatsApp
+          </SupportLink>
         </p>
       )}
       {detail && detail !== friendly && (

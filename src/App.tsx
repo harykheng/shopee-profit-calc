@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Alert, ErrorBox, Spinner, SupportLink } from './components/ui'
+import { MonthlyReminderCard } from './components/MonthlyReminder'
 import { APP_NAME } from './lib/brand'
 import { formatDate } from './lib/format'
 import { expiryNotice, subscriptionStatus } from './lib/subscription'
@@ -288,6 +289,9 @@ function MainApp({ user }: { user: User }) {
             <RecapPage stores={stores} storeId={storeId} readOnly />
           </div>
         ) : (
+          <>
+            {/* Di luar pembungkus per-halaman supaya tidak berkedip tiap pindah halaman. */}
+            {storeId !== null && <MonthlyReminderCard storeId={storeId} route={route} />}
           <div key={route} className="page-in">
             {notice && selectedStore && (
               <div className="mb-6">
@@ -315,6 +319,7 @@ function MainApp({ user }: { user: User }) {
             {route === 'iklan' && <AdsPage key={storeId} stores={stores} storeId={storeId} />}
             {route === 'simulasi' && <PriceSimPage stores={stores} storeId={storeId} />}
           </div>
+          </>
         )}
       </main>
     </div>

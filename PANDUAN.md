@@ -66,6 +66,12 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 
 > Upload file yang sama dua kali **aman**. Data tidak akan dobel.
 
+**Pengingat otomatis.** Kalau rekap bulan lalu belum lengkap, kartu biru muncul di atas halaman
+("Rekap September 2026 belum lengkap") dengan tombol langsung ke langkah yang tersisa: Upload laporan,
+Upload pesanan, Isi HPP, atau Isi biaya. Kartu ini ikut berubah begitu kamu menyimpan data, dan
+hilang sendiri saat angka sudah final. **Ingatkan besok** menyembunyikannya sampai hari berikutnya.
+Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
+
 ---
 
 ## 3. File apa saja yang perlu di-download dari Shopee

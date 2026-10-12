@@ -11,6 +11,12 @@ const SUPPORT_NUMBER = ((import.meta.env.VITE_SUPPORT_WA as string | undefined) 
 
 export const hasSupportWhatsApp = SUPPORT_NUMBER.length > 0
 
+// Tanpa nomor ini, "Hubungi pengelola", "Lupa password?", dan "Perpanjang" hanya jadi teks biasa.
+// Peringatan di console (bukan di layar) supaya pengelola sadar saat membuka aplikasi hasil deploy.
+if (!hasSupportWhatsApp && import.meta.env.PROD) {
+  console.warn('VITE_SUPPORT_WA belum diisi: tombol WhatsApp ke pengelola tidak aktif (lihat README).')
+}
+
 /** Link chat WhatsApp ke pengelola, dengan pesan awal. null kalau nomor belum diisi. */
 export function supportUrl(message: string): string | null {
   if (!hasSupportWhatsApp) return null

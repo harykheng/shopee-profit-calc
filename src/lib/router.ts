@@ -19,6 +19,12 @@ export function readHash(): { route: Route; params: URLSearchParams } {
   return { route, params: new URLSearchParams(query ?? '') }
 }
 
+/** Alamat hash untuk tautan biasa (<a href>): "#/hpp?kosong=1". */
+export function hrefFor(route: Route, params?: Record<string, string>): string {
+  const query = params ? '?' + new URLSearchParams(params).toString() : ''
+  return `#/${route}${query}`
+}
+
 export function navigate(route: Route, params?: Record<string, string>) {
   const query = params ? '?' + new URLSearchParams(params).toString() : ''
   window.location.hash = `/${route}${query}`

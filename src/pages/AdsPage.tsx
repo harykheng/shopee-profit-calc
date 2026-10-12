@@ -502,7 +502,7 @@ function UploadCard({
               <li key={f.fileName} className="rounded-md border border-line p-4">
                 <p className="break-all text-sm text-ink-muted">{f.fileName}</p>
                 <div className="mt-2">
-                  <ErrorBox error={f.error} />
+                  <ErrorBox error={f.error} reportFile={{ kind: 'data iklan', fileName: f.fileName }} />
                 </div>
               </li>
             ))}
