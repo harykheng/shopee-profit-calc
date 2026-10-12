@@ -15,6 +15,10 @@ const MISSING_MIGRATIONS: [match: (lower: string) => boolean, file: string][] = 
     (l) => (l.includes('fee_categories') || l.includes('fee_category_id')) && (l.includes('does not exist') || l.includes('schema cache')),
     '20261014000000_fee_categories.sql',
   ],
+  [
+    (l) => l.includes('store_settings') && (l.includes('does not exist') || l.includes('schema cache')),
+    '20261015000000_store_settings.sql',
+  ],
   [(l) => l.includes('save_ad_report') || l.includes('ad_reports') || l.includes('ad_rows'), '20261006000000_ads.sql'],
 ]
 

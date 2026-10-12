@@ -5,7 +5,7 @@ import { Alert, Button, Card, ErrorBox } from '../components/ui'
 import { IconSearch } from '../components/icons'
 import { RupiahInput } from '../components/pickers'
 import { WordsRise } from '../components/motion'
-import { XTRA_FEE_RATE, profitAtRoas, simulateAdGroup } from '../lib/adsMath'
+import { XTRA_FEE_RATE, profitAtRoas, simulateAdGroup, type Targets } from '../lib/adsMath'
 import { fetchItemsCreatedBetween, fetchLastSalePrice, fetchLatestOrderDate } from '../lib/api'
 import { formatMonth, formatNumber, formatPercent, formatRupiah, monthEnd, wibDay } from '../lib/format'
 import { effectiveAdminPct } from '../lib/feeCategories'
@@ -57,11 +57,14 @@ export function AdGroupSim({
   storeId,
   products,
   categories,
+  targets,
 }: {
   storeId: number | null
   products: Product[] | null
   categories: FeeCategory[]
+  targets: Targets
 }) {
+  const adsPct = formatPercent(targets.adsProfit * 100)
   const [rows, setRows] = useState<GroupRow[]>([])
   const [processFee, setProcessFee] = useState<number | null>(DEFAULTS.processFee)
   const [packaging, setPackaging] = useState<number | null>(DEFAULTS.packaging)
@@ -168,6 +171,7 @@ export function AdGroupSim({
           })),
           processFee: processFee ?? 0,
           packaging: packaging ?? 0,
+          targets,
         })
       : null
   const target = group && group.recommendedRoas !== null ? roundUp2(group.recommendedRoas) : null
@@ -201,7 +205,7 @@ export function AdGroupSim({
         ) : target === null ? (
           <>
             <h2 className="font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
-              Grup ini <span className="text-coral-soft">tidak bisa untung 5%</span> setelah iklan.
+              Grup ini <span className="text-coral-soft">tidak bisa untung {adsPct}</span> setelah iklan.
             </h2>
             <p className="mt-3 text-lg text-on-field-muted">
               Untung per barangnya terlalu tipis. Naikkan harga, atau keluarkan produk yang ditandai merah dari grup.
@@ -214,10 +218,10 @@ export function AdGroupSim({
             </h2>
             <p className="mt-3 max-w-3xl text-lg text-on-field-muted">
               {group.recommended === 'safe'
-                ? `Target aman: setiap produk di grup tetap untung 5% setelah iklan, berapa pun porsi penjualannya. Dipakai karena ${
+                ? `Target aman: setiap produk di grup tetap untung ${adsPct} setelah iklan, berapa pun porsi penjualannya. Dipakai karena ${
                     group.hasUnknownQty ? 'ada produk yang porsi penjualannya belum diketahui' : 'porsi penjualan belum diisi'
                   }.`
-                : `Sesuai porsi penjualan${monthLabel ? ` ${monthLabel}` : ''}: grup secara keseluruhan untung 5% setelah iklan.`}
+                : `Sesuai porsi penjualan${monthLabel ? ` ${monthLabel}` : ''}: grup secara keseluruhan untung ${adsPct} setelah iklan.`}
               {group.recommended === 'mix' && group.safeTargetRoas !== null && (
                 <>
                   {' '}
@@ -300,7 +304,7 @@ export function AdGroupSim({
                   hint={
                     group.hasUnknownQty
                       ? 'Produk yang porsinya belum diketahui dianggap laku rata-rata produk lain.'
-                      : 'Grup untung 5% setelah iklan kalau porsi penjualannya seperti ini.'
+                      : `Grup untung ${adsPct} setelah iklan kalau porsi penjualannya seperti ini.`
                   }
                 />
                 <Result
@@ -308,7 +312,7 @@ export function AdGroupSim({
                   value={group.safeTargetRoas !== null ? formatRoas(roundUp2(group.safeTargetRoas)) : TOO_THIN}
                   bad={group.safeTargetRoas === null}
                   strong={group.recommended === 'safe'}
-                  hint="Setiap produk tetap untung 5% setelah iklan, berapa pun porsinya."
+                  hint={`Setiap produk tetap untung ${adsPct} setelah iklan, berapa pun porsinya.`}
                 />
                 <Result
                   label="Balik modal grup"

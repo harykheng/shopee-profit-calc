@@ -70,6 +70,8 @@ export interface MonthlyRecap {
   income_released?: number
   /** Total biaya penyesuaian bulan itu (sudah termasuk di total_income). */
   adjustments?: number
+  /** Modal barang retur yang tidak bisa dijual lagi (sudah termasuk di total_modal). Ada setelah SQL 20261015. */
+  returned_loss?: number
 }
 
 export interface ProductRecap {

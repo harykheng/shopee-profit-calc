@@ -3,15 +3,15 @@ import { Alert, Button, Card, ErrorBox, PageTitle, Stamp, inputClass } from '../
 import { IconCheck, IconSearch } from '../components/icons'
 import { RupiahInput } from '../components/pickers'
 import {
-  ADS_TARGET_PROFIT,
   DEFAULT_FEE_RATE,
-  PRICE_TARGET_MARGIN,
+  DEFAULT_TARGETS,
   XTRA_FEE_RATE,
   analyzeAds,
   priceLadder,
   productKey,
   simulatePrice,
   type PriceLadderRow,
+  type Targets,
   type SuggestedPrice,
 } from '../lib/adsMath'
 import {
@@ -21,9 +21,11 @@ import {
   fetchItemsCreatedBetween,
   fetchLastSalePrice,
   fetchProducts,
+  fetchStoreSettings,
   saveProductFees,
 } from '../lib/api'
 import { effectiveAdminPct } from '../lib/feeCategories'
+import { resolveSettings, targetsOf } from '../lib/storeSettings'
 import { formatDate, formatPercent, formatRupiah } from '../lib/format'
 import { navigate } from '../lib/router'
 import type { FeeCategory, Product, Store } from '../lib/types'
@@ -59,6 +61,8 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
   const [categories, setCategories] = useState<FeeCategory[]>([])
   const [categoriesAvailable, setCategoriesAvailable] = useState(false)
   const [categoryId, setCategoryId] = useState<number | null>(null)
+  // Target untung toko (Akun → Pengaturan hitungan). Bawaan sampai pengaturannya dimuat / kalau belum pernah disimpan.
+  const [targets, setTargets] = useState<Targets>(DEFAULT_TARGETS)
 
   useEffect(() => {
     if (!storeId) return
@@ -71,6 +75,10 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
     setCategories([])
     setCategoriesAvailable(false)
     setCategoryId(null)
+    setTargets(DEFAULT_TARGETS)
+    fetchStoreSettings(storeId)
+      .then((row) => !cancelled && setTargets(targetsOf(resolveSettings(row))))
+      .catch(() => {})
     fetchFeeCategories(storeId)
       .then((list) => {
         if (cancelled) return
@@ -174,6 +182,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
         packaging: packaging ?? 0,
         realisticRoas,
         actualRoas,
+        targets,
       })
     : null
 
@@ -187,6 +196,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
           processFee: processFee ?? 0,
           packaging: packaging ?? 0,
           realisticRoas,
+          targets,
         })
       : null
   const recRow = ladder?.rows.find((x) => x.price === ladder.recommended) ?? null
@@ -242,7 +252,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
 
       {mode === 'grup' ? (
         <div key="grup" className="page-in">
-          <AdGroupSim storeId={storeId} products={products} categories={categories} />
+          <AdGroupSim storeId={storeId} products={products} categories={categories} targets={targets} />
         </div>
       ) : (
         <div key="satu" className="page-in">
@@ -296,7 +306,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                     <span className="num text-lime">{recRow.targetRoas !== null ? formatRoas(roundUp2(recRow.targetRoas)) : '-'}</span>.
                   </h2>
                   <p className="mt-3 max-w-3xl text-lg text-on-field-muted">
-                    Harga terendah yang masih untung 5% setelah iklan kalau ROAS iklan biasanya{' '}
+                    Harga terendah yang masih untung {formatPercent(targets.adsProfit * 100)} setelah iklan kalau ROAS iklan biasanya{' '}
                     <span className="num">{decimal(realisticRoas ?? 0)}</span>. Pilih harga lain di tabel, atau isi harga jual sendiri.
                   </p>
                 </>
@@ -304,7 +314,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                 <>
                   <h2 className="font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
                     Dengan ROAS iklan <span className="num">{decimal(realisticRoas ?? 0)}</span>,{' '}
-                    <span className="text-coral-soft">berapa pun harganya iklan tidak bisa untung 5%</span>.
+                    <span className="text-coral-soft">berapa pun harganya iklan tidak bisa untung {formatPercent(targets.adsProfit * 100)}</span>.
                   </h2>
                   <p className="mt-3 text-lg text-on-field-muted">
                     Potongan Shopee ditambah biaya iklan sudah lebih besar dari harga. Jual tanpa iklan, atau cek lagi ROAS realistisnya.
@@ -419,6 +429,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                   rows={ladder.rows}
                   recommended={ladder.recommended}
                   realisticRoas={realisticRoas ?? 0}
+                  targets={targets}
                   onPick={setPrice}
                 />
               ) : !r ? (
@@ -527,7 +538,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                         strong
                         hint={
                           r.profitable
-                            ? `Supaya masih untung ${formatPercent(ADS_TARGET_PROFIT * 100)} setelah iklan. Belum termasuk cadangan pesanan batal.`
+                            ? `Supaya masih untung ${formatPercent(targets.adsProfit * 100)} setelah iklan. Belum termasuk cadangan pesanan batal.`
                             : undefined
                         }
                       />
@@ -538,14 +549,14 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                         hint={exactHint(r.priceBreakEven, 'Di bawah harga ini, iklan dengan ROAS realistis pasti rugi.')}
                       />
                       <Result
-                        label={`Harga untuk untung ${formatPercent(ADS_TARGET_PROFIT * 100)} setelah iklan`}
+                        label={`Harga untuk untung ${formatPercent(targets.adsProfit * 100)} setelah iklan`}
                         value={priceText(r.priceTargetProfit)}
                         bad={r.priceTargetProfit === null}
                         strong
                         hint={exactHint(r.priceTargetProfit, `Dengan ROAS ${decimal(realisticRoas ?? 0)}.`)}
                       />
                       <Result
-                        label={`Harga untuk untung ${formatPercent(PRICE_TARGET_MARGIN * 100)}`}
+                        label={`Harga untuk untung ${formatPercent(targets.priceMargin * 100)}`}
                         value={priceText(r.priceTargetMargin)}
                         bad={r.priceTargetMargin === null}
                         hint={exactHint(r.priceTargetMargin, 'Sebelum iklan.')}
@@ -610,28 +621,31 @@ async function loadLatestAdRoas(storeId: number): Promise<AdRoasData | null> {
   return { periodLabel, byProduct }
 }
 
-const LADDER_TAGS: Record<PriceLadderRow['tags'][number], string> = {
+const ladderTags = (targets: Targets): Record<PriceLadderRow['tags'][number], string> => ({
   balik_modal: 'Balik modal setelah iklan',
   disarankan: 'Disarankan',
-  untung_20: 'Untung 20% sebelum iklan',
-}
+  untung_20: `Untung ${formatPercent(targets.priceMargin * 100)} sebelum iklan`,
+})
 
 /** Pilihan harga jual untuk modal yang diisi; "Pakai" mengisi harga jual di kiri. */
 function PriceLadderCard({
   rows,
   recommended,
   realisticRoas,
+  targets,
   onPick,
 }: {
   rows: PriceLadderRow[]
   recommended: number | null
   realisticRoas: number
+  targets: Targets
   onPick: (price: number) => void
 }) {
+  const LADDER_TAGS = ladderTags(targets)
   return (
     <Card title="Pilih harga jual">
       <p className="-mt-2 mb-4 text-sm text-ink-muted">
-        Semua harga dibulatkan ke atas ke Rp1.000. Target ROAS = yang diisi di Shopee supaya untung 5% setelah iklan.
+        Semua harga dibulatkan ke atas ke Rp1.000. Target ROAS = yang diisi di Shopee supaya untung {formatPercent(targets.adsProfit * 100)} setelah iklan.
       </p>
       <ul className="space-y-2">
         {rows.map((x) => {

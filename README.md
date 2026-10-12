@@ -86,6 +86,14 @@ menghapus data.
 > Sudah setup sebelum 6 Oktober 2026? Jalankan sekali file `20261006000000_ads.sql` supaya
 > halaman **Iklan** bisa dipakai.
 
+> Sudah setup sebelum 15 Oktober 2026? Jalankan sekali file `20261015000000_store_settings.sql`
+> (aman diulang, tidak mengubah data) supaya target untung dan pengaturan retur per toko bisa
+> dipakai (halaman Akun → Pengaturan hitungan). Tanpa pengaturan yang disimpan, semua angka sama
+> seperti sebelumnya (5% setelah iklan, 20% harga jual, retur kembali ke stok). File ini juga
+> mengganti dua view Rekap (`monthly_recap`, `product_monthly_recap`) agar modal bisa menghitung
+> barang retur yang tidak bisa dijual lagi, dan menambah kolom `returned_loss` di akhir
+> `monthly_recap`. Tanpa file ini, aplikasi tetap jalan dengan nilai bawaan.
+
 > Sudah setup sebelum 14 Oktober 2026? Jalankan sekali file `20261014000000_fee_categories.sql`
 > (aman diulang, tidak mengubah data; butuh PostgreSQL 15+, standar di Supabase) supaya
 > "Kategori biaya admin" di Simulasi Harga bisa dipakai. Tanpa file itu, aplikasi tetap jalan:
@@ -284,7 +292,7 @@ membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
    di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
    free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
 2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
-   satu per satu, dari `20260930000000_init.sql` sampai `20261014000000_fee_categories.sql`.
+   satu per satu, dari `20260930000000_init.sql` sampai `20261015000000_store_settings.sql`.
 3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
    hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
 

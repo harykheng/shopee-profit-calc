@@ -1,5 +1,6 @@
 // Semua akses ke Supabase ada di sini.
 import type { AdRow, AdsParseResult } from './parsers/ads'
+import type { SettingsPercent, StoreSettingsRow } from './storeSettings'
 import type { IncomeAdjustment, IncomeDayRow } from './parsers/income'
 import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
@@ -173,6 +174,29 @@ export async function saveProductFees(
       .update({ admin_pct: adminPct, xtra, ...(categoryId !== undefined ? { fee_category_id: categoryId } : {}) })
       .eq('store_id', storeId)
       .eq('product_name', productName),
+  )
+}
+
+// --- Pengaturan hitungan per toko -------------------------------------------
+
+/** Baris pengaturan toko; null kalau toko belum pernah menyimpan (artinya semua nilai bawaan). */
+export async function fetchStoreSettings(storeId: number): Promise<StoreSettingsRow | null> {
+  return check(
+    await supabase.from('store_settings').select('*').eq('store_id', storeId).maybeSingle(),
+  ) as StoreSettingsRow | null
+}
+
+export async function saveStoreSettings(storeId: number, v: SettingsPercent) {
+  check(
+    await supabase.from('store_settings').upsert(
+      {
+        store_id: storeId,
+        ads_target_profit_pct: v.adsTargetProfitPct,
+        price_target_margin_pct: v.priceTargetMarginPct,
+        return_recovery_pct: v.returnRecoveryPct,
+      },
+      { onConflict: 'store_id' },
+    ),
   )
 }
 

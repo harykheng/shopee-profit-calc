@@ -18,6 +18,7 @@ Untuk setup database dan deploy, lihat [README.md](README.md).
 9. [Halaman Simulasi Harga](#9-halaman-simulasi-harga)
 10. [Pertanyaan yang sering muncul](#10-pertanyaan-yang-sering-muncul)
 11. [Kamus istilah](#11-kamus-istilah)
+12. [Akun dan pengaturan hitungan](#12-akun-dan-pengaturan-hitungan)
 
 ---
 
@@ -186,6 +187,12 @@ Dibaca dari atas ke bawah:
 ```
 
 - **Barang terjual** = jumlah pcs/unit yang selesai dan uangnya cair bulan itu.
+- **Barang retur.** Uang barang yang diretur sudah dikembalikan ke pembeli (sudah terpotong di uang
+  masuk). Secara bawaan, aplikasi menganggap barang retur **kembali ke stok**, jadi modalnya tidak
+  dihitung hilang. Kalau barang retur tokomu biasanya rusak atau tidak bisa dijual lagi, turunkan
+  "Barang retur yang bisa dijual lagi" di **Akun → Pengaturan hitungan**. Modal barang retur yang
+  hilang lalu ikut dihitung di baris Modal ("termasuk Rp… dari barang retur yang tidak bisa dijual
+  lagi").
 - Tombol **ⓘ Kenapa X, bukan Y?** menjelaskan kenapa jumlah barang terjual beda dengan barang yang
   dipesan bulan itu (ada yang batal, masih dikirim, retur, atau selesai bulan berikutnya).
 
@@ -550,3 +557,35 @@ disimpan**. File dibaca langsung di browser.
 | **Takedown** | Matikan iklan produk itu |
 | **Hero** | Produk yang iklannya paling menghasilkan |
 | **Angka final** | Semua data bulan itu lengkap; untung bersih adalah angka pasti |
+
+---
+
+## 12. Akun dan pengaturan hitungan
+
+Buka lewat ikon orang di pojok kanan atas.
+
+### Pengaturan hitungan (per toko)
+
+Tiga angka yang sebelumnya sama untuk semua toko. Sekarang tiap toko boleh punya sendiri:
+
+| Pengaturan | Artinya | Bawaan |
+|---|---|---|
+| **Target untung setelah iklan** | Untung yang kamu inginkan dari harga jual setelah dikurangi potongan Shopee, modal, dan iklan. Menentukan saran target ROAS (Simulasi Harga) dan label Hero / Aman / ROAS terlalu kecil / Takedown di halaman Iklan | 5% |
+| **Target untung harga jual** | Untung yang kamu inginkan dari harga jual sebelum iklan. Menentukan saran harga; produk yang untungnya di bawah angka ini diberi saran menaikkan harga | 20% |
+| **Barang retur yang bisa dijual lagi** | 100% = barang retur kembali ke stok (modalnya tidak hilang). 0% = seluruh modal barang retur dihitung sebagai kerugian | 100% |
+
+Contoh: kalau margin produkmu memang tipis (mis. 12%), target 5% setelah iklan akan membuat hampir
+semua iklan berlabel "ROAS terlalu kecil". Turunkan targetnya ke 2–3% supaya label mencerminkan
+kenyataan tokomu.
+
+Yang perlu diingat:
+
+- Kolom yang dikosongkan kembali ke angka bawaan. Tombol **Kembalikan ke bawaan** mengisi semuanya.
+- Target hanya mengubah **saran dan label**, bukan uang yang sebenarnya diterima.
+- Pengaturan **retur** mengubah angka Rekap, dan berlaku untuk **semua bulan** (bulan lama ikut
+  dihitung ulang). Harga jual dan HPP yang tersimpan tidak berubah.
+- Kalau langganan habis, pengaturan hanya bisa dilihat.
+
+### Ganti password
+
+Dijelaskan di banner kuning bagian atas selama kamu masih memakai password dari admin.

@@ -4,10 +4,20 @@ import type { AdRow } from './parsers/ads'
 import type { AdSource, StatusGroup } from './shopeeColumns'
 import { ADS_CSV } from './shopeeColumns'
 
-/** Target untung bersih setelah iklan (5% dari harga jual). */
+/** Target untung bersih setelah iklan (5% dari harga jual). Bawaan; tiap toko boleh mengubahnya (store_settings). */
 export const ADS_TARGET_PROFIT = 0.05
-/** Target untung harga jual setelah potongan Shopee, sebelum iklan & packaging. */
+/** Target untung harga jual setelah potongan Shopee, sebelum iklan & packaging. Bawaan; bisa diubah per toko. */
 export const PRICE_TARGET_MARGIN = 0.2
+
+/** Target untung yang dipakai semua hitungan saran (pecahan 0–1). */
+export interface Targets {
+  /** Untung bersih yang diinginkan setelah iklan, dari harga jual. */
+  adsProfit: number
+  /** Untung yang diinginkan dari harga jual, setelah potongan Shopee dan sebelum iklan. */
+  priceMargin: number
+}
+
+export const DEFAULT_TARGETS: Targets = { adsProfit: ADS_TARGET_PROFIT, priceMargin: PRICE_TARGET_MARGIN }
 /** Potongan Shopee kalau laporan penghasilan belum ada. */
 export const DEFAULT_FEE_RATE = 0.15
 /** Minimal terjual (bersih) sebelum produk diberi label pasti. */
@@ -136,8 +146,9 @@ export function feeRateFromIncome(days: { total_income: number; subtotal_pesanan
 export function targetRoasFromMargin(
   margin: number | null,
   batalShare = 0,
+  adsProfit = ADS_TARGET_PROFIT,
 ): { targetRoas: number | null; shopeeTargetRoas: number | null } {
-  const rawTarget = margin !== null && margin > ADS_TARGET_PROFIT ? 1 / (margin - ADS_TARGET_PROFIT) : null
+  const rawTarget = margin !== null && margin > adsProfit ? 1 / (margin - adsProfit) : null
   const targetRoas = rawTarget !== null && rawTarget <= MAX_TARGET_ROAS ? rawTarget : null
   const shopeeTarget = targetRoas !== null && batalShare < 1 ? targetRoas / (1 - batalShare) : null
   const shopeeTargetRoas = shopeeTarget !== null && shopeeTarget <= MAX_TARGET_ROAS ? shopeeTarget : null
@@ -183,8 +194,11 @@ export function analyzeAds(input: {
    * di sini memakai rata-rata toko apa adanya. Kosong/tidak diisi = semua produk memakai rata-rata toko.
    */
   feeComponents?: Map<string, number>
+  /** Target untung toko; kosong = bawaan. */
+  targets?: Targets
 }): AdsAnalysis {
   const { reports, orders, feeRate } = input
+  const targets = input.targets ?? DEFAULT_TARGETS
   const bySource = (s: AdSource) => reports.filter((r) => r.source === s).flatMap((r) => r.rows)
   const all = bySource('keseluruhan')
   const breakdown = [...bySource('otomatis'), ...bySource('grup')]
@@ -291,12 +305,14 @@ export function analyzeAds(input: {
     const unitProfit = price !== null && hpp !== null ? price * (1 - productFee) - hpp : null
     const margin = unitProfit !== null && price ? unitProfit / price : null
     const bepRoas = margin !== null && margin > 0 ? 1 / margin : null
-    const { targetRoas, shopeeTargetRoas } = targetRoasFromMargin(margin, batalShare)
+    const { targetRoas, shopeeTargetRoas } = targetRoasFromMargin(margin, batalShare, targets.adsProfit)
     const realRoas = a.spend > 0 ? netGmv / a.spend : null
     const profitAfterAds = unitProfit !== null ? netSold * unitProfit - a.spend : null
+    // Penyebut ≤ 0 (potongan + target untung ≥ 100%) = tidak ada harga yang memenuhi target.
+    const idealDenominator = 1 - productFee - targets.priceMargin
     const idealPrice =
-      hpp !== null && margin !== null && margin < PRICE_TARGET_MARGIN
-        ? hpp / (1 - productFee - PRICE_TARGET_MARGIN)
+      hpp !== null && margin !== null && margin < targets.priceMargin && idealDenominator > 0
+        ? hpp / idealDenominator
         : null
 
     products.push({
@@ -399,6 +415,8 @@ export interface PriceSimInput {
   processFee: number
   /** Packaging per order (Rp). */
   packaging: number
+  /** Target untung toko; kosong = bawaan (5% setelah iklan, 20% sebelum iklan). */
+  targets?: Targets
   /** ROAS yang biasa didapat di iklan. */
   realisticRoas: number
   /** ROAS aktual iklan produk ini (opsional). */
@@ -449,6 +467,7 @@ export function roundUpToThousand(value: number): number {
  */
 export function simulatePrice(input: PriceSimInput): PriceSimResult {
   const { hpp, price, adminRate, xtra, processFee, packaging, realisticRoas, actualRoas } = input
+  const targets = input.targets ?? DEFAULT_TARGETS
   const xtraRate = xtra ? XTRA_FEE_RATE : 0
   const adminFee = price * adminRate
   const xtraFee = price * xtraRate
@@ -480,10 +499,10 @@ export function simulatePrice(input: PriceSimInput): PriceSimResult {
     margin,
     profitable,
     bepRoas: profitable ? price / profit : null,
-    targetRoas: profitable ? targetRoasFromMargin(margin, 0).shopeeTargetRoas : null,
+    targetRoas: profitable ? targetRoasFromMargin(margin, 0, targets.adsProfit).shopeeTargetRoas : null,
     priceBreakEven: priceFor(adShare),
-    priceTargetProfit: priceFor(adShare + ADS_TARGET_PROFIT),
-    priceTargetMargin: priceFor(PRICE_TARGET_MARGIN),
+    priceTargetProfit: priceFor(adShare + targets.adsProfit),
+    priceTargetMargin: priceFor(targets.priceMargin),
     actual: adCost !== null ? { adCost, profitAfterAds: profit - adCost } : null,
   }
 }
@@ -543,7 +562,10 @@ export function simulateAdGroup(input: {
   rows: AdGroupRowInput[]
   processFee: number
   packaging: number
+  /** Target untung toko; kosong = bawaan. */
+  targets?: Targets
 }): AdGroupResult {
+  const targets = input.targets ?? DEFAULT_TARGETS
   const known = input.rows.map((r) => r.qty).filter((q): q is number => q !== null && q > 0)
   const fallbackWeight = known.length > 0 ? known.reduce((s, q) => s + q, 0) / known.length : 1
   const rows = input.rows.map((r): AdGroupRowResult => {
@@ -555,13 +577,14 @@ export function simulateAdGroup(input: {
       processFee: input.processFee,
       packaging: input.packaging,
       realisticRoas: 1,
+      targets,
     })
     const estimated = r.qty === null
     return {
       profit: sim.profit,
       margin: sim.margin,
       bepRoas: sim.bepRoas,
-      targetRoas: sim.profitable ? targetRoasFromMargin(sim.margin, 0).shopeeTargetRoas : null,
+      targetRoas: sim.profitable ? targetRoasFromMargin(sim.margin, 0, targets.adsProfit).shopeeTargetRoas : null,
       weight: estimated ? fallbackWeight : Math.max(0, r.qty ?? 0),
       weightEstimated: estimated,
     }
@@ -571,7 +594,8 @@ export function simulateAdGroup(input: {
   const profit = rows.reduce((s, r) => s + r.profit * r.weight, 0)
   const mixMargin = gmv > 0 ? profit / gmv : null
   const mixBepRoas = mixMargin !== null && profit > 0 ? gmv / profit : null
-  const mixTargetRoas = mixMargin !== null && profit > 0 ? targetRoasFromMargin(mixMargin, 0).shopeeTargetRoas : null
+  const mixTargetRoas =
+    mixMargin !== null && profit > 0 ? targetRoasFromMargin(mixMargin, 0, targets.adsProfit).shopeeTargetRoas : null
   const safeTargetRoas =
     rows.length > 0 && rows.every((r) => r.targetRoas !== null) ? Math.max(...rows.map((r) => r.targetRoas as number)) : null
   const hasUnknownQty = rows.some((r) => r.weightEstimated)

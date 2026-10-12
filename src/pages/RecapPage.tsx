@@ -15,6 +15,7 @@ import {
   fetchReconciliation,
   fetchReturnedItems,
   fetchSetupProgress,
+  fetchStoreSettings,
   type SetupProgress,
   recalcHpp,
   type CreatedItem,
@@ -22,6 +23,7 @@ import {
 import { addMonths, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '../lib/format'
 import { monthStatus, type MonthStatus } from '../lib/monthStatus'
 import { estimateProfit, soldFlow, type FlowStep, type ProfitEstimate } from '../lib/recapMath'
+import { resolveSettings } from '../lib/storeSettings'
 import { navigate } from '../lib/router'
 import { fullMonthOf } from '../lib/adsMath'
 import { loadAdsAnalysis, type Period as AdsPeriod } from './AdsPage'
@@ -100,13 +102,15 @@ export function RecapPage({
     }
     // Dimuat terpisah: kalau gagal (mis. SQL ke-3 belum dijalankan), untung bersih tetap tampil.
     try {
-      const [groups, withoutCreatedAt, createdItems, earlierCompleted, productList, incomeDays] = await Promise.all([
+      const [groups, withoutCreatedAt, createdItems, earlierCompleted, productList, incomeDays, settingsRow] = await Promise.all([
         fetchOrdersByCreated(storeId, from, end),
         countItemsWithoutCreatedAt(storeId),
         fetchCreatedItems(storeId, from, end),
         fetchEarlierOrdersCompleted(storeId, from, end),
         fetchProducts(storeId),
         fetchIncomeDays(storeId, from),
+        // Belum ada pengaturan / SQL 20261015 belum dijalankan: pakai bawaan (retur kembali ke stok).
+        fetchStoreSettings(storeId).catch(() => null),
       ])
       const hppBySku = new Map(productList.map((p) => [p.sku, p.hpp === null ? null : Number(p.hpp)]))
       const estimate = estimateProfit(
@@ -124,6 +128,7 @@ export function RecapPage({
           total_income: Number(d.total_income),
           subtotal_pesanan: Number(d.subtotal_pesanan),
         })),
+        resolveSettings(settingsRow).returnRecovery,
       )
       setOrders({ groups, withoutCreatedAt, createdItems, earlierCompleted, estimate })
     } catch (e) {
@@ -401,11 +406,12 @@ function NotaCard({
       income: a.income + Number(m.total_income),
       adjustments: a.adjustments + Number(m.adjustments ?? 0),
       modal: a.modal + Number(m.total_modal),
+      returnedLoss: a.returnedLoss + Number(m.returned_loss ?? 0),
       expenses: a.expenses + Number(m.total_expenses),
       profit: a.profit + Number(m.net_profit),
       qty: a.qty + Number(m.total_qty),
     }),
-    { income: 0, adjustments: 0, modal: 0, expenses: 0, profit: 0, qty: 0 },
+    { income: 0, adjustments: 0, modal: 0, returnedLoss: 0, expenses: 0, profit: 0, qty: 0 },
   )
   const statuses = data.months.map((m) => ({ month: m.month, status: monthStatus(m, data.reconciliation) }))
   const todoCount = statuses.reduce((n, s) => n + todos(s.status).length, 0)
@@ -530,6 +536,7 @@ function NotaCard({
               detail={
                 <>
                   {formatNumber(t.qty)} barang × HPP masing-masing
+                  {t.returnedLoss > 0 && <> · termasuk {formatRupiah(t.returnedLoss)} dari barang retur yang tidak bisa dijual lagi</>}
                   {singleMonth && !readOnly && (
                     <>
                       {' · '}

@@ -8,14 +8,13 @@ import {
   fetchItemsCreatedBetween,
   fetchFeeCategories,
   fetchProducts,
+  fetchStoreSettings,
   findAdShopElsewhere,
   saveAdReport,
   saveAdsExpense,
 } from '../lib/api'
 import {
-  ADS_TARGET_PROFIT,
   DEFAULT_FEE_RATE,
-  PRICE_TARGET_MARGIN,
   analyzeAds,
   feeRateFromIncome,
   fullMonthOf,
@@ -23,8 +22,10 @@ import {
   type AdProductResult,
   type AdVerdict,
   type AdsAnalysis,
+  type Targets,
 } from '../lib/adsMath'
 import { productFeeComponents } from '../lib/feeCategories'
+import { resolveSettings, targetsOf } from '../lib/storeSettings'
 import { addMonths, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort, monthEnd, wibDay } from '../lib/format'
 import { ParseError } from '../lib/parsers/common'
 import { parseAdsCsv, type AdsParseResult } from '../lib/parsers/ads'
@@ -613,6 +614,8 @@ function UploadCard({
 // --- Analisis -----------------------------------------------------------------
 
 export interface Loaded {
+  /** Target untung toko yang dipakai untuk analisis ini (bawaan 5% setelah iklan, 20% sebelum iklan). */
+  targets: Targets
   analysis: AdsAnalysis
   feeRate: number
   feeFrom: string | null
@@ -625,14 +628,17 @@ export interface Loaded {
 export async function loadAdsAnalysis(storeId: number, period: Period): Promise<Loaded> {
   const monthStart = `${period.start.slice(0, 7)}-01`
   const lastMonth = `${period.end.slice(0, 7)}-01`
-  const [reports, items, products, incomeDays, categories] = await Promise.all([
+  const [reports, items, products, incomeDays, categories, settingsRow] = await Promise.all([
     fetchAdRows(period.reports),
     fetchItemsCreatedBetween(storeId, period.start, period.end),
     fetchProducts(storeId),
     fetchIncomeDays(storeId, addMonths(monthStart, -3), monthEnd(lastMonth)),
     // Kategori admin belum tentu ada (SQL 20261014 belum dijalankan): tanpa itu, hanya isian manual yang dipakai.
     fetchFeeCategories(storeId).catch(() => []),
+    // Belum ada pengaturan / SQL 20261015 belum dijalankan: target bawaan.
+    fetchStoreSettings(storeId).catch(() => null),
   ])
+  const targets = targetsOf(resolveSettings(settingsRow))
   const feeComponents = productFeeComponents(products, categories)
 
   // Potongan Shopee: bulan periode iklan; kalau belum ada, 3 bulan sebelumnya; kalau tidak ada juga, 15%.
@@ -663,7 +669,7 @@ export async function loadAdsAnalysis(storeId: number, period: Period): Promise<
     hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
   })
   const rate = feeRate ?? DEFAULT_FEE_RATE
-  const analysis = analyzeAds({ reports, orders: items.map(toLine), feeRate: rate, fallbackHpp, feeComponents })
+  const analysis = analyzeAds({ reports, orders: items.map(toLine), feeRate: rate, fallbackHpp, feeComponents, targets })
   // Gabungan: hitung juga per bulan (data iklan & pesanan bulan itu saja) untuk dibandingkan.
   const perMonth =
     period.months && period.months.length > 1
@@ -675,10 +681,11 @@ export async function loadAdsAnalysis(storeId: number, period: Period): Promise<
             feeRate: rate,
             fallbackHpp,
             feeComponents,
+            targets,
           }),
         }))
       : undefined
-  return { analysis, feeRate: rate, feeFrom, hasOrders: items.length > 0, perMonth }
+  return { targets, analysis, feeRate: rate, feeFrom, hasOrders: items.length > 0, perMonth }
 }
 
 function Analysis({ storeId, period }: { storeId: number; period: Period }) {
@@ -785,6 +792,7 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
           <ProductCard
             key={p.code}
             p={p}
+            targets={data.targets}
             months={data.perMonth ? (productMonths.get(p.code) ?? []) : undefined}
             stampDelay={Math.min(i, 8) * 60}
           />
@@ -811,7 +819,7 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
         </details>
       )}
 
-      <HowToRead feeRate={data.feeRate} />
+      <HowToRead feeRate={data.feeRate} targets={data.targets} />
     </div>
   )
 }
@@ -973,7 +981,8 @@ function Line({
   )
 }
 
-function advice(p: AdProductResult): string {
+function advice(p: AdProductResult, targets: Targets): string {
+  const adsPct = formatPercent(targets.adsProfit * 100)
   const target = p.shopeeTargetRoas !== null ? formatRoas(roundUp1(p.shopeeTargetRoas)) : null
   const ideal = p.idealPrice !== null ? formatRupiah(roundUpPrice(p.idealPrice)) : null
   switch (p.verdict) {
@@ -986,8 +995,8 @@ function advice(p: AdProductResult): string {
       return `ROAS nyata di bawah balik modal. Matikan iklan, atau naikkan target ROAS di Shopee ke ${target}.`
     case 'kurang':
       if (target === null)
-        return `Target untung 5% tidak mungkin dengan harga sekarang. Naikkan harga${ideal ? ` ke ±${ideal}` : ''}.`
-      return `${(p.profitAfterAds ?? 0) >= 0 ? 'Masih untung, tapi' : 'Rugi tipis,'} belum sampai target 5%. Naikkan target ROAS di Shopee ke ${target}.`
+        return `Target untung ${adsPct} tidak mungkin dengan harga sekarang. Naikkan harga${ideal ? ` ke ±${ideal}` : ''}.`
+      return `${(p.profitAfterAds ?? 0) >= 0 ? 'Masih untung, tapi' : 'Rugi tipis,'} belum sampai target ${adsPct}. Naikkan target ROAS di Shopee ke ${target}.`
     case 'hero':
       return `Iklan ini menghasilkan. Pertahankan${target ? ` (target ROAS minimal ${target})` : ''}; budget boleh dinaikkan.`
     case 'aman':
@@ -1001,7 +1010,17 @@ function advice(p: AdProductResult): string {
 
 type MonthFigure = { month: string; p: AdProductResult }
 
-function ProductCard({ p, months, stampDelay = 0 }: { p: AdProductResult; months?: MonthFigure[]; stampDelay?: number }) {
+function ProductCard({
+  p,
+  targets,
+  months,
+  stampDelay = 0,
+}: {
+  p: AdProductResult
+  targets: Targets
+  months?: MonthFigure[]
+  stampDelay?: number
+}) {
   const v = VERDICTS[p.verdict]
   const sold = Math.round(p.netSold)
   return (
@@ -1058,12 +1077,12 @@ function ProductCard({ p, months, stampDelay = 0 }: { p: AdProductResult; months
         </p>
       )}
 
-      {p.margin !== null && p.margin < PRICE_TARGET_MARGIN && p.idealPrice !== null && (
+      {p.margin !== null && p.margin < targets.priceMargin && p.idealPrice !== null && (
         <p className="mt-3 flex gap-2 text-sm text-warn">
           <IconAlertCircle size={18} className="mt-px shrink-0" />
           <span>
-            Untung harga di bawah {formatPercent(PRICE_TARGET_MARGIN * 100)}. Harga sekarang ±{formatRupiah(p.price)};
-            supaya {formatPercent(PRICE_TARGET_MARGIN * 100)}:{' '}
+            Untung harga di bawah {formatPercent(targets.priceMargin * 100)}. Harga sekarang ±{formatRupiah(p.price)};
+            supaya {formatPercent(targets.priceMargin * 100)}:{' '}
             <strong className="num">±{formatRupiah(roundUpPrice(p.idealPrice))}</strong>
           </span>
         </p>
@@ -1090,7 +1109,7 @@ function ProductCard({ p, months, stampDelay = 0 }: { p: AdProductResult; months
         </div>
       )}
 
-      <p className="mt-auto rounded-md bg-counter/70 px-3 py-2.5 text-ink [margin-top:max(0.75rem,auto)]">{advice(p)}</p>
+      <p className="mt-auto rounded-md bg-counter/70 px-3 py-2.5 text-ink [margin-top:max(0.75rem,auto)]">{advice(p, targets)}</p>
       {p.verdict === 'hpp_kosong' && (
         <Button variant="secondary" className="mt-3 self-start" onClick={() => navigate('hpp', { kosong: '1' })}>
           Isi HPP
@@ -1147,7 +1166,7 @@ function FeeCoverage({ products }: { products: AdProductResult[] }) {
   )
 }
 
-function HowToRead({ feeRate }: { feeRate: number }) {
+function HowToRead({ feeRate, targets }: { feeRate: number; targets: Targets }) {
   return (
     <details className="rounded-3xl bg-paper p-5 shadow-sheet">
       <summary className="flex cursor-pointer items-center gap-2 font-semibold">
@@ -1172,7 +1191,7 @@ function HowToRead({ feeRate }: { feeRate: number }) {
         </li>
         <li>
           <strong>Saran target ROAS di Shopee</strong>: angka untuk diisi di pengaturan iklan (GMV Max ROAS) supaya masih
-          untung {formatPercent(ADS_TARGET_PROFIT * 100)} dari harga jual setelah iklan. Sudah termasuk cadangan untuk
+          untung {formatPercent(targets.adsProfit * 100)} dari harga jual setelah iklan. Sudah termasuk cadangan untuk
           pesanan batal.
         </li>
         <li>
@@ -1182,15 +1201,23 @@ function HowToRead({ feeRate }: { feeRate: number }) {
             <span><Stamp tone="gain" tilt={false} className="!text-xs">Aman</Stamp> sesuai target</span>
             <span>
               <Stamp tone="warn" tilt={false} className="!text-xs">ROAS terlalu kecil</Stamp> di atas balik modal, untung belum{' '}
-              {formatPercent(ADS_TARGET_PROFIT * 100)}
+              {formatPercent(targets.adsProfit * 100)}
             </span>
             <span><Stamp tone="loss" tilt={false} className="!text-xs">Takedown</Stamp> iklan rugi</span>
             <span><Stamp tone="neutral" tilt={false} className="!text-xs">Data belum cukup</Stamp> terjual kurang dari 3</span>
           </span>
         </li>
         <li>
-          Harga untuk untung {formatPercent(PRICE_TARGET_MARGIN * 100)} = HPP ÷ (1 − potongan Shopee −{' '}
-          {formatPercent(PRICE_TARGET_MARGIN * 100)}).
+          Harga untuk untung {formatPercent(targets.priceMargin * 100)} = HPP ÷ (1 − potongan Shopee −{' '}
+          {formatPercent(targets.priceMargin * 100)}).
+        </li>
+        <li>
+          Target untung {formatPercent(targets.adsProfit * 100)} (setelah iklan) dan {formatPercent(targets.priceMargin * 100)}{' '}
+          (harga jual) adalah pengaturan tokomu.{' '}
+          <button type="button" className="font-semibold text-stamp underline" onClick={() => navigate('akun')}>
+            Ubah di halaman Akun
+          </button>
+          .
         </li>
       </ul>
     </details>

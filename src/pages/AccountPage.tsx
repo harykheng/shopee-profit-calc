@@ -2,9 +2,26 @@ import { useState, type FormEvent } from 'react'
 import { Alert, Button, Card, ErrorBox, PageTitle, inputClass } from '../components/ui'
 import { MIN_PASSWORD_LENGTH, validateNewPassword } from '../lib/password'
 import { supabase } from '../lib/supabase'
+import type { Store } from '../lib/types'
+import { StoreSettingsCard } from './StoreSettings'
 
 /** Akun: email dan ganti password. Bisa dibuka walau langganan habis atau belum punya toko. */
-export function AccountPage({ email, mustChange }: { email: string; mustChange: boolean }) {
+export function AccountPage({
+  email,
+  mustChange,
+  stores,
+  storeId,
+  readOnly,
+}: {
+  email: string
+  mustChange: boolean
+  /** null = daftar toko belum selesai dimuat. */
+  stores: Store[] | null
+  storeId: number | null
+  /** Langganan toko terpilih habis: pengaturan toko hanya bisa dilihat. */
+  readOnly: boolean
+}) {
+  const store = stores?.find((s) => s.id === storeId) ?? null
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
@@ -35,6 +52,15 @@ export function AccountPage({ email, mustChange }: { email: string; mustChange: 
   return (
     <>
       <PageTitle subtitle={`Masuk sebagai ${email || '-'}`}>Akun</PageTitle>
+
+      {store && (
+        <StoreSettingsCard
+          storeId={store.id}
+          storeName={store.name}
+          showStoreName={(stores?.length ?? 0) > 1}
+          readOnly={readOnly}
+        />
+      )}
 
       <Card title="Ganti password" className="max-w-xl">
         {mustChange && (

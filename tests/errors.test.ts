@@ -44,3 +44,11 @@ describe('friendlyError: kategori biaya admin', () => {
     expect(adminHint(e)).toContain('20261014000000_fee_categories.sql')
   })
 })
+
+describe('friendlyError: pengaturan toko', () => {
+  it('tabel belum ada: pesan umum untuk pelanggan, file untuk pengelola', () => {
+    const e = new Error("Could not find the table 'public.store_settings' in the schema cache")
+    expect(friendlyError(e)).toMatch(/gangguan di sistem/)
+    expect(adminHint(e)).toContain('20261015000000_store_settings.sql')
+  })
+})
