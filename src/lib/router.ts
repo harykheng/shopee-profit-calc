@@ -1,5 +1,5 @@
 // Navigasi sederhana berbasis hash: "#/hpp?kosong=1".
-export type Route = 'upload' | 'hpp' | 'biaya' | 'rekap' | 'iklan' | 'simulasi'
+export type Route = 'upload' | 'hpp' | 'biaya' | 'rekap' | 'iklan' | 'simulasi' | 'akun'
 
 /** `short`: label pendek untuk layar kecil (supaya menu tetap muat). */
 export const ROUTES: { route: Route; label: string; short?: string }[] = [
@@ -9,6 +9,8 @@ export const ROUTES: { route: Route; label: string; short?: string }[] = [
   { route: 'rekap', label: 'Rekap' },
   { route: 'iklan', label: 'Iklan' },
   { route: 'simulasi', label: 'Simulasi Harga', short: 'Simulasi' },
+  // Tidak ada di menu utama; dibuka dari ikon akun di header dan banner ganti password.
+  { route: 'akun', label: 'Akun' },
 ]
 
 export function readHash(): { route: Route; params: URLSearchParams } {

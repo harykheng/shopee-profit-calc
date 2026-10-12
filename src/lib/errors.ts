@@ -35,6 +35,13 @@ export function friendlyError(err: unknown): string {
   if (lower.includes('jwt') || lower.includes('not authenticated') || lower.includes('refresh token')) {
     return 'Sesi login sudah habis. Silakan keluar lalu login lagi.'
   }
+  if (lower.includes('different from the old password')) return 'Password baru harus berbeda dari password yang sekarang.'
+  if (lower.includes('password should be') || lower.includes('weak password')) {
+    return 'Password terlalu lemah. Pakai minimal 8 karakter, campuran huruf dan angka.'
+  }
+  if (lower.includes('reauthentication') || lower.includes('recently logged in')) {
+    return 'Demi keamanan, keluar lalu login lagi, kemudian coba ganti password sekali lagi.'
+  }
   if (lower.includes('failed to fetch') || lower.includes('network') || lower.includes('load failed')) {
     return 'Tidak bisa terhubung ke server. Cek koneksi internet, lalu coba lagi.'
   }

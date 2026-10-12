@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
+import type { Session, User } from '@supabase/supabase-js'
 import { Alert, ErrorBox, Spinner, SupportLink } from './components/ui'
 import { APP_NAME } from './lib/brand'
 import { formatDate } from './lib/format'
 import { expiryNotice, subscriptionStatus } from './lib/subscription'
+import { needsPasswordChange } from './lib/password'
 import { fetchStores } from './lib/api'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import type { Store } from './lib/types'
@@ -13,10 +14,11 @@ import { HppPage } from './pages/HppPage'
 import { ExpensesPage } from './pages/ExpensesPage'
 import { RecapPage } from './pages/RecapPage'
 import { AdsPage } from './pages/AdsPage'
+import { AccountPage } from './pages/AccountPage'
 import { PriceSimPage } from './pages/PriceSimPage'
 import { ROUTES, readHash, type Route } from './lib/router'
 import { useActiveIndicator } from './components/motion'
-import { IconCalculator, IconChevronDown, IconLogout, IconMegaphone, IconReceipt, IconStore, IconTag, IconUpload, IconWallet } from './components/icons'
+import { IconCalculator, IconChevronDown, IconLogout, IconMegaphone, IconReceipt, IconStore, IconTag, IconUpload, IconUser, IconWallet } from './components/icons'
 
 // Hasil dulu (Rekap, Iklan, Simulasi), lalu input bulanan (Upload, HPP, Biaya).
 const NAV_ORDER: Route[] = ['rekap', 'iklan', 'simulasi', 'upload', 'hpp', 'biaya']
@@ -25,6 +27,7 @@ const NAV_ICONS: Record<Route, typeof IconUpload> = {
   rekap: IconReceipt,
   iklan: IconMegaphone,
   simulasi: IconCalculator,
+  akun: IconUser,
   upload: IconUpload,
   hpp: IconTag,
   biaya: IconWallet,
@@ -113,10 +116,12 @@ export default function App() {
   }
   if (!authReady) return <Spinner />
   if (!session) return <LoginPage />
-  return <MainApp email={session.user.email ?? ''} />
+  return <MainApp user={session.user} />
 }
 
-function MainApp({ email }: { email: string }) {
+function MainApp({ user }: { user: User }) {
+  const email = user.email ?? ''
+  const mustChangePassword = needsPasswordChange(user)
   const [{ route, params }, setLocation] = useState(readHash)
   const topRef = useRef<HTMLElement>(null)
   const barRef = useRef<HTMLElement>(null)
@@ -189,6 +194,22 @@ function MainApp({ email }: { email: string }) {
   return (
     <div className="min-h-screen pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
       <header className="on-field sticky top-0 z-10 bg-field/90 backdrop-blur-md">
+        {/* Selalu tampil (ikut menempel di atas) sampai pelanggan mengganti password dari admin. */}
+        {mustChangePassword && route !== 'akun' && (
+          <div role="region" aria-label="Pengingat ganti password" className="bg-[#ffcf5c] text-ink">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
+              <p className="min-w-0 flex-1 font-semibold">
+                Kamu masih memakai password dari admin. Ganti sekarang supaya akunmu aman.
+              </p>
+              <a
+                href="#/akun"
+                className="inline-flex min-h-10 shrink-0 items-center rounded-full bg-ink px-5 font-semibold text-white transition active:scale-[0.97]"
+              >
+                Ganti password
+              </a>
+            </div>
+          </div>
+        )}
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <a href="#/rekap" className="shrink-0 font-display text-xl font-bold tracking-tight text-on-field max-sm:sr-only">
             {APP_NAME}
@@ -206,15 +227,28 @@ function MainApp({ email }: { email: string }) {
               ))}
             </ul>
           </nav>
-          <button
-            type="button"
-            onClick={() => supabase.auth.signOut()}
-            title={`Keluar (${email})`}
-            className="ml-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-field-muted transition-colors hover:bg-white/10 hover:text-on-field lg:ml-1"
-          >
-            <IconLogout size={19} />
-            <span className="sr-only">Keluar</span>
-          </button>
+          <div className={`ml-auto flex shrink-0 items-center gap-1 ${blocked ? '' : 'lg:ml-1'}`}>
+            <a
+              href="#/akun"
+              aria-current={route === 'akun' ? 'page' : undefined}
+              title={`Akun (${email})`}
+              className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10 hover:text-on-field ${
+                route === 'akun' ? 'bg-white/15 text-on-field' : 'text-on-field-muted'
+              }`}
+            >
+              <IconUser size={19} />
+              <span className="sr-only">Akun</span>
+            </a>
+            <button
+              type="button"
+              onClick={() => supabase.auth.signOut()}
+              title={`Keluar (${email})`}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-field-muted transition-colors hover:bg-white/10 hover:text-on-field"
+            >
+              <IconLogout size={19} />
+              <span className="sr-only">Keluar</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -238,7 +272,11 @@ function MainApp({ email }: { email: string }) {
       </nav>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-        {storesError ? (
+        {route === 'akun' ? (
+          <div className="page-in">
+            <AccountPage email={email} mustChange={mustChangePassword} />
+          </div>
+        ) : storesError ? (
           <ErrorBox error={storesError} />
         ) : !stores ? (
           <Spinner />

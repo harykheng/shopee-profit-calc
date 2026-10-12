@@ -72,6 +72,13 @@ export const IconCalculator = (p: IconProps) => (
   </Svg>
 )
 
+export const IconUser = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" />
+  </Svg>
+)
+
 export const IconLogout = (p: IconProps) => (
   <Svg {...p}>
     <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />

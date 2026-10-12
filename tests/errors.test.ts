@@ -23,3 +23,11 @@ describe('friendlyError: database belum diperbarui', () => {
     expect(friendlyError(new Error('Invalid login credentials'))).toBe('Email atau password salah.')
   })
 })
+
+describe('friendlyError: ganti password', () => {
+  it('menerjemahkan pesan Supabase', () => {
+    expect(friendlyError(new Error('New password should be different from the old password.'))).toMatch(/berbeda/)
+    expect(friendlyError(new Error('Password should be at least 6 characters.'))).toMatch(/terlalu lemah/)
+    expect(friendlyError(new Error('Password update requires reauthentication'))).toMatch(/login lagi/)
+  })
+})

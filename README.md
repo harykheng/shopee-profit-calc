@@ -311,7 +311,22 @@ Tanpa baris di `store_members` orang asing hanya melihat data kosong, tapi tetap
    Email yang belum dibuat di langkah 1 menghasilkan error yang jelas. Nama toko boleh sama
    dengan toko pelanggan lain. Pelanggan dengan beberapa toko: jalankan fungsinya lagi dengan
    email yang sama dan nama toko lain.
-3. Beri tahu pelanggan email, password, dan alamat `app.studioharel.id`.
+3. Beri tahu pelanggan email, password sementara, dan alamat `app.studioharel.id`.
+
+   Selama pelanggan belum mengganti password itu, **banner kuning menempel di atas semua halaman**
+   ("Kamu masih memakai password dari admin") dengan tombol ke halaman **Akun** (ikon orang di
+   header). Setelah pelanggan menyimpan password baru, banner hilang untuk selamanya. Tidak ada
+   yang perlu diatur admin. Pelanggan lama (atau akun keluarga) yang tidak perlu diingatkan:
+
+   ```sql
+   update auth.users
+   set raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || '{"password_changed": true}'
+   where email = 'pelanggan@email.com';
+   ```
+
+   Banner hanya pengingat, bukan pengaman: penandanya disimpan di data akun yang bisa diubah
+   pelanggan sendiri. Kalau Supabase meminta login ulang saat ganti password (pengaturan
+   "Secure password change"), aplikasi menyuruh pelanggan keluar lalu masuk lagi.
 
 Lihat semua pelanggan:
 
