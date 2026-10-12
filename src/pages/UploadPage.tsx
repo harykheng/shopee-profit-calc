@@ -36,6 +36,8 @@ export function UploadPage({
   const [inputKey, setInputKey] = useState(0)
 
   const store = stores.find((s) => s.id === storeId) ?? null
+  // Nama toko hanya ditampilkan kalau akun punya lebih dari satu toko (pemilih toko juga hanya ada saat itu).
+  const multiStore = stores.length > 1
 
   const onOrdersFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -128,12 +130,14 @@ export function UploadPage({
     <>
       <PageTitle subtitle="Upload export pesanan dan/atau laporan penghasilan dari Shopee.">Upload</PageTitle>
 
-      <div className="on-field mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-3xl bg-white/10 px-5 py-4 text-on-field">
-        <IconStore size={22} className="text-lime" />
-        <span className="text-on-field-muted">Upload ke toko</span>
-        <strong className="font-display text-2xl font-bold">{store?.name ?? '-'}</strong>
-        <span className="text-sm text-on-field-muted">(ganti toko di pilihan Toko pada menu)</span>
-      </div>
+      {multiStore && (
+        <div className="on-field mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-3xl bg-white/10 px-5 py-4 text-on-field">
+          <IconStore size={22} className="text-lime" />
+          <span className="text-on-field-muted">Upload ke toko</span>
+          <strong className="font-display text-2xl font-bold">{store?.name ?? '-'}</strong>
+          <span className="text-sm text-on-field-muted">(ganti toko di pilihan Toko pada menu)</span>
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
         <Card title="1. Export pesanan (Excel)">
@@ -144,20 +148,24 @@ export function UploadPage({
         <Card title="2. Laporan penghasilan (PDF)">
           <p className="mb-3 text-ink-soft">Keuangan → Penghasilan Saya → laporan bulanan. File .pdf</p>
           <FileInput key={`i${inputKey}`} accept=".pdf,application/pdf" onChange={onIncomeFile} />
-          <IncomePreview parsed={income} store={store} />
+          <IncomePreview parsed={income} store={store} multiStore={multiStore} />
         </Card>
       </div>
 
       {(orders?.result || income?.result) && (
         <Card title="3. Simpan" className="mb-6">
           <p className="mb-4 text-ink-soft">
-            Data akan disimpan ke toko <strong>{store?.name ?? '(belum dipilih)'}</strong>. Upload file yang sama dua
-            kali aman — data tidak akan dobel.
+            {multiStore ? (
+              <>Data akan disimpan ke toko <strong>{store?.name ?? '(belum dipilih)'}</strong>.</>
+            ) : (
+              'Data akan disimpan ke akunmu.'
+            )}{' '}
+            Upload file yang sama dua kali aman — data tidak akan dobel.
           </p>
           {saveError ? <div className="mb-4"><ErrorBox error={saveError} /></div> : null}
           <div className="flex flex-wrap gap-3">
             <Button onClick={save} disabled={!canSave}>
-              {saving ? 'Menyimpan…' : `Simpan ke ${store?.name ?? 'toko'}`}
+              {saving ? 'Menyimpan…' : multiStore ? `Simpan ke ${store?.name ?? 'toko'}` : 'Simpan'}
             </Button>
             <Button variant="secondary" onClick={reset} disabled={saving}>
               Batal
@@ -166,7 +174,7 @@ export function UploadPage({
         </Card>
       )}
 
-      {summary && <SaveSummaryCard summary={summary} onAgain={reset} />}
+      {summary && <SaveSummaryCard summary={summary} multiStore={multiStore} onAgain={reset} />}
     </>
   )
 }
@@ -269,7 +277,15 @@ function normalizeName(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
-function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | null; store: Store | null }) {
+function IncomePreview({
+  parsed,
+  store,
+  multiStore,
+}: {
+  parsed: Parsed<IncomeParseResult> | null
+  store: Store | null
+  multiStore: boolean
+}) {
   if (!parsed) return null
   if (parsed.loading) return <Spinner label="Membaca file…" />
   if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} /></div>
@@ -290,8 +306,11 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
       {shopMismatch && (
         <div className="mt-4">
           <Alert tone="warning" title="Nama toko berbeda">
-            Nama toko di PDF: <strong>{r.shopName}</strong>. Toko yang dipilih: <strong>{store!.name}</strong>. Pastikan
-            toko yang dipilih sudah benar sebelum menyimpan.
+            Nama toko di PDF: <strong>{r.shopName}</strong>. {multiStore ? 'Toko yang dipilih' : 'Nama toko di akunmu'}:{' '}
+            <strong>{store!.name}</strong>.{' '}
+            {multiStore
+              ? 'Pastikan toko yang dipilih sudah benar sebelum menyimpan.'
+              : 'Kalau ini memang PDF tokomu (hanya beda penulisan nama), lanjutkan simpan; kalau bukan, jangan disimpan.'}
           </Alert>
         </div>
       )}
@@ -348,7 +367,15 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
   )
 }
 
-function SaveSummaryCard({ summary, onAgain }: { summary: SaveSummary; onAgain: () => void }) {
+function SaveSummaryCard({
+  summary,
+  multiStore,
+  onAgain,
+}: {
+  summary: SaveSummary
+  multiStore: boolean
+  onAgain: () => void
+}) {
   const { orders, income, missingHpp } = summary
   // Perayaan kecil setiap kali upload berhasil disimpan: konfeti dari cap TERSIMPAN.
   const stampRef = useRef<HTMLSpanElement>(null)
@@ -357,7 +384,7 @@ function SaveSummaryCard({ summary, onAgain }: { summary: SaveSummary; onAgain: 
     <Card
       title={
         <span className="flex flex-wrap items-center justify-between gap-3">
-          Berhasil disimpan ke {summary.storeName}
+          {multiStore ? `Berhasil disimpan ke ${summary.storeName}` : 'Berhasil disimpan'}
           <span ref={stampRef}>
             <Stamp tone="gain" delay={150}>Tersimpan</Stamp>
           </span>
