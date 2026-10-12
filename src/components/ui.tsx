@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react'
+import { APP_NAME, supportUrl } from '../lib/brand'
 import { errorText, friendlyError } from '../lib/errors'
 import { IconAlertCircle, IconCheckCircle, IconError, IconInfo } from './icons'
 
@@ -67,6 +68,30 @@ export function Alert({ tone = 'info', title, children }: { tone?: Tone; title?:
   )
 }
 
+/** Link WhatsApp ke pengelola. Kalau nomor belum diisi (VITE_SUPPORT_WA), hanya teks biasa. */
+export function SupportLink({
+  message = `Halo, saya butuh bantuan untuk ${APP_NAME}.`,
+  className = '',
+  children = 'Hubungi pengelola lewat WhatsApp',
+}: {
+  message?: string
+  className?: string
+  children?: ReactNode
+}) {
+  const href = supportUrl(message)
+  if (!href) return <span className={className}>{children}</span>
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`font-semibold underline underline-offset-2 ${className}`}
+    >
+      {children}
+    </a>
+  )
+}
+
 /** Kotak error ramah + detail teknis yang bisa dibuka (untuk pengelola aplikasi). */
 export function ErrorBox({ error }: { error: unknown }) {
   if (!error) return null
@@ -74,6 +99,11 @@ export function ErrorBox({ error }: { error: unknown }) {
   const detail = errorText(error)
   return (
     <Alert tone="error" title={friendly}>
+      {friendly.includes('pengelola aplikasi') && supportUrl('') && (
+        <p className="mt-1">
+          <SupportLink message={`Halo, ada kendala di ${APP_NAME}: ${friendly}`} />
+        </p>
+      )}
       {detail && detail !== friendly && (
         <details className="mt-1 text-sm">
           <summary className="cursor-pointer">Detail teknis</summary>

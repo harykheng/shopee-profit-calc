@@ -35,7 +35,7 @@ function chunks<T>(items: T[], size = CHUNK): T[][] {
 }
 
 export async function fetchStores(): Promise<Store[]> {
-  return check(await supabase.from('stores').select('id, name').order('id'))
+  return check(await supabase.from('stores').select('id, name, active_until').order('id'))
 }
 
 // --- Upload -----------------------------------------------------------------

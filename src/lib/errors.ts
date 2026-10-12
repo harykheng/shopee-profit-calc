@@ -13,6 +13,12 @@ export function friendlyError(err: unknown): string {
   if (lower.includes('failed to fetch') || lower.includes('network') || lower.includes('load failed')) {
     return 'Tidak bisa terhubung ke server. Cek koneksi internet, lalu coba lagi.'
   }
+  if (lower.includes('active_until') || lower.includes('store_members')) {
+    return (
+      'Database belum diperbarui untuk mode banyak pelanggan. Pengelola aplikasi perlu menjalankan file ' +
+      'SQL "20261012000000_multi_tenant.sql" di Supabase (lihat README).'
+    )
+  }
   if (lower.includes('upsert_income_adjustments') || lower.includes('income_adjustments')) {
     return (
       'Database belum diperbarui untuk biaya penyesuaian. Pengelola aplikasi perlu menjalankan file ' +

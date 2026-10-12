@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { Button, ErrorBox, inputClass } from '../components/ui'
+import { Button, ErrorBox, SupportLink, inputClass } from '../components/ui'
+import { APP_NAME } from '../lib/brand'
 import { supabase } from '../lib/supabase'
 
 export function LoginPage() {
@@ -20,7 +21,7 @@ export function LoginPage() {
   return (
     <main className="mx-auto grid min-h-screen max-w-5xl items-center gap-10 p-4 sm:p-8 lg:grid-cols-[1.1fr_1fr]">
       <div className="on-field text-on-field">
-        <p className="font-display text-lg font-bold text-lime">Profit Shopee</p>
+        <p className="font-display text-lg font-bold text-lime">{APP_NAME}</p>
         <h1 className="mt-3 font-display text-5xl font-bold leading-[1.02] tracking-tight sm:text-6xl">
           Berapa untung toko bulan ini?
         </h1>
@@ -58,7 +59,17 @@ export function LoginPage() {
           {busy ? 'Memproses…' : 'Masuk'}
         </Button>
         <p className="mt-4 text-sm text-ink-muted">
-          Lupa password atau belum punya akun? Hubungi pengelola aplikasi.
+          <SupportLink
+            message={`Halo, saya lupa password ${APP_NAME}${email.trim() ? ` (email: ${email.trim()})` : ''}. Mohon bantu reset.`}
+            className="text-stamp-strong"
+          >
+            Lupa password?
+          </SupportLink>{' '}
+          Belum punya akun?{' '}
+          <SupportLink message={`Halo, saya ingin memakai ${APP_NAME}.`} className="text-stamp-strong">
+            Hubungi pengelola aplikasi
+          </SupportLink>
+          .
         </p>
       </form>
     </main>

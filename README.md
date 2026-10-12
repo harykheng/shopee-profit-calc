@@ -34,6 +34,7 @@ membaca file di browser, Vitest untuk test.
 5. [Menjalankan di komputer sendiri](#5-menjalankan-di-komputer-sendiri-developer)
 6. [Privasi data](#6-privasi-data)
 7. [Kalau Shopee mengganti format file](#7-kalau-shopee-mengganti-format-file)
+8. [Mode HitungCuan (banyak pelanggan)](#8-mode-hitungcuan-banyak-pelanggan)
 
 ---
 
@@ -85,6 +86,13 @@ menghapus data.
 > Sudah setup sebelum 6 Oktober 2026? Jalankan sekali file `20261006000000_ads.sql` supaya
 > halaman **Iklan** bisa dipakai.
 
+> Sudah setup sebelum 12 Oktober 2026? Lihat [bagian 8](#8-mode-hitungcuan-banyak-pelanggan):
+> file `20261012000000_multi_tenant.sql` membatasi tiap user ke toko miliknya. Di project keluarga
+> cukup jalankan file itu sekali (cadangkan database dulu); ketiga akun yang ada tetap bisa
+> masuk karena migration memasukkan semua user yang sudah ada sebagai anggota kedua toko.
+> **Aplikasi versi ini mengambil kolom `stores.active_until`, jadi file itu wajib dijalankan
+> sebelum versi ini di-deploy ke project keluarga.**
+
 > Sudah setup sebelum 7 Oktober 2026? Jalankan sekali file
 > `20261007000000_product_fee_settings.sql` supaya % admin & XTRA bisa disimpan per produk di
 > halaman **Simulasi Harga**. Tanpa file ini, simulasi tetap jalan, hanya tombol simpan yang gagal.
@@ -96,6 +104,16 @@ Karena pendaftaran publik dimatikan, akun dibuat manual oleh pemilik:
 1. **Authentication → Users → Add user → Create new user**.
 2. Isi email dan password, centang **Auto Confirm User**, lalu **Create user**.
 3. Ulangi untuk 3 orang (Anda, cici, adik). Semua akun bisa mengakses kedua toko.
+4. **Setelah migration `20261012000000_multi_tenant.sql` dijalankan**, akses ke toko ditentukan
+   tabel `store_members`: akun yang sudah ada dimasukkan otomatis oleh migration itu, tapi akun
+   yang dibuat **sesudahnya** harus ditambahkan sendiri (SQL Editor):
+
+   ```sql
+   insert into public.store_members (store_id, user_id)
+   select s.id, u.id from public.stores s, auth.users u
+   where u.email = 'email.baru@contoh.com'
+   on conflict do nothing;
+   ```
 
 Lupa password: buka user di menu yang sama → reset / ganti password, lalu beri tahu orangnya.
 Menghapus akses: hapus user tersebut.
@@ -223,3 +241,124 @@ PRODUCT.md / DESIGN.md Fakta produk & sistem desain (dipakai skill desain Impecc
 tests/                 Test Vitest + fixture dummy
 scripts/make-fixtures.mjs  Pembuat fixture dummy
 ```
+
+---
+
+## 8. Mode HitungCuan (banyak pelanggan)
+
+Kode yang sama dipakai untuk dua deploy yang terpisah total:
+
+| | Keluarga | HitungCuan |
+|---|---|---|
+| Website | yang sekarang | `app.studioharel.id` |
+| Project Supabase | yang lama | **project baru** (jangan digabung) |
+| Nama di layar | Profit Shopee (default) | HitungCuan (`VITE_APP_NAME`) |
+| Yang login | 3 akun keluarga | pelanggan yang berlangganan |
+
+Di dalam HitungCuan semua pelanggan berbagi satu database. Yang memisahkan mereka adalah RLS:
+tiap user hanya bisa membaca/menulis toko yang tercatat di `store_members` miliknya, dan hanya
+selama `stores.active_until` belum lewat (dihitung menurut WIB). Layar "Langganan habis" di
+aplikasi hanya tampilan; penolakan sebenarnya terjadi di database.
+
+Model ini manual: tidak ada pendaftaran sendiri dan tidak ada pembayaran otomatis. Admin
+membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
+
+### a) Buat project Supabase baru dan jalankan SEMUA migration
+
+1. Buat project Supabase **baru** (paket **Pro** sebelum pelanggan pertama membayar: free
+   di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
+   free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
+2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
+   satu per satu, dari `20260930000000_init.sql` sampai `20261012000000_multi_tenant.sql`.
+3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
+   hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
+
+### b) Hapus 2 toko bawaan
+
+`init.sql` membuat toko "Harel Beauty" dan "Oraiste Beauty House". Di HitungCuan keduanya tidak
+boleh ada. Hapus segera setelah migration, sebelum ada pelanggan:
+
+```sql
+delete from public.stores where name in ('Harel Beauty', 'Oraiste Beauty House');
+```
+
+### c) Matikan signup publik
+
+Authentication → Sign In / Providers (atau Settings) → matikan **Allow new users to sign up**.
+Tanpa baris di `store_members` orang asing hanya melihat data kosong, tapi tetap matikan.
+
+### d) Menambah pelanggan
+
+1. Authentication → Users → **Add user → Create new user**: isi email dan password, centang
+   **Auto Confirm User**.
+2. SQL Editor (jalankan sebagai admin; fungsi ini tidak bisa dipanggil dari aplikasi):
+
+   ```sql
+   select public.admin_add_customer('pelanggan@email.com', 'Nama Toko', '2026-12-31');
+   ```
+
+   Hasilnya `store_id` toko baru. Tanggal terakhir langganan boleh `null` (tanpa batas).
+   Email yang belum dibuat di langkah 1 menghasilkan error yang jelas. Nama toko boleh sama
+   dengan toko pelanggan lain. Pelanggan dengan beberapa toko: jalankan fungsinya lagi dengan
+   email yang sama dan nama toko lain.
+3. Beri tahu pelanggan email, password, dan alamat `app.studioharel.id`.
+
+Lihat semua pelanggan:
+
+```sql
+select s.id, s.name, s.active_until, u.email
+from public.stores s
+join public.store_members m on m.store_id = s.id
+join auth.users u on u.id = m.user_id
+order by s.id;
+```
+
+### e) Memperpanjang atau menghentikan langganan
+
+```sql
+-- perpanjang (aktif sampai akhir tanggal ini, WIB)
+update public.stores set active_until = '2027-01-31' where id = 5;
+
+-- hentikan sekarang (data tetap tersimpan; pelanggan melihat layar "langganan habis")
+update public.stores set active_until = (now() at time zone 'Asia/Jakarta')::date - 1 where id = 5;
+```
+
+Reset password: Authentication → Users → pilih user → ubah password (pelanggan menghubungi lewat
+tautan "Lupa password?" di halaman login, yang membuka WhatsApp).
+
+### f) Env var Cloudflare Pages / Vercel untuk app.studioharel.id
+
+Buat project hosting **kedua** dari repo yang sama (build `npm run build`, output `dist`), lalu
+isi variabel berikut (Production dan Preview):
+
+| Name | Value |
+|---|---|
+| `VITE_SUPABASE_URL` | Project URL project **HitungCuan** |
+| `VITE_SUPABASE_ANON_KEY` | anon / publishable key project **HitungCuan** |
+| `VITE_APP_NAME` | `HitungCuan` |
+| `VITE_SUPPORT_WA` | nomor WhatsApp admin, format `62…` (mis. `6281234567890`) |
+
+- Cloudflare Pages: Workers & Pages → Create → Pages → hubungkan repo → Settings → Variables and
+  Secrets. Tambahkan domain `app.studioharel.id` di Custom domains.
+- Vercel: Settings → Environment Variables. Domain di Settings → Domains.
+- Nilai `VITE_…` ditanam saat build; setelah mengubahnya lakukan **Redeploy**.
+- `VITE_APP_NAME` dan `VITE_SUPPORT_WA` tidak wajib; tanpa keduanya aplikasi memakai nama
+  "Profit Shopee" dan teks "hubungi pengelola" tanpa tautan WhatsApp (deploy keluarga).
+- **Jangan pernah** mengisi `service_role` / secret key di variabel apa pun.
+
+### Project keluarga
+
+Cukup jalankan `20261012000000_multi_tenant.sql` sekali di project lama (cadangkan database
+dulu: Supabase → Database → Backups, atau `pg_dump`). Ketiga akun yang sudah ada otomatis
+dimasukkan sebagai anggota kedua toko oleh seed transisi, jadi tidak ada yang kehilangan
+akses. `active_until` kedua toko dibiarkan kosong (tanpa batas). Akun yang dibuat sesudahnya
+perlu ditambahkan manual (lihat bagian 2). Menjalankan migration yang sama sekali lagi
+aman: seed tidak menambah apa pun.
+
+### Sebelum pelanggan pertama
+
+- [ ] Project HitungCuan sudah di paket Pro (backup aktif).
+- [ ] Dua akun uji dengan dua toko: masing-masing hanya melihat tokonya sendiri.
+- [ ] Toko dengan `active_until` kemarin menampilkan layar "Langganan habis", datanya tetap ada.
+- [ ] Signup publik mati, dan tidak ada `service_role` key di variabel hosting atau di git.
+- [ ] Sudah berlatih `admin_add_customer` dan memperpanjang lewat SQL.

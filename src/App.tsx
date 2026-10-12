@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { Alert, ErrorBox, Spinner } from './components/ui'
+import { Alert, ErrorBox, Spinner, SupportLink } from './components/ui'
+import { APP_NAME } from './lib/brand'
+import { formatDate } from './lib/format'
+import { subscriptionStatus } from './lib/subscription'
 import { fetchStores } from './lib/api'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import type { Store } from './lib/types'
@@ -152,8 +155,14 @@ function MainApp({ email }: { email: string }) {
     saveStoreId(id)
   }
 
+  const selectedStore = stores?.find((s) => s.id === storeId) ?? null
+  const subscription = subscriptionStatus(selectedStore?.active_until)
+  // Layar penuh menggantikan semua halaman: belum punya toko, atau langganan toko terpilih habis.
+  const blocked = stores !== null && (stores.length === 0 || subscription.state === 'expired')
+
+  // Pemilih toko hanya muncul kalau user punya lebih dari satu toko.
   const storeSelect =
-    stores && stores.length > 0 ? (
+    stores && stores.length > 1 ? (
       <label className="min-w-0">
         <span className="sr-only">Toko</span>
         <span className="relative block">
@@ -179,10 +188,10 @@ function MainApp({ email }: { email: string }) {
       <header className="on-field sticky top-0 z-10 bg-field/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <a href="#/rekap" className="shrink-0 font-display text-xl font-bold tracking-tight text-on-field max-sm:sr-only">
-            Profit Shopee
+            {APP_NAME}
           </a>
           {storeSelect}
-          <nav ref={topRef} aria-label="Menu utama" className="relative ml-auto hidden lg:block">
+          <nav ref={topRef} aria-label="Menu utama" className={`relative ml-auto hidden ${blocked ? '' : 'lg:block'}`}>
             {topIndicator && (
               <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-on-field" style={topIndicator} />
             )}
@@ -210,6 +219,7 @@ function MainApp({ email }: { email: string }) {
       <nav
         ref={barRef}
         aria-label="Menu utama"
+        hidden={blocked}
         className="on-field fixed inset-x-0 bottom-0 z-10 bg-field-deep pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
         {barIndicator && (
@@ -229,6 +239,10 @@ function MainApp({ email }: { email: string }) {
           <ErrorBox error={storesError} />
         ) : !stores ? (
           <Spinner />
+        ) : stores.length === 0 ? (
+          <NoStoreScreen />
+        ) : subscription.state === 'expired' && selectedStore ? (
+          <ExpiredScreen storeName={selectedStore.name} activeUntil={subscription.activeUntil} />
         ) : (
           <div key={route} className="page-in">
             {route === 'upload' && <UploadPage stores={stores} storeId={storeId} />}
@@ -254,6 +268,36 @@ function MainApp({ email }: { email: string }) {
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+function NoStoreScreen() {
+  return (
+    <div className="mx-auto max-w-xl">
+      <Alert tone="warning" title="Akun ini belum terhubung ke toko. Hubungi admin.">
+        <p>Setelah admin menghubungkan akunmu ke sebuah toko, muat ulang halaman ini.</p>
+        <p className="mt-3">
+          <SupportLink message={`Halo, akun ${APP_NAME} saya belum terhubung ke toko.`}>
+            Hubungi admin lewat WhatsApp
+          </SupportLink>
+        </p>
+      </Alert>
+    </div>
+  )
+}
+
+function ExpiredScreen({ storeName, activeUntil }: { storeName: string; activeUntil: string | null }) {
+  return (
+    <div className="mx-auto max-w-xl">
+      <Alert tone="warning" title={`Langganan ${APP_NAME} habis pada ${formatDate(activeUntil)}.`}>
+        <p>Data kamu aman dan tersimpan. Perpanjang langganan untuk membukanya lagi.</p>
+        <p className="mt-3">
+          <SupportLink message={`Halo, saya ingin memperpanjang langganan ${APP_NAME} untuk toko ${storeName}.`}>
+            Perpanjang lewat WhatsApp
+          </SupportLink>
+        </p>
+      </Alert>
     </div>
   )
 }

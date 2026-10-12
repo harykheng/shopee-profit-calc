@@ -1,6 +1,8 @@
 export interface Store {
   id: number
   name: string
+  /** Langganan berlaku sampai tanggal ini ("YYYY-MM-DD"); null = tidak dibatasi. */
+  active_until: string | null
 }
 
 export interface Product {
