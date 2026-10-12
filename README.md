@@ -346,6 +346,22 @@ isi variabel berikut (Production dan Preview):
   "Profit Shopee" dan teks "hubungi pengelola" tanpa tautan WhatsApp (deploy keluarga).
 - **Jangan pernah** mengisi `service_role` / secret key di variabel apa pun.
 
+### Cloudflare Workers Builds: deploy HitungCuan dari branch `multi-tenant`
+
+Selama `multi-tenant` belum digabung ke `main`, deploy HitungCuan membangun branch itu:
+
+- Settings → Builds → **Production branch** = `multi-tenant`. Mengubah pengaturan ini **tidak**
+  memicu build; build baru berjalan hanya setelah ada push ke branch tersebut.
+- Build command `npm run build`. Deploy command `npx wrangler deploy --name <nama-worker-hitungcuan>`.
+  `name` di `wrangler.jsonc` adalah nama Worker **keluarga**; jangan diubah dan jangan menerima PR
+  otomatis Cloudflare yang menggantinya, karena file itu dipakai kedua deploy.
+- Variabel `VITE_…` diisi di **Build → Variables and secrets** (terbaca saat build), bukan di
+  Variables runtime.
+- Setiap push ke `multi-tenant` langsung live di HitungCuan. Eksperimen dilakukan di branch lain
+  (mis. `dev`) dan hanya yang sudah terbukti dimasukkan ke `multi-tenant`.
+- Perbaikan di `main` (mis. parser Shopee) dibawa ke HitungCuan dengan `git merge main` di branch
+  `multi-tenant`.
+
 ### Project keluarga
 
 Cukup jalankan `20261012000000_multi_tenant.sql` sekali di project lama (cadangkan database
