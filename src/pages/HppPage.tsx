@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { RupiahInput } from '../components/pickers'
-import { Alert, Card, ErrorBox, PageTitle, Spinner, inputClass } from '../components/ui'
+import { Alert, Card, ErrorBox, PageTitle, ScrollX, Spinner, inputClass } from '../components/ui'
 import { IconCheck, IconCheckCircle, IconSearch } from '../components/icons'
 import { fetchProducts, updateHpp } from '../lib/api'
 import { friendlyError } from '../lib/errors'
@@ -131,7 +131,7 @@ export function HppPage({
             </p>
           )}
 
-          <div className="overflow-x-auto">
+          <ScrollX>
             <table className="w-full text-left">
               <thead className="border-b border-rule text-sm text-ink-muted">
                 <tr>
@@ -184,7 +184,7 @@ export function HppPage({
               </tbody>
             </table>
             {visible.length === 0 && <p className="py-6 text-center text-ink-muted">Tidak ada produk yang cocok.</p>}
-          </div>
+          </ScrollX>
         </Card>
       )}
     </>

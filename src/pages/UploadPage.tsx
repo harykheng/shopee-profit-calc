@@ -1,5 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react'
-import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, Stamp } from '../components/ui'
+import { Alert, Button, Card, ErrorBox, PageTitle, ScrollX, Spinner, Stamp } from '../components/ui'
 import { IconStore, IconUpload } from '../components/icons'
 import { Confetti } from '../components/motion'
 import { fetchProducts, saveAdjustments, saveIncome, saveOrderItems } from '../lib/api'
@@ -236,7 +236,7 @@ function OrdersPreview({ parsed }: { parsed: Parsed<OrdersParseResult> | null })
         )}
       </Alert>
       <Warnings warnings={r.warnings} />
-      <div className="mt-4 overflow-x-auto">
+      <ScrollX className="mt-4">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-rule text-ink-muted">
             <tr>
@@ -263,7 +263,7 @@ function OrdersPreview({ parsed }: { parsed: Parsed<OrdersParseResult> | null })
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollX>
       {r.items.length > PREVIEW_ROWS && (
         <button type="button" className="mt-2 min-h-11 font-medium text-stamp underline" onClick={() => setShowAll((v) => !v)}>
           {showAll ? 'Tampilkan lebih sedikit' : `Tampilkan semua (${r.items.length})`}

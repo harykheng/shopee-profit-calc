@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
-import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, Stamp, type StampTone } from '../components/ui'
+import { Alert, Button, Card, ErrorBox, PageTitle, ScrollX, Spinner, Stamp, type StampTone } from '../components/ui'
 import { IconAlertCircle, IconCheck, IconInfo, IconUpload } from '../components/icons'
 import {
   fetchAdReports,
@@ -836,7 +836,7 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
 function PerMonthCard({ rows }: { rows: { month: string; analysis: AdsAnalysis }[] }) {
   return (
     <Card title="Per bulan">
-      <div className="overflow-x-auto">
+      <ScrollX>
         <table className="w-full min-w-[34rem] text-left text-base">
           <thead className="text-sm text-ink-muted">
             <tr>
@@ -861,7 +861,7 @@ function PerMonthCard({ rows }: { rows: { month: string; analysis: AdsAnalysis }
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollX>
     </Card>
   )
 }

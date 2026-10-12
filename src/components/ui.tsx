@@ -1,4 +1,4 @@
-import { useEffect, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
 import { APP_NAME, supportUrl } from '../lib/brand'
 import { adminHint, errorText, friendlyError } from '../lib/errors'
 import { IconAlertCircle, IconCheckCircle, IconError, IconInfo } from './icons'
@@ -46,6 +46,51 @@ export function ButtonLink({
     >
       {children}
     </a>
+  )
+}
+
+/**
+ * Pembungkus tabel lebar di atas lembar putih. Kalau isinya lebih lebar dari layar (HP), tampil
+ * bayangan di tepi kanan dan petunjuk "geser", supaya jelas masih ada kolom yang tersembunyi.
+ */
+export function ScrollX({ children, className = '' }: { children: ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [more, setMore] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  const update = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    setMore(el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+    if (el.scrollLeft > 4) setScrolled(true)
+  }, [])
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    if (el.firstElementChild) ro.observe(el.firstElementChild)
+    return () => ro.disconnect()
+  }, [update])
+
+  return (
+    <div className="relative">
+      <div ref={ref} onScroll={update} className={`overflow-x-auto ${className}`}>
+        {children}
+      </div>
+      {more && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 w-10"
+          style={{ background: 'linear-gradient(to left, var(--color-paper), transparent)' }}
+        />
+      )}
+      {more && !scrolled && (
+        <p className="mt-1 text-right text-sm font-semibold text-stamp-strong">Geser ke samping untuk kolom lainnya →</p>
+      )}
+    </div>
   )
 }
 

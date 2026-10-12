@@ -1,6 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { MonthSelect } from '../components/pickers'
-import { Alert, Button, ButtonLink, Card, ErrorBox, Spinner, Stamp } from '../components/ui'
+import { Alert, Button, ButtonLink, Card, ErrorBox, ScrollX, Spinner, Stamp } from '../components/ui'
 import { IconAlertCircle, IconCheck, IconChevronDown, IconInfo } from '../components/icons'
 import {
   countItemsWithoutCreatedAt,
@@ -493,6 +493,15 @@ function NotaCard({
           {statuses.map((s) => (
             <Checklist key={s.month} month={s.month} status={s.status} showTitle={statuses.length > 1} onRecalc={onRecalc} />
           ))}
+          <p className="flex gap-2 border-t border-ink/10 pt-3 text-sm text-ink-soft">
+            <IconInfo size={16} className="mt-0.5 shrink-0 text-info" />
+            <span>
+              <strong>Soal tanggal batas bulan.</strong> Untung sebulan dihitung dari uang yang cair di bulan itu dan
+              modal barang yang sampai di bulan itu. Barang yang sampai di 30–31 tapi uangnya cair 1–2 hari kemudian bisa
+              tercatat beda bulan, jadi untung satu bulan bisa bergeser sedikit (bulan berikutnya jadi sedikit lebih
+              tinggi). Kalau beberapa bulan dilihat bersamaan, totalnya tetap pas.
+            </span>
+          </p>
         </div>
       )}
 
@@ -596,7 +605,21 @@ function ChapterTitle({ n, kicker, children }: { n: number; kicker: string; chil
  * "Dari setiap Rp100 yang masuk": satu batang bagian-dari-keseluruhan (modal, biaya, untung).
  * Tegak di laptop, mendatar di HP. Tidak ditampilkan kalau rugi (bagiannya tidak lagi menjumlah ke 100).
  */
+/** true di layar lebar (laptop), tempat batang "Rp100" berdiri tegak dan segmen kecil masih muat label. */
+function useIsDesktop() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const m = window.matchMedia('(min-width: 1024px)')
+      m.addEventListener('change', onChange)
+      return () => m.removeEventListener('change', onChange)
+    },
+    () => window.matchMedia('(min-width: 1024px)').matches,
+    () => true,
+  )
+}
+
 function MoneySplit({ income, modal, expenses, profit }: { income: number; modal: number; expenses: number; profit: number }) {
+  const desktop = useIsDesktop()
   if (income <= 0 || profit < 0) {
     return (
       <div className="on-field rounded-3xl bg-white/8 p-5 text-on-field-muted">
@@ -612,7 +635,9 @@ function MoneySplit({ income, modal, expenses, profit }: { income: number; modal
     { key: 'biaya', label: 'biaya', per100: biayaPer100, share: expenses / income, cls: 'bg-white/35 text-on-field' },
     { key: 'untung', label: 'untung', per100: untungPer100, share: profit / income, cls: 'bg-lime text-field-deep' },
   ]
-  const big = (share: number) => share >= 0.12
+  // Batang mendatar di HP hanya selebar layar, jadi segmen harus lebih besar supaya labelnya tidak terpotong.
+  // Segmen kecil tetap tertulis di kalimat di bawah batang.
+  const big = (share: number) => share >= (desktop ? 0.12 : 0.22)
   return (
     <figure className="on-field min-w-0 text-on-field">
       <figcaption className="font-display text-2xl font-bold leading-tight tracking-tight">Dari setiap Rp100 yang masuk</figcaption>
@@ -696,16 +721,23 @@ function AdsChapter({ storeId, month }: { storeId: number; month: string }) {
     }
   }, [storeId, month])
 
+  // Merah (coral) berarti iklan RUGI. Belum ada data, gagal dihitung, atau iklan untung tampil netral,
+  // supaya bab ini tidak terbaca sebagai peringatan padahal tidak ada yang salah.
+  const loss = state.kind === 'ok' && state.profitAfterAds < 0
+  const tone = loss
+    ? { box: 'bg-coral text-white shadow-sheet', kicker: 'text-[#ffe4dc]', text: 'text-white', button: 'text-coral' }
+    : { box: 'bg-white/10 text-on-field', kicker: 'text-lime', text: 'text-on-field', button: 'text-field' }
+
   return (
-    <section className="on-field rounded-[2rem] bg-coral p-6 text-white shadow-sheet sm:p-9">
-      <p className="font-display text-lg font-bold text-[#ffe4dc]">Bab 3 · Iklan {formatMonth(month)}</p>
-      {state.kind === 'loading' && <p className="mt-3 text-white">Menghitung iklan…</p>}
+    <section className={`on-field rounded-[2rem] p-6 sm:p-9 ${tone.box}`}>
+      <p className={`font-display text-lg font-bold ${tone.kicker}`}>Bab 3 · Iklan {formatMonth(month)}</p>
+      {state.kind === 'loading' && <p className={`mt-3 ${tone.text}`}>Menghitung iklan…</p>}
       {(state.kind === 'none' || state.kind === 'error') && (
         <>
           <h2 className="mt-2 font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
             {state.kind === 'none' ? `Belum ada data iklan ${formatMonth(month)}.` : 'Data iklan belum bisa dihitung di sini.'}
           </h2>
-          <p className="mt-2 max-w-2xl text-lg text-white">
+          <p className={`mt-2 max-w-2xl text-lg ${tone.text}`}>
             {state.kind === 'none'
               ? 'Upload file iklan Shopee 1 bulan penuh untuk melihat iklan mana yang untung dan mana yang bikin rugi.'
               : 'Buka halaman Iklan untuk melihat rinciannya.'}
@@ -718,16 +750,20 @@ function AdsChapter({ storeId, month }: { storeId: number; month: string }) {
             Iklan {state.profitAfterAds < 0 ? 'rugi' : 'untung'} {formatRupiahShort(Math.abs(state.profitAfterAds))}.{' '}
             {state.takedownCount > 0 ? `${formatNumber(state.takedownCount)} iklan sebaiknya dimatikan.` : 'Tidak ada iklan yang perlu dimatikan.'}
           </h2>
-          <p className="mt-2 text-lg text-white">
+          <p className={`mt-2 text-lg ${tone.text}`}>
             Setelah biaya iklan <span className="num">{formatRupiah(state.spend)}</span>, untungnya{' '}
-            <b className="num text-white">{formatRupiah(state.profitAfterAds)}</b>.
+            <b className={`num ${loss ? 'text-white' : 'text-lime'}`}>{formatRupiah(state.profitAfterAds)}</b>.
           </p>
           {state.takedown.length > 0 && (
             <ul className="mt-5 grid gap-2 sm:grid-cols-3">
               {state.takedown.map((p) => (
                 <li key={p.name} className="min-w-0 rounded-2xl bg-white/14 px-4 py-3">
                   <span className="line-clamp-2 font-semibold">{p.name}</span>
-                  <span className="num mt-1 block font-display text-xl font-bold">
+                  <span
+                    className={`num mt-1 block font-display text-xl font-bold ${
+                      !loss && p.profit !== null && p.profit < 0 ? 'text-coral-soft' : ''
+                    }`}
+                  >
                     {p.profit === null ? 'HPP belum lengkap' : formatRupiah(p.profit)}
                   </span>
                 </li>
@@ -739,7 +775,7 @@ function AdsChapter({ storeId, month }: { storeId: number; month: string }) {
       {!readOnly && (
         <a
           href="#/iklan"
-          className="mt-6 inline-flex min-h-11 items-center rounded-full bg-white px-5 font-semibold text-coral transition active:scale-[0.97]"
+          className={`mt-6 inline-flex min-h-11 items-center rounded-full bg-white px-5 font-semibold transition active:scale-[0.97] ${tone.button}`}
         >
           Buka halaman Iklan →
         </a>
@@ -1061,7 +1097,7 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
             </div>
           )}
 
-          <div className="overflow-x-auto">
+          <ScrollX>
             <table className="w-full min-w-[32rem] text-left">
               <thead className="border-b border-rule text-sm font-medium text-ink-muted">
                 <tr>
@@ -1107,7 +1143,7 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
                 </tr>
               </tfoot>
             </table>
-          </div>
+          </ScrollX>
           <p className="text-sm text-ink-muted">
             Dihitung dari <strong>tanggal pesanan dibuat</strong>, untuk melihat penjualan. Angka ini sama dengan
             hitungan dari file export. Modal di tabel ini termasuk barang retur; pesanan yang masih diproses memakai HPP
@@ -1217,7 +1253,7 @@ function MonthsTab({
   const readOnly = useContext(ReadOnlyContext)
   return (
     <section className="rounded-3xl bg-paper p-5 shadow-sheet sm:p-6">
-      <div className="overflow-x-auto">
+      <ScrollX>
         <table className="w-full min-w-[40rem] text-left">
           <thead className="border-b border-rule text-sm font-medium text-ink-muted">
             <tr>
@@ -1270,7 +1306,7 @@ function MonthsTab({
             })}
           </tbody>
         </table>
-      </div>
+      </ScrollX>
     </section>
   )
 }
