@@ -260,6 +260,16 @@ tiap user hanya bisa membaca/menulis toko yang tercatat di `store_members` milik
 selama `stores.active_until` belum lewat (dihitung menurut WIB). Layar "Langganan habis" di
 aplikasi hanya tampilan; penolakan sebenarnya terjadi di database.
 
+**Langganan habis = mode baca saja.** Pelanggan yang langganannya habis masih bisa melihat Rekap
+(pelanggan melihat banner "Langganan habis"), tapi upload, HPP, biaya, iklan, dan simulasi
+ditolak database. Mulai 7 hari sebelum habis, semua halaman menampilkan banner pengingat. Mode baca
+saja ini diatur file `20261013000000_read_only_when_expired.sql`; **tanpa file itu, pelanggan yang
+habis melihat Rekap kosong ("Belum ada data"), bukan datanya.** Jalankan file itu di project yang
+sudah memakai `20261012000000_multi_tenant.sql` (aman diulang, tidak mengubah data).
+
+Kalau pelanggan melihat pesan "Ada gangguan di sistem kami", penyebab teknisnya (mis. migration
+yang belum dijalankan) ditulis ke console browser (F12 → Console), tidak ke layar pelanggan.
+
 Model ini manual: tidak ada pendaftaran sendiri dan tidak ada pembayaran otomatis. Admin
 membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
 
@@ -269,7 +279,7 @@ membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
    di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
    free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
 2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
-   satu per satu, dari `20260930000000_init.sql` sampai `20261012000000_multi_tenant.sql`.
+   satu per satu, dari `20260930000000_init.sql` sampai `20261013000000_read_only_when_expired.sql`.
 3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
    hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
 

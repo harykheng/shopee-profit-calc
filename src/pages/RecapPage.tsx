@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { MonthSelect } from '../components/pickers'
-import { Alert, Button, ErrorBox, Spinner, Stamp } from '../components/ui'
+import { Alert, Button, ButtonLink, Card, ErrorBox, Spinner, Stamp } from '../components/ui'
 import { IconAlertCircle, IconCheck, IconChevronDown, IconInfo } from '../components/icons'
 import {
   countItemsWithoutCreatedAt,
@@ -14,6 +14,8 @@ import {
   fetchProducts,
   fetchReconciliation,
   fetchReturnedItems,
+  fetchSetupProgress,
+  type SetupProgress,
   recalcHpp,
   type CreatedItem,
 } from '../lib/api'
@@ -51,7 +53,18 @@ interface OrdersData {
 
 type Tab = 'pesanan' | 'produk' | 'bulan'
 
-export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: number | null }) {
+/** Langganan habis: Rekap hanya bisa dilihat. Semua tombol yang mengubah data atau pindah ke halaman input disembunyikan. */
+const ReadOnlyContext = createContext(false)
+
+export function RecapPage({
+  stores,
+  storeId,
+  readOnly = false,
+}: {
+  stores: Store[]
+  storeId: number | null
+  readOnly?: boolean
+}) {
   const lastMonth = addMonths(currentMonth(), -1)
   const [from, setFrom] = useState(lastMonth)
   const [to, setTo] = useState(lastMonth)
@@ -158,10 +171,15 @@ export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: numbe
       ) : !data || ordersPending ? (
         <Spinner />
       ) : isEmpty ? (
-        <Alert tone="info" title="Belum ada data">
-          Belum ada penghasilan, pesanan, atau biaya untuk {storeName} di {period}.
-        </Alert>
+        readOnly ? (
+          <Alert tone="info" title="Belum ada data">
+            Belum ada penghasilan, pesanan, atau biaya untuk {storeName} di {period}.
+          </Alert>
+        ) : (
+          <EmptyRecap storeId={storeId} storeName={storeName} period={period} />
+        )
       ) : (
+        <ReadOnlyContext.Provider value={readOnly}>
         <div className="space-y-14">
           <NotaCard
             data={data}
@@ -194,9 +212,10 @@ export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: numbe
             </div>
           </section>
         </div>
+        </ReadOnlyContext.Provider>
       )}
 
-      {recalcMonth && storeId && (
+      {recalcMonth && storeId && !readOnly && (
         <RecalcDialog
           month={recalcMonth}
           onCancel={() => setRecalcMonth(null)}
@@ -213,6 +232,108 @@ export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: numbe
         />
       )}
     </>
+  )
+}
+
+/**
+ * Rekap kosong untuk periode yang dipilih. Toko yang belum punya data sama sekali dapat langkah awal
+ * (upload → HPP); toko yang sudah punya data di bulan lain hanya diberi tahu bulan ini kosong.
+ */
+function EmptyRecap({ storeId, storeName, period }: { storeId: number | null; storeName: string; period: string }) {
+  const [progress, setProgress] = useState<SetupProgress | null>(null)
+  const [error, setError] = useState<unknown>(null)
+
+  useEffect(() => {
+    if (!storeId) return
+    let cancelled = false
+    setProgress(null)
+    setError(null)
+    fetchSetupProgress(storeId)
+      .then((p) => !cancelled && setProgress(p))
+      .catch((e) => !cancelled && setError(e))
+    return () => {
+      cancelled = true
+    }
+  }, [storeId])
+
+  if (error) return <ErrorBox error={error} />
+  // Tunggu dulu: menampilkan "Belum ada data" sebentar lalu berganti jadi panduan akan terlihat berkedip.
+  if (!progress) return <Spinner />
+
+  if (progress.hasOrders || progress.hasIncome) {
+    return (
+      <Alert tone="info" title={`Belum ada data di ${period}`}>
+        <p>
+          {storeName} belum punya penghasilan, pesanan, atau biaya di bulan ini. Pilih bulan lain di atas, atau upload
+          data bulan ini.
+        </p>
+        <p className="mt-3">
+          <ButtonLink href="#/upload" variant="secondary">Upload data</ButtonLink>
+        </p>
+      </Alert>
+    )
+  }
+
+  const hppDone = progress.hasProducts && !progress.hasMissingHpp
+  return (
+    <Card title={`Mulai dengan data ${storeName}`}>
+      <p className="mb-5 text-ink-soft">
+        Rekap muncul setelah tiga langkah ini. Setelah itu, tiap bulan cukup ulangi upload file terbaru dari Shopee.
+      </p>
+      <ol className="space-y-3">
+        <SetupStep n={1} title="Upload export pesanan (Excel)" action={<ButtonLink href="#/upload">Buka Upload</ButtonLink>}>
+          Seller Centre → Pesanan Saya → Export, status <strong>Semua</strong>. File .xlsx
+        </SetupStep>
+        <SetupStep n={2} title="Upload laporan penghasilan (PDF)" action={<ButtonLink href="#/upload">Buka Upload</ButtonLink>}>
+          Keuangan → Penghasilan Saya → laporan bulanan. File .pdf
+        </SetupStep>
+        <SetupStep
+          n={3}
+          title="Isi HPP (modal) tiap produk"
+          done={hppDone}
+          action={progress.hasProducts && !hppDone ? <ButtonLink href="#/hpp?kosong=1">Isi HPP</ButtonLink> : null}
+        >
+          {progress.hasProducts
+            ? 'Supaya untung dihitung setelah dikurangi modal.'
+            : 'Daftar produk muncul di sini setelah export pesanan di-upload.'}
+        </SetupStep>
+      </ol>
+    </Card>
+  )
+}
+
+function SetupStep({
+  n,
+  title,
+  done = false,
+  action,
+  children,
+}: {
+  n: number
+  title: string
+  done?: boolean
+  action: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-counter/50 p-4">
+      <span
+        aria-hidden="true"
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-lg font-bold ${
+          done ? 'bg-gain text-white' : 'bg-stamp-tint text-stamp-strong'
+        }`}
+      >
+        {done ? <IconCheck size={18} /> : n}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">
+          {title}
+          {done && <span className="sr-only"> (sudah)</span>}
+        </p>
+        <p className="text-ink-soft">{children}</p>
+      </div>
+      {!done && action}
+    </li>
   )
 }
 
@@ -274,6 +395,7 @@ function NotaCard({
   storeId: number | null
   storeName: string
 }) {
+  const readOnly = useContext(ReadOnlyContext)
   const t = data.months.reduce(
     (a, m) => ({
       income: a.income + Number(m.total_income),
@@ -399,7 +521,7 @@ function NotaCard({
               detail={
                 <>
                   {formatNumber(t.qty)} barang × HPP masing-masing
-                  {singleMonth && (
+                  {singleMonth && !readOnly && (
                     <>
                       {' · '}
                       <button type="button" className="font-semibold text-stamp underline-offset-2 hover:underline" onClick={() => onRecalc(singleMonth)}>
@@ -417,7 +539,7 @@ function NotaCard({
               detail={
                 <>
                   {expenseDetail || (unfilledExpenses.length > 0 ? 'Belum diisi' : 'Tidak ada biaya')}
-                  {biayaMonth && (
+                  {biayaMonth && !readOnly && (
                     <>
                       {' · '}
                       <button
@@ -539,6 +661,7 @@ type AdsState =
 
 /** Bab 3: iklan bulan yang sama (kalau ada data iklan 1 bulan penuh), dengan tautan ke halaman Iklan. */
 function AdsChapter({ storeId, month }: { storeId: number; month: string }) {
+  const readOnly = useContext(ReadOnlyContext)
   const [state, setState] = useState<AdsState>({ kind: 'loading' })
 
   useEffect(() => {
@@ -613,12 +736,14 @@ function AdsChapter({ storeId, month }: { storeId: number; month: string }) {
           )}
         </>
       )}
-      <a
-        href="#/iklan"
-        className="mt-6 inline-flex min-h-11 items-center rounded-full bg-white px-5 font-semibold text-coral transition active:scale-[0.97]"
-      >
-        Buka halaman Iklan →
-      </a>
+      {!readOnly && (
+        <a
+          href="#/iklan"
+          className="mt-6 inline-flex min-h-11 items-center rounded-full bg-white px-5 font-semibold text-coral transition active:scale-[0.97]"
+        >
+          Buka halaman Iklan →
+        </a>
+      )}
     </section>
   )
 }
@@ -728,6 +853,7 @@ function Checklist({
   showTitle: boolean
   onRecalc: (month: string) => void
 }) {
+  const readOnly = useContext(ReadOnlyContext)
   const label = formatMonth(month)
   return (
     <div className="space-y-2">
@@ -764,20 +890,27 @@ function Checklist({
         {s.missingHpp === 0 ? 'Semua barang sudah punya HPP' : (
           <>
             <strong>{formatNumber(s.missingHpp)} barang belum punya HPP</strong>, jadi modalnya masih Rp0.
-            <span className="mt-2 flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => navigate('hpp', { kosong: '1' })}>Isi HPP</Button>
-              <Button variant="secondary" onClick={() => onRecalc(month)}>Hitung ulang HPP</Button>
-            </span>
+            {!readOnly && (
+              <span className="mt-2 flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={() => navigate('hpp', { kosong: '1' })}>Isi HPP</Button>
+                <Button variant="secondary" onClick={() => onRecalc(month)}>Hitung ulang HPP</Button>
+              </span>
+            )}
           </>
         )}
       </CheckRow>
       <CheckRow ok={s.expensesFilled}>
         {s.expensesFilled ? 'Biaya sudah diisi' : (
           <>
-            <strong>Biaya {label} belum diisi</strong> (iklan, packaging, dll.). Kalau memang tidak ada, simpan Rp0.{' '}
-            <button type="button" className="font-semibold underline" onClick={() => navigate('biaya', { bulan: month })}>
-              Isi biaya
-            </button>
+            <strong>Biaya {label} belum diisi</strong> (iklan, packaging, dll.).
+            {!readOnly && (
+              <>
+                {' '}Kalau memang tidak ada, simpan Rp0.{' '}
+                <button type="button" className="font-semibold underline" onClick={() => navigate('biaya', { bulan: month })}>
+                  Isi biaya
+                </button>
+              </>
+            )}
           </>
         )}
       </CheckRow>
@@ -794,6 +927,7 @@ const GROUP_LABEL: Record<OrdersByCreated['status_group'], string> = {
 }
 
 function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown } | null; period: string }) {
+  const readOnly = useContext(ReadOnlyContext)
   if (!orders) return <Spinner />
   if ('error' in orders) {
     return (
@@ -900,7 +1034,9 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
               {est.missingHpp > 0 && (
                 <Alert tone="warning">
                   {formatNumber(est.missingHpp)} barang belum punya HPP, jadi modal di perkiraan ini belum lengkap.{' '}
-                  <button type="button" className="underline" onClick={() => navigate('hpp', { kosong: '1' })}>Isi HPP</button>
+                  {!readOnly && (
+                    <button type="button" className="underline" onClick={() => navigate('hpp', { kosong: '1' })}>Isi HPP</button>
+                  )}
                 </Alert>
               )}
               <Why label="Kenapa beda dengan untung bersih di atas?">
@@ -1078,6 +1214,7 @@ function MonthsTab({
   reconciliation: DailyReconciliation[]
   onRecalc: (month: string) => void
 }) {
+  const readOnly = useContext(ReadOnlyContext)
   return (
     <section className="rounded-3xl bg-paper p-5 shadow-sheet sm:p-6">
       <div className="overflow-x-auto">
@@ -1118,13 +1255,15 @@ function MonthsTab({
                   </td>
                   <td className="num py-3 pr-3 text-right">{formatNumber(Number(m.total_qty))}</td>
                   <td className="py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onRecalc(m.month)}
-                      className="min-h-11 whitespace-nowrap px-2 text-sm font-medium text-stamp underline"
-                    >
-                      Hitung ulang HPP
-                    </button>
+                    {!readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => onRecalc(m.month)}
+                        className="min-h-11 whitespace-nowrap px-2 text-sm font-medium text-stamp underline"
+                      >
+                        Hitung ulang HPP
+                      </button>
+                    )}
                   </td>
                 </tr>
               )

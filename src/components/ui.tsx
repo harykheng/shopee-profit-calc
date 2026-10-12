@@ -1,6 +1,6 @@
-import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react'
+import { useEffect, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
 import { APP_NAME, supportUrl } from '../lib/brand'
-import { errorText, friendlyError } from '../lib/errors'
+import { adminHint, errorText, friendlyError } from '../lib/errors'
 import { IconAlertCircle, IconCheckCircle, IconError, IconInfo } from './icons'
 
 type Variant = 'primary' | 'secondary' | 'danger'
@@ -24,6 +24,28 @@ export function Button({
       {...props}
       className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-base font-semibold transition duration-150 enabled:active:scale-[0.97] disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
     />
+  )
+}
+
+/** Tautan (#/halaman) yang tampil seperti Button. */
+export function ButtonLink({
+  href,
+  variant = 'primary',
+  className = '',
+  children,
+}: {
+  href: string
+  variant?: Variant
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <a
+      href={href}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-base font-semibold transition duration-150 active:scale-[0.97] ${VARIANTS[variant]} ${className}`}
+    >
+      {children}
+    </a>
   )
 }
 
@@ -94,6 +116,12 @@ export function SupportLink({
 
 /** Kotak error ramah + detail teknis yang bisa dibuka (untuk pengelola aplikasi). */
 export function ErrorBox({ error }: { error: unknown }) {
+  // Petunjuk untuk pengelola (mis. migration belum dijalankan) hanya masuk console, tidak ke layar pelanggan.
+  useEffect(() => {
+    if (!error) return
+    const hint = adminHint(error)
+    if (hint) console.error(`[${APP_NAME}] ${hint}`, error)
+  }, [error])
   if (!error) return null
   const friendly = friendlyError(error)
   const detail = errorText(error)

@@ -35,3 +35,17 @@ export function subscriptionStatus(
   const daysLeft = dayNumber(until) - dayNumber(wibToday(now))
   return { state: daysLeft < 0 ? 'expired' : 'active', activeUntil: until, daysLeft }
 }
+
+/** Berapa hari sebelum habis banner pengingat mulai tampil. */
+export const EXPIRY_WARNING_DAYS = 7
+
+/**
+ * Kalimat "berakhir …" untuk banner pengingat. null kalau belum perlu mengingatkan
+ * (tidak dibatasi, masih lama, atau sudah habis — yang sudah habis punya layarnya sendiri).
+ */
+export function expiryNotice(s: SubscriptionStatus): string | null {
+  if (s.state !== 'active' || s.daysLeft === null || s.daysLeft > EXPIRY_WARNING_DAYS) return null
+  if (s.daysLeft === 0) return 'berakhir hari ini'
+  if (s.daysLeft === 1) return 'berakhir besok'
+  return `berakhir ${s.daysLeft} hari lagi`
+}

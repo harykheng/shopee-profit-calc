@@ -38,6 +38,30 @@ export async function fetchStores(): Promise<Store[]> {
   return check(await supabase.from('stores').select('id, name, active_until').order('id'))
 }
 
+/** Sudah sampai mana toko ini mengisi data. Dipakai untuk panduan awal di halaman Rekap. */
+export interface SetupProgress {
+  hasOrders: boolean
+  hasIncome: boolean
+  hasProducts: boolean
+  /** Ada produk yang HPP-nya masih kosong. */
+  hasMissingHpp: boolean
+}
+
+export async function fetchSetupProgress(storeId: number): Promise<SetupProgress> {
+  const any = async (table: 'order_items' | 'income' | 'products', missingHpp = false) => {
+    let q = supabase.from(table).select('id').eq('store_id', storeId)
+    if (missingHpp) q = q.is('hpp', null)
+    return check(await q.limit(1)).length > 0
+  }
+  const [hasOrders, hasIncome, hasProducts, hasMissingHpp] = await Promise.all([
+    any('order_items'),
+    any('income'),
+    any('products'),
+    any('products', true),
+  ])
+  return { hasOrders, hasIncome, hasProducts, hasMissingHpp }
+}
+
 // --- Upload -----------------------------------------------------------------
 
 export async function saveOrderItems(storeId: number, items: OrderItemRow[]) {

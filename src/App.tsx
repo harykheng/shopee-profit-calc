@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { Alert, ErrorBox, Spinner, SupportLink } from './components/ui'
 import { APP_NAME } from './lib/brand'
 import { formatDate } from './lib/format'
-import { subscriptionStatus } from './lib/subscription'
+import { expiryNotice, subscriptionStatus } from './lib/subscription'
 import { fetchStores } from './lib/api'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import type { Store } from './lib/types'
@@ -158,7 +158,10 @@ function MainApp({ email }: { email: string }) {
   const selectedStore = stores?.find((s) => s.id === storeId) ?? null
   const subscription = subscriptionStatus(selectedStore?.active_until)
   // Layar penuh menggantikan semua halaman: belum punya toko, atau langganan toko terpilih habis.
-  const blocked = stores !== null && (stores.length === 0 || subscription.state === 'expired')
+  const expired = subscription.state === 'expired' && selectedStore !== null
+  // Menu disembunyikan kalau belum punya toko, atau langganan habis (saat itu hanya Rekap, baca saja).
+  const blocked = stores !== null && (stores.length === 0 || expired)
+  const notice = expiryNotice(subscription)
 
   // Pemilih toko hanya muncul kalau user punya lebih dari satu toko.
   const storeSelect =
@@ -241,10 +244,18 @@ function MainApp({ email }: { email: string }) {
           <Spinner />
         ) : stores.length === 0 ? (
           <NoStoreScreen />
-        ) : subscription.state === 'expired' && selectedStore ? (
-          <ExpiredScreen storeName={selectedStore.name} activeUntil={subscription.activeUntil} />
+        ) : expired && selectedStore ? (
+          <div className="page-in space-y-6">
+            <ExpiredBanner storeName={selectedStore.name} activeUntil={subscription.activeUntil} />
+            <RecapPage stores={stores} storeId={storeId} readOnly />
+          </div>
         ) : (
           <div key={route} className="page-in">
+            {notice && selectedStore && (
+              <div className="mb-6">
+                <ExpiryReminder storeName={selectedStore.name} showStore={stores.length > 1} notice={notice} activeUntil={subscription.activeUntil} />
+              </div>
+            )}
             {route === 'upload' && <UploadPage stores={stores} storeId={storeId} />}
             {route === 'hpp' && (
               <HppPage
@@ -287,17 +298,43 @@ function NoStoreScreen() {
   )
 }
 
-function ExpiredScreen({ storeName, activeUntil }: { storeName: string; activeUntil: string | null }) {
+function renewMessage(storeName: string) {
+  return `Halo, saya ingin memperpanjang langganan ${APP_NAME} untuk toko ${storeName}.`
+}
+
+/** Pengingat beberapa hari sebelum langganan habis. */
+function ExpiryReminder({
+  storeName,
+  showStore,
+  notice,
+  activeUntil,
+}: {
+  storeName: string
+  showStore: boolean
+  notice: string
+  activeUntil: string | null
+}) {
   return (
-    <div className="mx-auto max-w-xl">
-      <Alert tone="warning" title={`Langganan ${APP_NAME} habis pada ${formatDate(activeUntil)}.`}>
-        <p>Data kamu aman dan tersimpan. Perpanjang langganan untuk membukanya lagi.</p>
-        <p className="mt-3">
-          <SupportLink message={`Halo, saya ingin memperpanjang langganan ${APP_NAME} untuk toko ${storeName}.`}>
-            Perpanjang lewat WhatsApp
-          </SupportLink>
-        </p>
-      </Alert>
-    </div>
+    <Alert tone="warning" title={`Langganan ${showStore ? `toko ${storeName} ` : ''}${notice} (${formatDate(activeUntil)}).`}>
+      <p>Setelah habis, data tetap aman dan bisa dilihat di Rekap, tapi upload dan perubahan data dimatikan.</p>
+      <p className="mt-2">
+        <SupportLink message={renewMessage(storeName)}>Perpanjang lewat WhatsApp</SupportLink>
+      </p>
+    </Alert>
+  )
+}
+
+/** Langganan habis: data tetap bisa dilihat (Rekap, baca saja), mengubah data tidak. */
+function ExpiredBanner({ storeName, activeUntil }: { storeName: string; activeUntil: string | null }) {
+  return (
+    <Alert tone="warning" title={`Langganan ${APP_NAME} toko ${storeName} habis pada ${formatDate(activeUntil)}.`}>
+      <p>
+        Data kamu aman dan tetap bisa dilihat di Rekap di bawah. Upload, HPP, biaya, iklan, dan simulasi aktif lagi
+        setelah langganan diperpanjang.
+      </p>
+      <p className="mt-2">
+        <SupportLink message={renewMessage(storeName)}>Perpanjang lewat WhatsApp</SupportLink>
+      </p>
+    </Alert>
   )
 }

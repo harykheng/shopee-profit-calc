@@ -1,5 +1,30 @@
 import { ParseError } from './parsers/common'
 
+/** Pesan untuk pelanggan kalau database belum diperbarui. Detailnya hanya untuk pengelola (lihat adminHint). */
+const SYSTEM_TROUBLE = 'Ada gangguan di sistem kami. Coba lagi sebentar lagi; kalau masih gagal, hubungi pengelola aplikasi.'
+
+/** Error karena migration belum dijalankan: [kata kunci, nama file SQL]. */
+const MISSING_MIGRATIONS: [match: (lower: string) => boolean, file: string][] = [
+  [(l) => l.includes('active_until') || l.includes('store_members'), '20261012000000_multi_tenant.sql'],
+  [(l) => l.includes('upsert_income_adjustments') || l.includes('income_adjustments'), '20261004000000_income_adjustments.sql'],
+  [
+    (l) => l.includes('admin_pct') || l.includes("'xtra'") || l.includes('column products.xtra'),
+    '20261007000000_product_fee_settings.sql',
+  ],
+  [(l) => l.includes('save_ad_report') || l.includes('ad_reports') || l.includes('ad_rows'), '20261006000000_ads.sql'],
+]
+
+/**
+ * Petunjuk untuk pengelola kalau errornya berarti migration belum dijalankan; null kalau bukan.
+ * Hanya untuk log (console), tidak pernah ditampilkan ke pelanggan.
+ */
+export function adminHint(err: unknown): string | null {
+  if (err instanceof ParseError) return null
+  const lower = errorText(err).toLowerCase()
+  const hit = MISSING_MIGRATIONS.find(([match]) => match(lower))
+  return hit ? `Database belum diperbarui: jalankan supabase/migrations/${hit[1]} di Supabase SQL Editor (lihat README).` : null
+}
+
 /** Ubah error apa pun menjadi pesan yang bisa dipahami orang non-teknis. */
 export function friendlyError(err: unknown): string {
   if (err instanceof ParseError) return err.message
@@ -13,30 +38,7 @@ export function friendlyError(err: unknown): string {
   if (lower.includes('failed to fetch') || lower.includes('network') || lower.includes('load failed')) {
     return 'Tidak bisa terhubung ke server. Cek koneksi internet, lalu coba lagi.'
   }
-  if (lower.includes('active_until') || lower.includes('store_members')) {
-    return (
-      'Database belum diperbarui untuk mode banyak pelanggan. Pengelola aplikasi perlu menjalankan file ' +
-      'SQL "20261012000000_multi_tenant.sql" di Supabase (lihat README).'
-    )
-  }
-  if (lower.includes('upsert_income_adjustments') || lower.includes('income_adjustments')) {
-    return (
-      'Database belum diperbarui untuk biaya penyesuaian. Pengelola aplikasi perlu menjalankan file ' +
-      'SQL "20261004000000_income_adjustments.sql" di Supabase (lihat README), lalu upload ulang file ini.'
-    )
-  }
-  if (lower.includes('admin_pct') || lower.includes("'xtra'") || lower.includes('column products.xtra')) {
-    return (
-      'Database belum diperbarui untuk pengaturan admin & XTRA per produk. Pengelola aplikasi perlu menjalankan ' +
-      'file SQL "20261007000000_product_fee_settings.sql" di Supabase (lihat README).'
-    )
-  }
-  if (lower.includes('save_ad_report') || lower.includes('ad_reports') || lower.includes('ad_rows')) {
-    return (
-      'Database belum diperbarui untuk data iklan. Pengelola aplikasi perlu menjalankan file ' +
-      'SQL "20261006000000_ads.sql" di Supabase (lihat README).'
-    )
-  }
+  if (adminHint(err)) return SYSTEM_TROUBLE
   if (lower.includes('permission denied') || lower.includes('row-level security')) {
     return 'Anda tidak punya akses untuk data ini. Coba login ulang.'
   }

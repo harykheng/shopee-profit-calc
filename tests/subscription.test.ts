@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { subscriptionStatus, wibToday } from '../src/lib/subscription'
+import { expiryNotice, subscriptionStatus, wibToday } from '../src/lib/subscription'
 
 // 12 Okt 2026, jam WIB tertentu → UTC dikurangi 7 jam.
 const wib = (date: string, time = '12:00:00') => new Date(`${date}T${time}+07:00`)
@@ -52,5 +52,28 @@ describe('subscriptionStatus', () => {
 
   it('lintas bulan dan tahun', () => {
     expect(subscriptionStatus('2027-01-02', wib('2026-12-30')).daysLeft).toBe(3)
+  })
+})
+
+describe('expiryNotice', () => {
+  const notice = (until: string | null) => expiryNotice(subscriptionStatus(until, wib('2026-10-12')))
+
+  it('tidak dibatasi atau masih lama: tidak ada pengingat', () => {
+    expect(notice(null)).toBeNull()
+    expect(notice('2026-10-20')).toBeNull() // 8 hari lagi
+  })
+
+  it('mulai H-7', () => {
+    expect(notice('2026-10-19')).toBe('berakhir 7 hari lagi')
+    expect(notice('2026-10-15')).toBe('berakhir 3 hari lagi')
+  })
+
+  it('besok dan hari ini punya kalimat sendiri', () => {
+    expect(notice('2026-10-13')).toBe('berakhir besok')
+    expect(notice('2026-10-12')).toBe('berakhir hari ini')
+  })
+
+  it('sudah habis: bukan urusan banner pengingat', () => {
+    expect(notice('2026-10-11')).toBeNull()
   })
 })
