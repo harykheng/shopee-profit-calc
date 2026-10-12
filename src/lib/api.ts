@@ -12,6 +12,7 @@ import type {
   OrdersByCreated,
   Expense,
   ExpenseCategory,
+  FeeCategory,
   MonthlyRecap,
   Product,
   ProductRecap,
@@ -154,12 +155,69 @@ export async function fetchLatestOrderDate(storeId: number): Promise<string | nu
   return rows[0]?.created_at ?? null
 }
 
-/** Simpan % admin & XTRA untuk semua variasi dengan nama produk ini (Simulasi Harga). */
-export async function saveProductFees(storeId: number, productName: string, adminPct: number, xtra: boolean) {
+/**
+ * Simpan % admin & XTRA untuk semua variasi dengan nama produk ini (Simulasi Harga).
+ * `categoryId` ikut disimpan kalau diberikan (null = isian manual); undefined = jangan sentuh kolom itu.
+ * admin_pct selalu diisi persen yang berlaku, sebagai cadangan kalau kategorinya nanti dihapus.
+ */
+export async function saveProductFees(
+  storeId: number,
+  productName: string,
+  adminPct: number,
+  xtra: boolean,
+  categoryId?: number | null,
+) {
   check(
     await supabase
       .from('products')
-      .update({ admin_pct: adminPct, xtra })
+      .update({ admin_pct: adminPct, xtra, ...(categoryId !== undefined ? { fee_category_id: categoryId } : {}) })
+      .eq('store_id', storeId)
+      .eq('product_name', productName),
+  )
+}
+
+// --- Kategori biaya admin ---------------------------------------------------
+
+export async function fetchFeeCategories(storeId: number): Promise<FeeCategory[]> {
+  const rows = check(
+    await supabase.from('fee_categories').select('id, store_id, name, admin_pct').eq('store_id', storeId).order('name'),
+  ) as FeeCategory[]
+  return rows.map((r) => ({ ...r, admin_pct: Number(r.admin_pct) }))
+}
+
+/** Tambah kategori baru (tanpa id) atau ubah yang ada (dengan id). */
+export async function saveFeeCategory(
+  storeId: number,
+  input: { id?: number; name: string; adminPct: number },
+): Promise<FeeCategory> {
+  const values = { name: input.name.trim(), admin_pct: input.adminPct }
+  const q =
+    input.id === undefined
+      ? supabase.from('fee_categories').insert({ store_id: storeId, ...values })
+      : supabase.from('fee_categories').update(values).eq('id', input.id).eq('store_id', storeId)
+  const row = check(await q.select('id, store_id, name, admin_pct').single()) as FeeCategory
+  return { ...row, admin_pct: Number(row.admin_pct) }
+}
+
+/** Hapus kategori. Produk yang memakainya otomatis kembali ke isian manual (fee_category_id dikosongkan). */
+export async function deleteFeeCategory(storeId: number, id: number) {
+  check(await supabase.from('fee_categories').delete().eq('id', id).eq('store_id', storeId))
+}
+
+/**
+ * Pasang kategori (atau null = isian manual) ke semua variasi dengan nama produk ini.
+ * `adminPctSnapshot`: persen kategori saat ini, disimpan di admin_pct sebagai cadangan kalau kategori dihapus.
+ */
+export async function saveProductCategory(
+  storeId: number,
+  productName: string,
+  categoryId: number | null,
+  adminPctSnapshot?: number,
+) {
+  check(
+    await supabase
+      .from('products')
+      .update({ fee_category_id: categoryId, ...(adminPctSnapshot !== undefined ? { admin_pct: adminPctSnapshot } : {}) })
       .eq('store_id', storeId)
       .eq('product_name', productName),
   )

@@ -86,6 +86,7 @@ export function DecimalInput({
   suffix,
   optional,
   placeholder,
+  disabled,
 }: {
   value: number | null
   onCommit: (value: number | null) => void
@@ -93,6 +94,7 @@ export function DecimalInput({
   suffix?: string
   optional?: boolean
   placeholder?: string
+  disabled?: boolean
 }) {
   const format = (n: number | null) => (n === null ? '' : decimal(n, 4))
   const [text, setText] = useState(format(value))
@@ -131,6 +133,7 @@ export function DecimalInput({
         aria-label={ariaLabel}
         aria-invalid={invalid}
         value={text}
+        disabled={disabled}
         placeholder={placeholder ?? (optional ? 'boleh dikosongkan' : 'belum diisi')}
         onChange={(e) => setText(e.target.value)}
         onBlur={commit}
@@ -139,7 +142,9 @@ export function DecimalInput({
         }}
         className={`num min-h-11 w-full rounded-md border px-3 text-right text-base transition-colors placeholder:font-sans placeholder:text-ink-muted focus:outline-none focus:ring-2 ${
           suffix ? 'pr-9' : ''
-        } ${invalid ? 'border-loss ring-loss/20' : 'border-line bg-paper hover:border-ink-muted focus:border-stamp focus:ring-stamp/25'}`}
+        } ${invalid ? 'border-loss ring-loss/20' : 'border-line bg-paper hover:border-ink-muted focus:border-stamp focus:ring-stamp/25'} ${
+          disabled ? 'cursor-not-allowed bg-counter text-ink-soft hover:border-line' : ''
+        }`}
       />
       {suffix && (
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted">{suffix}</span>

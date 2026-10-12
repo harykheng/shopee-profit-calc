@@ -11,6 +11,10 @@ const MISSING_MIGRATIONS: [match: (lower: string) => boolean, file: string][] = 
     (l) => l.includes('admin_pct') || l.includes("'xtra'") || l.includes('column products.xtra'),
     '20261007000000_product_fee_settings.sql',
   ],
+  [
+    (l) => (l.includes('fee_categories') || l.includes('fee_category_id')) && (l.includes('does not exist') || l.includes('schema cache')),
+    '20261014000000_fee_categories.sql',
+  ],
   [(l) => l.includes('save_ad_report') || l.includes('ad_reports') || l.includes('ad_rows'), '20261006000000_ads.sql'],
 ]
 
@@ -30,6 +34,7 @@ export function friendlyError(err: unknown): string {
   if (err instanceof ParseError) return err.message
   const message = errorText(err)
   const lower = message.toLowerCase()
+  if (lower.includes('fee_categories_store_name_key')) return 'Sudah ada kategori dengan nama itu. Pakai nama lain.'
   if (lower.includes('invalid login credentials')) return 'Email atau password salah.'
   if (lower.includes('email not confirmed')) return 'Akun ini belum dikonfirmasi. Hubungi pengelola aplikasi.'
   if (lower.includes('jwt') || lower.includes('not authenticated') || lower.includes('refresh token')) {

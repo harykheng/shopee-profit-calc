@@ -8,7 +8,8 @@ import { WordsRise } from '../components/motion'
 import { XTRA_FEE_RATE, profitAtRoas, simulateAdGroup } from '../lib/adsMath'
 import { fetchItemsCreatedBetween, fetchLastSalePrice, fetchLatestOrderDate } from '../lib/api'
 import { formatMonth, formatNumber, formatPercent, formatRupiah, monthEnd, wibDay } from '../lib/format'
-import type { Product } from '../lib/types'
+import { effectiveAdminPct } from '../lib/feeCategories'
+import type { FeeCategory, Product } from '../lib/types'
 import { DEFAULTS, DecimalInput, Field, Result, TOO_THIN, decimal, formatRoas, roundUp2 } from './simShared'
 
 interface GroupRow {
@@ -52,7 +53,15 @@ async function loadSales(storeId: number): Promise<Sales | null> {
 
 let nextKey = 0
 
-export function AdGroupSim({ storeId, products }: { storeId: number | null; products: Product[] | null }) {
+export function AdGroupSim({
+  storeId,
+  products,
+  categories,
+}: {
+  storeId: number | null
+  products: Product[] | null
+  categories: FeeCategory[]
+}) {
   const [rows, setRows] = useState<GroupRow[]>([])
   const [processFee, setProcessFee] = useState<number | null>(DEFAULTS.processFee)
   const [packaging, setPackaging] = useState<number | null>(DEFAULTS.packaging)
@@ -102,7 +111,7 @@ export function AdGroupSim({ storeId, products }: { storeId: number | null; prod
       const known = variants.map((v) => v.hpp).filter((h): h is number => h !== null).map(Number)
       if (known.length > 0) hpp = known.reduce((s, h) => s + h, 0) / known.length
     }
-    const withFees = variants.find((v) => v.admin_pct !== null && v.admin_pct !== undefined)
+    const withFees = variants.find((v) => effectiveAdminPct(v, categories) !== null)
     const key = `p${nextKey++}`
     setRows((r) => [
       ...r,
@@ -112,7 +121,7 @@ export function AdGroupSim({ storeId, products }: { storeId: number | null; prod
         manual: false,
         price: sold ? Math.round(sold.gmv / sold.qty) : null,
         hpp: hpp === null ? null : Math.round(hpp),
-        adminPct: withFees ? Number(withFees.admin_pct) : DEFAULTS.adminPct,
+        adminPct: withFees ? (effectiveAdminPct(withFees, categories) ?? DEFAULTS.adminPct) : DEFAULTS.adminPct,
         xtra: withFees?.xtra ?? DEFAULTS.xtra,
         qty: sold ? sold.qty : null,
         note: sold

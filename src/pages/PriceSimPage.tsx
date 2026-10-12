@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Button, Card, ErrorBox, PageTitle, Stamp } from '../components/ui'
+import { Alert, Button, Card, ErrorBox, PageTitle, Stamp, inputClass } from '../components/ui'
 import { IconCheck, IconSearch } from '../components/icons'
 import { RupiahInput } from '../components/pickers'
 import {
@@ -17,16 +17,19 @@ import {
 import {
   fetchAdReports,
   fetchAdRows,
+  fetchFeeCategories,
   fetchItemsCreatedBetween,
   fetchLastSalePrice,
   fetchProducts,
   saveProductFees,
 } from '../lib/api'
+import { effectiveAdminPct } from '../lib/feeCategories'
 import { formatDate, formatPercent, formatRupiah } from '../lib/format'
 import { navigate } from '../lib/router'
-import type { Product, Store } from '../lib/types'
+import type { FeeCategory, Product, Store } from '../lib/types'
 import { NotaLine } from './RecapPage'
 import { AdGroupSim } from './AdGroupSim'
+import { FeeCategoriesPanel } from './FeeCategories'
 import { DEFAULTS, DecimalInput, Field, Result, TOO_THIN, decimal, formatRoas, roundUp2 } from './simShared'
 
 // Semua dihitung di browser. Yang disimpan hanya % admin & XTRA per produk (tombol Simpan).
@@ -52,6 +55,10 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
   const [feesSaving, setFeesSaving] = useState(false)
   const [feesSaved, setFeesSaved] = useState(false)
   const [feesError, setFeesError] = useState<unknown>(null)
+  // Kategori biaya admin milik toko. "Tidak tersedia" kalau SQL 20261014 belum dijalankan: sisanya tetap jalan.
+  const [categories, setCategories] = useState<FeeCategory[]>([])
+  const [categoriesAvailable, setCategoriesAvailable] = useState(false)
+  const [categoryId, setCategoryId] = useState<number | null>(null)
 
   useEffect(() => {
     if (!storeId) return
@@ -61,6 +68,16 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
     setSelected(null)
     setNotes({})
     setAdRoas(null)
+    setCategories([])
+    setCategoriesAvailable(false)
+    setCategoryId(null)
+    fetchFeeCategories(storeId)
+      .then((list) => {
+        if (cancelled) return
+        setCategories(list)
+        setCategoriesAvailable(true)
+      })
+      .catch(() => {})
     fetchProducts(storeId)
       .then((list) => !cancelled && setProducts(list))
       .catch((e) => !cancelled && setProductsError(e))
@@ -75,11 +92,17 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
     setFeesSaved(false)
     setFeesError(null)
     setHpp(p.hpp === null ? null : Number(p.hpp))
-    const savedFees = p.admin_pct !== null && p.admin_pct !== undefined
-    setAdminPct(savedFees ? Number(p.admin_pct) : DEFAULTS.adminPct)
+    const effective = effectiveAdminPct(p, categories)
+    const cat = p.fee_category_id != null ? (categories.find((c) => c.id === p.fee_category_id) ?? null) : null
+    setCategoryId(cat ? cat.id : null)
+    setAdminPct(effective ?? DEFAULTS.adminPct)
     setXtra(p.xtra ?? DEFAULTS.xtra)
     setNotes({
-      fees: savedFees ? 'Tersimpan untuk produk ini.' : 'Nilai bawaan — belum pernah disimpan untuk produk ini.',
+      fees: cat
+        ? `Dari kategori "${cat.name}".`
+        : effective !== null
+          ? 'Tersimpan untuk produk ini.'
+          : 'Nilai bawaan — belum pernah disimpan untuk produk ini.',
       price: 'Mengambil harga…',
       roas: 'Mengambil data iklan…',
     })
@@ -106,7 +129,16 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
     }))
   }
 
+  const chooseCategory = (id: number | null) => {
+    const cat = id === null ? null : (categories.find((c) => c.id === id) ?? null)
+    setCategoryId(cat ? cat.id : null)
+    if (cat) setAdminPct(cat.admin_pct)
+    setFeesSaved(false)
+    setNotes((n) => ({ ...n, fees: cat ? `Dari kategori "${cat.name}".` : 'Isian manual.' }))
+  }
+
   const clearPick = () => {
+    setCategoryId(null)
     setSelected(null)
     setNotes({})
     setFeesSaved(false)
@@ -118,11 +150,10 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
     setFeesSaving(true)
     setFeesError(null)
     try {
-      await saveProductFees(storeId, selected.product_name, adminPct, xtra)
-      setProducts((list) =>
-        (list ?? []).map((p) => (p.product_name === selected.product_name ? { ...p, admin_pct: adminPct, xtra } : p)),
-      )
-      setSelected((p) => (p ? { ...p, admin_pct: adminPct, xtra } : p))
+      await saveProductFees(storeId, selected.product_name, adminPct, xtra, categoriesAvailable ? categoryId : undefined)
+      const patch = { admin_pct: adminPct, xtra, ...(categoriesAvailable ? { fee_category_id: categoryId } : {}) }
+      setProducts((list) => (list ?? []).map((p) => (p.product_name === selected.product_name ? { ...p, ...patch } : p)))
+      setSelected((p) => (p ? { ...p, ...patch } : p))
       setNotes((n) => ({ ...n, fees: 'Tersimpan untuk produk ini.' }))
       setFeesSaved(true)
     } catch (e) {
@@ -189,9 +220,29 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
         ))}
       </div>
 
+      {categoriesAvailable && storeId && (
+        <details className="mb-8">
+          <summary className="on-field inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-white/10 px-5 font-semibold text-on-field transition-colors hover:bg-white/15">
+            Kategori biaya admin
+            <span className="font-normal text-on-field-muted">
+              {categories.length === 0 ? '· belum ada, buat dulu supaya biaya admin tiap produk tepat' : `· ${categories.length} kategori`}
+            </span>
+          </summary>
+          <div className="mt-4">
+            <FeeCategoriesPanel
+              storeId={storeId}
+              categories={categories}
+              onCategories={setCategories}
+              products={products}
+              onProducts={setProducts}
+            />
+          </div>
+        </details>
+      )}
+
       {mode === 'grup' ? (
         <div key="grup" className="page-in">
-          <AdGroupSim storeId={storeId} products={products} />
+          <AdGroupSim storeId={storeId} products={products} categories={categories} />
         </div>
       ) : (
         <div key="satu" className="page-in">
@@ -280,6 +331,23 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                 <Field label="Harga jual" hint="Kosongkan untuk melihat saran harga dari modal." note={notes.price}>
                   <RupiahInput value={price} onCommit={setPrice} ariaLabel="Harga jual" />
                 </Field>
+                {categoriesAvailable && categories.length > 0 && (
+                  <Field label="Kategori biaya admin" hint="Daftar kategori diatur di bagian atas halaman ini.">
+                    <select
+                      value={categoryId ?? ''}
+                      onChange={(e) => chooseCategory(e.target.value === '' ? null : Number(e.target.value))}
+                      aria-label="Kategori biaya admin"
+                      className={inputClass}
+                    >
+                      <option value="">— Isi persen sendiri —</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({decimal(c.admin_pct)}%)
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
                 <Field label="Biaya admin" note={notes.fees}>
                   <DecimalInput
                     value={adminPct}
@@ -289,6 +357,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                     }}
                     ariaLabel="Biaya admin (persen)"
                     suffix="%"
+                    disabled={categoryId !== null}
                   />
                 </Field>
                 <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-line px-3 transition-colors hover:border-ink-muted">

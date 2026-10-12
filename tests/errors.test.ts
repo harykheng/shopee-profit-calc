@@ -31,3 +31,16 @@ describe('friendlyError: ganti password', () => {
     expect(friendlyError(new Error('Password update requires reauthentication'))).toMatch(/login lagi/)
   })
 })
+
+describe('friendlyError: kategori biaya admin', () => {
+  it('nama kategori kembar: pesan jelas, bukan "database belum diperbarui"', () => {
+    const e = new Error('duplicate key value violates unique constraint "fee_categories_store_name_key"')
+    expect(friendlyError(e)).toMatch(/sudah ada kategori/i)
+    expect(adminHint(e)).toBeNull()
+  })
+  it('tabel belum ada: pesan umum untuk pelanggan, petunjuk file untuk pengelola', () => {
+    const e = new Error("Could not find the table 'public.fee_categories' in the schema cache")
+    expect(friendlyError(e)).toMatch(/gangguan di sistem/)
+    expect(adminHint(e)).toContain('20261014000000_fee_categories.sql')
+  })
+})

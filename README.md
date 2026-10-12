@@ -86,6 +86,11 @@ menghapus data.
 > Sudah setup sebelum 6 Oktober 2026? Jalankan sekali file `20261006000000_ads.sql` supaya
 > halaman **Iklan** bisa dipakai.
 
+> Sudah setup sebelum 14 Oktober 2026? Jalankan sekali file `20261014000000_fee_categories.sql`
+> (aman diulang, tidak mengubah data; butuh PostgreSQL 15+, standar di Supabase) supaya
+> "Kategori biaya admin" di Simulasi Harga bisa dipakai. Tanpa file itu, aplikasi tetap jalan:
+> % admin per produk diisi manual seperti sebelumnya, tanpa daftar kategori.
+
 > Sudah setup sebelum 12 Oktober 2026? Lihat [bagian 8](#8-mode-hitungcuan-banyak-pelanggan):
 > file `20261012000000_multi_tenant.sql` membatasi tiap user ke toko miliknya. Di project keluarga
 > cukup jalankan file itu sekali (cadangkan database dulu); ketiga akun yang ada tetap bisa
@@ -279,7 +284,7 @@ membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
    di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
    free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
 2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
-   satu per satu, dari `20260930000000_init.sql` sampai `20261013000000_read_only_when_expired.sql`.
+   satu per satu, dari `20260930000000_init.sql` sampai `20261014000000_fee_categories.sql`.
 3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
    hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
 

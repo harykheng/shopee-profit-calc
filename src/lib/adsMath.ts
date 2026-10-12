@@ -61,6 +61,10 @@ export interface AdProductResult {
   hpp: number | null
   /** Sebagian pesanan belum ada HPP-nya. */
   hppIncomplete: boolean
+  /** Potongan Shopee (0–1) yang dipakai untuk produk ini: rata-rata toko, disesuaikan admin produk kalau diketahui. */
+  feeRate: number
+  /** 'produk' = admin produk/kategori dipakai; 'rata-rata' = produk ini belum diisi, pakai rata-rata toko. */
+  feeSource: 'produk' | 'rata-rata'
   /** Sisa per barang setelah potongan Shopee dan HPP (sebelum iklan). */
   unitProfit: number | null
   margin: number | null
@@ -140,6 +144,31 @@ export function targetRoasFromMargin(
   return { targetRoas, shopeeTargetRoas }
 }
 
+/** Potongan per produk tidak boleh keluar dari rentang masuk akal setelah disesuaikan. */
+const MAX_PRODUCT_FEE_RATE = 0.9
+
+/**
+ * Porsi potongan (admin + XTRA, 0–1) yang dipakai sebagai pembanding: rata-rata produk yang sudah
+ * diketahui, ditimbang nilai penjualannya di periode ini. Itulah porsi yang "tertanam" di potongan
+ * rata-rata toko, jadi selisih tiap produk terhadapnya yang menggeser potongan produk itu.
+ */
+export function referenceFeeComponent(
+  components: Map<string, number>,
+  salesByKey: Map<string, number>,
+): number | null {
+  if (components.size === 0) return null
+  let weighted = 0
+  let weights = 0
+  for (const [key, c] of components) {
+    const w = salesByKey.get(key) ?? 0
+    weighted += w * c
+    weights += w
+  }
+  if (weights > 0) return weighted / weights
+  // Belum ada penjualan untuk produk yang diketahui: rata-rata biasa.
+  return [...components.values()].reduce((s, c) => s + c, 0) / components.size
+}
+
 const ORDER: Record<AdVerdict, number> = { takedown: 0, kurang: 1, hpp_kosong: 2, hero: 3, aman: 4, belum_cukup: 5 }
 
 export function analyzeAds(input: {
@@ -148,6 +177,12 @@ export function analyzeAds(input: {
   feeRate: number
   /** HPP per produk (nama listing) untuk produk tanpa pesanan di periode ini. */
   fallbackHpp?: Map<string, number>
+  /**
+   * Porsi potongan admin + XTRA (0–1) per nama produk, hanya untuk produk yang sudah diisi.
+   * Potongan produk = rata-rata toko + (porsi produk − porsi pembanding). Produk yang tidak ada
+   * di sini memakai rata-rata toko apa adanya. Kosong/tidak diisi = semua produk memakai rata-rata toko.
+   */
+  feeComponents?: Map<string, number>
 }): AdsAnalysis {
   const { reports, orders, feeRate } = input
   const bySource = (s: AdSource) => reports.filter((r) => r.source === s).flatMap((r) => r.rows)
@@ -212,10 +247,27 @@ export function analyzeAds(input: {
     else ordersByKey.set(k, [o])
   }
 
+  // --- Potongan per produk (lihat feeComponents).
+  const salesByKey = new Map<string, number>()
+  for (const [k, lines] of ordersByKey) {
+    salesByKey.set(
+      k,
+      lines.filter((l) => l.status_group !== 'batal').reduce((s, l) => s + l.subtotal, 0),
+    )
+  }
+  const components = input.feeComponents ?? new Map<string, number>()
+  const refComponent = referenceFeeComponent(components, salesByKey)
+
   const products: AdProductResult[] = []
   for (const [code, a] of agg) {
     if (a.spend <= 0) continue
-    const lines = ordersByKey.get(productKey(a.name)) ?? []
+    const key = productKey(a.name)
+    const component = components.get(key)
+    const productFee =
+      component !== undefined && refComponent !== null
+        ? Math.min(Math.max(feeRate + component - refComponent, 0), MAX_PRODUCT_FEE_RATE)
+        : feeRate
+    const lines = ordersByKey.get(key) ?? []
     const allQty = lines.reduce((s, l) => s + l.qty, 0)
     const kept = lines.filter((l) => l.status_group !== 'batal')
     const keptQty = kept.reduce((s, l) => s + l.qty, 0)
@@ -236,7 +288,7 @@ export function analyzeAds(input: {
     // Hanya relevan kalau ada barang yang benar-benar terjual.
     const hppIncomplete = kept.length > 0 && withHpp.length < hppLines.length
 
-    const unitProfit = price !== null && hpp !== null ? price * (1 - feeRate) - hpp : null
+    const unitProfit = price !== null && hpp !== null ? price * (1 - productFee) - hpp : null
     const margin = unitProfit !== null && price ? unitProfit / price : null
     const bepRoas = margin !== null && margin > 0 ? 1 / margin : null
     const { targetRoas, shopeeTargetRoas } = targetRoasFromMargin(margin, batalShare)
@@ -244,7 +296,7 @@ export function analyzeAds(input: {
     const profitAfterAds = unitProfit !== null ? netSold * unitProfit - a.spend : null
     const idealPrice =
       hpp !== null && margin !== null && margin < PRICE_TARGET_MARGIN
-        ? hpp / (1 - feeRate - PRICE_TARGET_MARGIN)
+        ? hpp / (1 - productFee - PRICE_TARGET_MARGIN)
         : null
 
     products.push({
@@ -264,6 +316,8 @@ export function analyzeAds(input: {
       price,
       hpp,
       hppIncomplete,
+      feeRate: productFee,
+      feeSource: component !== undefined ? 'produk' : 'rata-rata',
       unitProfit,
       margin,
       bepRoas,

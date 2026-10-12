@@ -309,7 +309,11 @@ Iklan tidak akan bisa memberi untung 5% (atau ROAS yang dibutuhkan di atas 50). 
 
 - **Potongan Shopee** diambil dari laporan penghasilan periode itu (admin, gratis ongkir XTRA,
   biaya proses, voucher). Kalau belum ada, dipakai 3 bulan sebelumnya; kalau tidak ada juga,
-  dipakai 15%.
+  dipakai 15%. Itu **rata-rata seluruh toko**. Kalau kamu sudah mengisi biaya admin tiap produk
+  (lihat "Kategori biaya admin" di Simulasi Harga), potongan tiap produk digeser sesuai admin-nya:
+  produk berkategori admin tinggi dinilai lebih berat, yang rendah lebih ringan, dan totalnya
+  tetap cocok dengan uang yang benar-benar cair. Produk yang belum diisi memakai rata-rata toko.
+  Kartu produk menulis "disesuaikan admin produk ini" atau "rata-rata toko".
 - **Harga jual** diambil dari export pesanan (rata-rata harga yang benar-benar terjual).
 - **HPP** dari halaman HPP (rata-rata variasi, ditimbang sesuai jumlah terjual).
 - **Target untung 5%** setelah iklan dan **target harga 20%** bisa diubah oleh pengelola aplikasi
@@ -389,6 +393,19 @@ dinaikkan. Mengubah angka di sini tidak mengubah data di halaman lain.
 **% admin dan XTRA tidak ada di file export Shopee**, jadi diisi sendiri. Isi sekali yang benar,
 lalu tekan **Simpan % admin & XTRA untuk produk ini**. Nilainya tersimpan untuk **semua variasi**
 produk itu dan dipakai lagi di semua perangkat dan semua akun.
+
+**Kategori biaya admin.** Biaya admin Shopee berbeda tiap kategori dan bisa berubah, jadi aplikasi
+tidak punya tabel tarif bawaan. Buka **Kategori biaya admin** di bagian atas halaman Simulasi Harga,
+buat daftar kategori tokomu sekali (mis. "Skincare" 8,25%, "Aksesori" 4,5%; lihat angkanya di
+Seller Centre → Pusat Edukasi Penjual), lalu pilihkan kategori untuk tiap produk di bagian
+"Kategori tiap produk". Setelah itu:
+
+- Di Simulasi, memilih produk langsung mengisi % admin dari kategorinya (kolom % terkunci; pilih
+  "Isi persen sendiri" kalau mau persen khusus).
+- Kalau Shopee mengubah persen sebuah kategori, ubah satu kali di daftar: semua produk di kategori
+  itu ikut, di Simulasi maupun di halaman Iklan.
+- Menghapus kategori tidak menghapus produk: produk kembali ke isian manual dengan persen
+  terakhirnya.
 
 Tekan **Ganti / isi manual** untuk memilih produk lain atau mengisi semuanya sendiri.
 

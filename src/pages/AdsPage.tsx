@@ -6,6 +6,7 @@ import {
   fetchAdRows,
   fetchIncomeDays,
   fetchItemsCreatedBetween,
+  fetchFeeCategories,
   fetchProducts,
   findAdShopElsewhere,
   saveAdReport,
@@ -23,6 +24,7 @@ import {
   type AdVerdict,
   type AdsAnalysis,
 } from '../lib/adsMath'
+import { productFeeComponents } from '../lib/feeCategories'
 import { addMonths, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort, monthEnd, wibDay } from '../lib/format'
 import { ParseError } from '../lib/parsers/common'
 import { parseAdsCsv, type AdsParseResult } from '../lib/parsers/ads'
@@ -623,12 +625,15 @@ export interface Loaded {
 export async function loadAdsAnalysis(storeId: number, period: Period): Promise<Loaded> {
   const monthStart = `${period.start.slice(0, 7)}-01`
   const lastMonth = `${period.end.slice(0, 7)}-01`
-  const [reports, items, products, incomeDays] = await Promise.all([
+  const [reports, items, products, incomeDays, categories] = await Promise.all([
     fetchAdRows(period.reports),
     fetchItemsCreatedBetween(storeId, period.start, period.end),
     fetchProducts(storeId),
     fetchIncomeDays(storeId, addMonths(monthStart, -3), monthEnd(lastMonth)),
+    // Kategori admin belum tentu ada (SQL 20261014 belum dijalankan): tanpa itu, hanya isian manual yang dipakai.
+    fetchFeeCategories(storeId).catch(() => []),
   ])
+  const feeComponents = productFeeComponents(products, categories)
 
   // Potongan Shopee: bulan periode iklan; kalau belum ada, 3 bulan sebelumnya; kalau tidak ada juga, 15%.
   const inPeriod = incomeDays.filter((d) => d.released_date >= monthStart)
@@ -658,7 +663,7 @@ export async function loadAdsAnalysis(storeId: number, period: Period): Promise<
     hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
   })
   const rate = feeRate ?? DEFAULT_FEE_RATE
-  const analysis = analyzeAds({ reports, orders: items.map(toLine), feeRate: rate, fallbackHpp })
+  const analysis = analyzeAds({ reports, orders: items.map(toLine), feeRate: rate, fallbackHpp, feeComponents })
   // Gabungan: hitung juga per bulan (data iklan & pesanan bulan itu saja) untuk dibandingkan.
   const perMonth =
     period.months && period.months.length > 1
@@ -669,6 +674,7 @@ export async function loadAdsAnalysis(storeId: number, period: Period): Promise<
             orders: items.filter((i) => i.created_at && wibDay(i.created_at).slice(0, 7) === m.slice(0, 7)).map(toLine),
             feeRate: rate,
             fallbackHpp,
+            feeComponents,
           }),
         }))
       : undefined
@@ -910,6 +916,7 @@ function SummaryCard({ data, period }: { data: Loaded; period: Period }) {
         <strong>{formatPercent(data.feeRate * 100)}</strong>{' '}
         {data.feeFrom ? `(dari laporan penghasilan ${data.feeFrom})` : '(perkiraan — laporan penghasilan belum di-upload)'}
       </p>
+      <FeeCoverage products={a.products} />
       <dl className="mt-4 space-y-2 border-t-2 border-dashed border-rule pt-3">
         <Line label="Biaya iklan" value={formatRupiah(a.totalSpend)} strong />
         <Line label="Omzet dari iklan (versi Shopee)" value={formatRupiah(a.adsGmv)} />
@@ -1044,6 +1051,12 @@ function ProductCard({ p, months, stampDelay = 0 }: { p: AdProductResult; months
           </div>
         </dl>
       )}
+      {p.unitProfit !== null && (
+        <p className="mt-2 text-sm text-ink-muted">
+          Potongan Shopee {formatPercent(p.feeRate * 100)} ·{' '}
+          {p.feeSource === 'produk' ? 'disesuaikan admin produk ini' : 'rata-rata toko'}
+        </p>
+      )}
 
       {p.margin !== null && p.margin < PRICE_TARGET_MARGIN && p.idealPrice !== null && (
         <p className="mt-3 flex gap-2 text-sm text-warn">
@@ -1109,6 +1122,31 @@ function Row({ label, value, strong, tone }: { label: string; value: string; str
   )
 }
 
+/**
+ * Seberapa banyak produk yang potongannya sudah memakai admin produk/kategori. Hanya tampil kalau
+ * ada yang belum, supaya jelas apa yang bisa diperbaiki.
+ */
+function FeeCoverage({ products }: { products: AdProductResult[] }) {
+  const withProfit = products.filter((p) => p.unitProfit !== null)
+  const known = withProfit.filter((p) => p.feeSource === 'produk').length
+  if (withProfit.length === 0 || known === withProfit.length) return null
+  return (
+    <p className="mt-2 flex gap-2 text-sm text-ink-soft">
+      <IconInfo size={16} className="mt-0.5 shrink-0 text-info" />
+      <span>
+        {known === 0
+          ? 'Semua produk memakai potongan rata-rata toko.'
+          : `${formatNumber(known)} dari ${formatNumber(withProfit.length)} produk memakai admin produk, sisanya rata-rata toko.`}{' '}
+        Biaya admin tiap kategori beda;{' '}
+        <button type="button" className="font-semibold text-stamp underline" onClick={() => navigate('simulasi')}>
+          atur kategori admin di Simulasi Harga
+        </button>{' '}
+        supaya verdict lebih tepat.
+      </span>
+    </p>
+  )
+}
+
 function HowToRead({ feeRate }: { feeRate: number }) {
   return (
     <details className="rounded-3xl bg-paper p-5 shadow-sheet">
@@ -1125,8 +1163,9 @@ function HowToRead({ feeRate }: { feeRate: number }) {
           kemudian <strong>batal</strong>. Aplikasi menguranginya memakai data pesanan periode yang sama.
         </li>
         <li>
-          <strong>Untung per barang</strong> = harga jual − potongan Shopee ({formatPercent(feeRate * 100)}) − HPP, sebelum
-          iklan dan packaging.
+          <strong>Untung per barang</strong> = harga jual − potongan Shopee − HPP, sebelum iklan dan packaging. Potongan
+          Shopee dimulai dari rata-rata toko ({formatPercent(feeRate * 100)}, dari laporan penghasilan), lalu digeser
+          sesuai biaya admin tiap produk kalau sudah diisi, supaya total tetap cocok dengan uang yang benar-benar cair.
         </li>
         <li>
           <strong>Balik modal butuh ROAS</strong>: di bawah angka ini, iklan produk itu rugi.

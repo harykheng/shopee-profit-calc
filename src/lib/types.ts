@@ -17,7 +17,18 @@ export interface Product {
   admin_pct?: number | null
   /** Ikut Gratis Ongkir XTRA (null = belum diisi). */
   xtra?: boolean | null
+  /** Kategori biaya admin (tabel fee_categories). null = isian manual. Ada setelah SQL 20261014 dijalankan. */
+  fee_category_id?: number | null
   updated_at: string
+}
+
+/** Kategori biaya admin buatan toko sendiri, mis. "Skincare" 8,25%. */
+export interface FeeCategory {
+  id: number
+  store_id: number
+  name: string
+  /** Persen biaya admin (0–100). */
+  admin_pct: number
 }
 
 export type ExpenseCategory = 'iklan_shopee' | 'meta_ads' | 'packaging' | 'lain_lain'
