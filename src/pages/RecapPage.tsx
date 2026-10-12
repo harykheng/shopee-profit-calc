@@ -123,6 +123,9 @@ export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: numbe
     load()
   }, [load])
 
+  // Kosong tidaknya baru pasti setelah pesanan selesai dimuat. Kalau penghasilan sudah ada, tidak perlu menunggu.
+  // Selama masih menunggu, tampilkan Spinner (bukan Nota Rp0 yang lalu berganti jadi "Belum ada data").
+  const ordersPending = !!data && data.months.length === 0 && orders === null
   const isEmpty =
     data && data.months.length === 0 && orders && !('error' in orders) && orders.groups.length === 0
 
@@ -152,7 +155,7 @@ export function RecapPage({ stores, storeId }: { stores: Store[]; storeId: numbe
 
       {!rangeValid ? null : error ? (
         <ErrorBox error={error} />
-      ) : !data ? (
+      ) : !data || ordersPending ? (
         <Spinner />
       ) : isEmpty ? (
         <Alert tone="info" title="Belum ada data">
