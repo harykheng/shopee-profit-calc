@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Alert, ErrorBox, Spinner, SupportLink } from './components/ui'
 import { MonthlyReminderCard } from './components/MonthlyReminder'
+import { SupportButton } from './components/SupportButton'
 import { APP_NAME } from './lib/brand'
 import { formatDate } from './lib/format'
 import { expiryNotice, subscriptionStatus } from './lib/subscription'
@@ -194,6 +195,13 @@ function MainApp({ user }: { user: User }) {
 
   return (
     <div className="min-h-screen pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <SupportButton
+        context={{
+          email,
+          storeName: selectedStore?.name,
+          page: ROUTES.find((r) => r.route === route)?.label,
+        }}
+      />
       <header className="on-field sticky top-0 z-10 bg-field/90 backdrop-blur-md">
         {/* Selalu tampil (ikut menempel di atas) sampai pelanggan mengganti password dari admin. */}
         {mustChangePassword && route !== 'akun' && (

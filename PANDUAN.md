@@ -66,6 +66,10 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 
 > Upload file yang sama dua kali **aman**. Data tidak akan dobel.
 
+**Butuh bantuan?** Tombol hijau **Bantuan** di pojok kanan bawah (di HP, tepat di atas menu bawah)
+membuka WhatsApp ke pengelola. Pesan awalnya sudah berisi akun, toko, dan halaman yang sedang kamu
+buka, jadi tinggal tulis masalahnya lalu kirim. Tombol ini ada juga di halaman login.
+
 **Pengingat otomatis.** Kalau rekap bulan lalu belum lengkap, kartu biru muncul di atas halaman
 ("Rekap September 2026 belum lengkap") dengan tombol langsung ke langkah yang tersisa: Upload laporan,
 Upload pesanan, Isi HPP, atau Isi biaya. Kartu ini ikut berubah begitu kamu menyimpan data, dan

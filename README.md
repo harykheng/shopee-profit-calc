@@ -415,6 +415,7 @@ aman: seed tidak menambah apa pun.
 - [ ] **Semua migration** sudah dijalankan berurutan sampai `20261015000000_store_settings.sql`
       (cek: tabel `store_settings` dan `fee_categories` ada).
 - [ ] **`VITE_SUPPORT_WA` terisi** di variabel hosting (format `62…`), lalu deploy ulang. Tanpa itu
+      tombol hijau **Bantuan** (pojok kanan bawah, juga di halaman login) tidak tampil, dan
       "Lupa password?", "Perpanjang lewat WhatsApp", dan "Laporkan file ini" hanya teks biasa. Cek:
       buka halaman login, klik "Lupa password?", harus membuka WhatsApp ke nomormu. Build produksi
       juga menulis peringatan di console browser kalau variabel ini kosong.

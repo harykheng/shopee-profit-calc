@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Button, ErrorBox, SupportLink, inputClass } from '../components/ui'
 import { APP_NAME } from '../lib/brand'
+import { SupportButton } from '../components/SupportButton'
 import { supabase } from '../lib/supabase'
 
 export function LoginPage() {
@@ -20,6 +21,7 @@ export function LoginPage() {
 
   return (
     <main className="mx-auto grid min-h-screen max-w-5xl items-center gap-10 p-4 sm:p-8 lg:grid-cols-[1.1fr_1fr]">
+      <SupportButton context={{ page: 'Halaman login' }} aboveNav={false} />
       <div className="on-field text-on-field">
         <p className="font-display text-lg font-bold text-lime">{APP_NAME}</p>
         <h1 className="mt-3 font-display text-5xl font-bold leading-[1.02] tracking-tight sm:text-6xl">
