@@ -1,6 +1,6 @@
 ---
 name: Profit Shopee
-description: Internal profit, ads and price tool for two Shopee beauty stores. Every page answers first in a sentence, then shows its working.
+description: Profit, ads and price tool for Shopee sellers (the family's "Profit Shopee" and the multi-tenant "HitungCuan"). Every page answers first in a sentence, then shows its working.
 colors:
   field: "#2b2fa6"
   field-deep: "#1d2079"
@@ -139,11 +139,25 @@ components:
     textColor: "{colors.paper}"
     rounded: "{rounded.pill}"
     padding: "4px 12px"
-  ads-chapter:
+  ads-chapter-loss:
     backgroundColor: "{colors.coral}"
     textColor: "{colors.paper}"
     rounded: "{rounded.chapter}"
     padding: "36px"
+  ads-chapter-neutral:
+    backgroundColor: "rgba(255,255,255,0.10)"
+    textColor: "{colors.on-field}"
+    rounded: "{rounded.chapter}"
+    padding: "36px"
+  password-banner:
+    backgroundColor: "#ffcf5c"
+    textColor: "{colors.ink}"
+    height: "auto"
+  support-button:
+    backgroundColor: "{colors.gain}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.pill}"
+    height: "48px"
 ---
 
 # Design System: Profit Shopee
@@ -174,7 +188,9 @@ It was chosen by the user from three rendered previews (Resi & Kardus, Cerita Bu
 - **On Field / On Field Muted**: sentences, chapter titles, labels on the field (9.4:1 and 6.1:1).
 - **Lime** (`lime`, #d7f45a): the answer figure, chapter kickers ("Bab 1 · Untung"), the bottom-bar marker, the final/gain sticker, the focus ring on the field (8.2:1 on Field).
 - **Coral Soft** (`coral-soft`, #ff9b85): a loss figure written on the field (5.0:1). Never the deep coral there (2.5:1).
-- **Coral** (`coral`, #c4361e): the Iklan chapter card in Rekap, the loss sticker, the "Dengan iklan, rugi" card in Simulasi. Text on it is white (5.4:1); the kicker uses #ffe4dc at large size only.
+- **Coral** (`coral`, #c4361e): **means loss, and only loss.** The Iklan chapter card in Rekap when ads lose money, the loss sticker, the "Dengan iklan, rugi" card in Simulasi. Text on it is white (5.4:1); the kicker uses #ffe4dc at large size only. "No ad data yet", "could not calculate" and "ads are profitable" use the neutral wash instead, so a new customer does not read an empty state as a warning.
+- **Amber** (literal `#ffcf5c`, not yet a CSS token): the sticky "ganti password" banner (Ink text, 11.7:1), the "Belum final: …" line and a range warning on the field (7.0:1), and the warn sticker. Always with words, never a bare colour.
+- **Gain** (`gain`, #146c43): also the floating Bantuan (WhatsApp) button, white text (6.4:1).
 
 ### Sheets
 - **Paper** (#ffffff) sheets; **Counter** (#eef0f7) wells and table washes; **Line** (#dfe2ee) hairlines; **Rule** (#b4b9cf) dashed dividers.
@@ -198,8 +214,11 @@ It was chosen by the user from three rendered previews (Resi & Kardus, Cerita Bu
 
 ## Layout
 
-- **Shell:** sticky top bar on the field at every width: brand, store pill, logout. From 1024px the six nav pills sit in it (Rekap, Iklan, Simulasi, Upload, HPP, Biaya) with one sliding marker. Below 1024px the nav moves to a fixed Field Deep bottom bar of six equal cells (icon over short label) with a lime marker; the page reserves room for it plus the safe-area inset. The brand text hides under 640px so the store name fits.
+- **Shell:** sticky top bar on the field at every width: brand, store pill (only when the account has more than one store), account icon (Akun), logout. While the user still has the operator's temporary password, an amber banner sits at the very top of the same sticky bar (hidden on the Akun page). From 1024px the six nav pills sit in it (Rekap, Iklan, Simulasi, Upload, HPP, Biaya) with one sliding marker; Akun is reached from the icon, not the menu. Below 1024px the nav moves to a fixed Field Deep bottom bar of six equal cells (icon over short label) with a lime marker; the page reserves room for it plus the safe-area inset. The brand text hides under 640px so the store name fits.
+- **Floating help:** a green "Bantuan" pill (48px, bottom right) opens WhatsApp to the operator with a prefilled message (account, store, page). Above the bottom bar on phones, 24px from the corner on laptops; on Login it sits 16px from the bottom. Absent when `VITE_SUPPORT_WA` is empty.
+- **Above the page content (not sticky):** the monthly reminder card (info alert, one pill action per missing step, "Ingatkan besok") and the subscription banners (expiring: warning alert; expired: warning alert over a read-only Rekap). The reminder lives outside the per-page wrapper so it does not flicker on navigation.
 - **Content:** max 72rem, 16 / 24 / 32px side padding.
+- **Empty Rekap:** no chapters and no Rp0. A store with no data at all gets one sheet, "Mulai dengan data …", with three numbered steps (upload orders, upload income report, fill HPP), each with a pill to its page; a store that has data in other months gets a short info alert and an Upload pill. Nothing renders until the check has finished, so the empty state never flashes after zeros.
 - **Rekap chapters:** 56px apart. Bab 1 is two columns from 1024px (sentence + hero figure left at ~70%, the "Dari setiap Rp100" bar right); one column below. Bab 2 and the tabs of Bab 4 are sheets under a chapter title; Bab 3 is the coral card.
 - **Answer first:** Iklan puts its answer line between the period select and the summary sheet; Simulasi puts its live answer line between the product picker and the input/results grid.
 
@@ -230,13 +249,23 @@ Pills (9999px) for buttons, nav, selects on the field, tabs and stickers; 12px f
 - Operator column (`+ − = ≈`), label with a detail line, amount right-aligned in figures; on phones the amount drops under its label. Totals are a Stamp Tint pill ("= Untung bersih", "≈ Perkiraan untung", "= Untung per order", "Total biaya") with the amount in the display face; Simulasi colours its pill gain/loss.
 
 ### Part-to-whole bar ("Dari setiap Rp100 yang masuk")
-- One bar split into modal (10% white), biaya (35% white), untung (lime), sized by their true share of the money in; labelled inside only when a part is at least 12% (others are named in the caption). Vertical from 1024px, horizontal below. Hidden with a plain sentence when the month is a loss (the parts no longer sum to 100).
+- One bar split into modal (10% white), biaya (35% white), untung (lime), sized by their true share of the money in; labelled inside only when a part is at least 12% on laptops and 22% on phones (others are named in the caption). Vertical from 1024px, horizontal below. Hidden with a plain sentence when the month is a loss (the parts no longer sum to 100).
 
 ### Sticker (`Stamp`)
 - Display face, 700, pill, slight −3° tilt, solid fill: final/gain = lime on Field Deep, warn = amber (#ffcf5c) on brown, loss = coral on white, neutral = Counter on Ink Soft. Text, never an image.
 
 ### Iklan chapter (Rekap Bab 3)
-- Coral card: kicker, the answer sentence ("Iklan rugi Rp283 ribu. 4 iklan sebaiknya dimatikan."), the exact figure, up to three takedown products as white-wash tiles, and a white pill to the Iklan page. Only for a single month with a full-month ad report; otherwise it invites an upload.
+- Kicker, the answer sentence ("Iklan rugi Rp283 ribu. 4 iklan sebaiknya dimatikan."), the exact figure, up to three takedown products as white-wash tiles, and a white pill to the Iklan page (hidden when the store is read-only). **Coral only when ads lose money**; every other state (profitable, no data, error, loading) is the neutral 10% white wash with a lime kicker and a lime profit figure. Only for a single month with a full-month ad report; otherwise it invites an upload.
+
+### Wide tables (`ScrollX`)
+- Every wide table sits in `ScrollX`: horizontal scroll inside the sheet, a Paper-to-transparent fade on the right edge while columns are hidden, and a "Geser ke samping untuk kolom lainnya →" hint (Stamp Strong) until the first scroll. Nothing shows when the table fits.
+
+### Settings forms (Akun, kategori biaya admin)
+- Labels above fields, the default written in the hint ("Bawaan 5%"), money and percentages right-aligned with a muted suffix, locked fields use Counter with Ink Soft text. In Akun, a blank field returns to its default. Messages go **below** the buttons so the buttons never move: error alert first, then success. Destructive steps (delete a category) confirm inline with the consequence spelled out.
+- **Category panel** (Simulasi Harga, collapsed under a field pill): list of categories (name, %, product count, delete), an add row on a Counter well, then one row per product with a native select. Choosing a category fills and locks the product's admin %; "Isi persen sendiri" unlocks it.
+
+### Reminder and banners
+- Info or warning alerts, never red: the reminder is a nudge, not an error. Each missing step is a sentence plus one Stamp pill to the page that fixes it. The password banner is the only full-width coloured strip; it never blocks anything.
 
 ## Motion
 
@@ -257,11 +286,15 @@ Motion marks an answer arriving or a state changing. All of it lives in `src/ind
 - **Do** keep working content on white sheets and wrap anything on the field in `on-field`.
 - **Do** use lime only for the answer, kickers, the marker and positive stickers; use coral-soft for losses on the field.
 - **Do** keep controls standard, pill-shaped and at least 44px tall.
+- **Do** write a setting's default next to it, and say when changing it rewrites past numbers.
+- **Do** explain an empty state with the next step instead of showing zeros.
 - **Do** tie any new motion to a state change and add it to the reduced-motion block.
 
 ### Don't:
 - **Don't** build grids of metric tiles; one answer per chapter.
 - **Don't** put ink text on the field or deep coral text on the field.
 - **Don't** nest sheets or add coloured side stripes.
+- **Don't** use coral or red for anything that is not a loss (empty, missing, expired, error-free-but-new).
+- **Don't** show customers operator language (SQL, migration, Supabase, hosting) in any message.
 - **Don't** use emoji or unicode glyphs as icons or status markers; use `src/components/icons.tsx`.
 - **Don't** loop animations or fire confetti for anything but a save or a first ANGKA FINAL.
