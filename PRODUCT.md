@@ -89,6 +89,11 @@ What differs per store is a **setting, never a hard-coded assumption**, and ever
 - Accounts are created by the operator; no public signup. A new account carries the operator's
   temporary password; a sticky banner asks the user to set their own until they do (a reminder, not
   a lock).
+- Operating tools for the single operator live in the database, not in the app: `client_errors` (error
+  reports from customers' browsers, written by the app, readable only through SQL), and the
+  `admin_export_store` / `admin_delete_store` / `admin_list_orphan_users` functions. They are
+  documented in OPERASI.md and are not callable by customers (verified). There is no third-party
+  monitoring: nothing about a customer's finances leaves the project.
 - Schema changes are SQL files in `supabase/migrations/`, run in order and safe to re-run. The app
   degrades when a newer file has not been run yet (defaults, no category panel) and shows customers
   a neutral message; the technical hint goes to the browser console only.

@@ -264,6 +264,10 @@ Pills (9999px) for buttons, nav, selects on the field, tabs and stickers; 12px f
 - Labels above fields, the default written in the hint ("Bawaan 5%"), money and percentages right-aligned with a muted suffix, locked fields use Counter with Ink Soft text. In Akun, a blank field returns to its default. Messages go **below** the buttons so the buttons never move: error alert first, then success. Destructive steps (delete a category) confirm inline with the consequence spelled out.
 - **Category panel** (Simulasi Harga, collapsed under a field pill): list of categories (name, %, product count, delete), an add row on a Counter well, then one row per product with a native select. Choosing a category fills and locks the product's admin %; "Isi persen sendiri" unlocks it.
 
+### Failure screens
+- A page that fails to render shows a single error alert on the field ("Halaman ini mengalami gangguan."): reassurance that data is safe, a primary pill "Muat ulang", and the WhatsApp link to the operator. It replaces what used to be a blank screen. Server errors shown to customers use the same neutral wording and never name SQL, migrations or hosting.
+- Akun ends with a "Data saya" sheet: two plain links that open WhatsApp with the account and store already written in.
+
 ### Reminder and banners
 - Info or warning alerts, never red: the reminder is a nudge, not an error. Each missing step is a sentence plus one Stamp pill to the page that fixes it. The password banner is the only full-width coloured strip; it never blocks anything.
 

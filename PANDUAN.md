@@ -598,4 +598,12 @@ Yang perlu diingat:
 
 ### Ganti password
 
-Dijelaskan di banner kuning bagian atas selama kamu masih memakai password dari admin.
+Dijelaskan di banner kuning bagian atas selama kamu masih memakai password dari admin. Selama
+password itu belum diganti, kartu **Ganti password** tampil paling atas di halaman Akun.
+
+### Data saya
+
+Data tokomu adalah milikmu. Di halaman Akun, **Minta salinan data** dan **Minta hapus data & akun**
+membuka WhatsApp ke pengelola dengan pesan yang sudah berisi akun dan tokomu. Pengelola memprosesnya
+secara manual setelah memastikan permintaan itu benar dari pemilik akun. Penghapusan tidak bisa
+dibatalkan, jadi minta salinan dulu kalau kamu masih membutuhkan datanya.

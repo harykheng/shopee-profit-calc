@@ -86,6 +86,12 @@ menghapus data.
 > Sudah setup sebelum 6 Oktober 2026? Jalankan sekali file `20261006000000_ads.sql` supaya
 > halaman **Iklan** bisa dipakai.
 
+> Sudah setup sebelum 16 Oktober 2026? Jalankan sekali file `20261016000000_operations.sql` (aman
+> diulang, tidak mengubah data): tabel `client_errors` + ringkasan `client_error_summary` untuk
+> memantau error pelanggan, dan fungsi admin `admin_export_store`, `admin_delete_store`,
+> `admin_list_orphan_users`. Cara memakainya ada di [OPERASI.md](OPERASI.md). Tanpa file ini, aplikasi
+> tetap jalan; laporan error hanya tidak tersimpan.
+
 > Sudah setup sebelum 15 Oktober 2026? Jalankan sekali file `20261015000000_store_settings.sql`
 > (aman diulang, tidak mengubah data) supaya target untung dan pengaturan retur per toko bisa
 > dipakai (halaman Akun → Pengaturan hitungan). Tanpa pengaturan yang disimpan, semua angka sama
@@ -292,7 +298,7 @@ membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
    di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
    free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
 2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
-   satu per satu, dari `20260930000000_init.sql` sampai `20261015000000_store_settings.sql`.
+   satu per satu, dari `20260930000000_init.sql` sampai `20261016000000_operations.sql`.
 3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
    hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
 
@@ -412,8 +418,13 @@ aman: seed tidak menambah apa pun.
 ### Sebelum pelanggan pertama
 
 - [ ] Project HitungCuan sudah di paket Pro (backup aktif).
-- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261015000000_store_settings.sql`
-      (cek: tabel `store_settings` dan `fee_categories` ada).
+- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261016000000_operations.sql`
+      (cek: tabel `store_settings`, `fee_categories`, dan `client_errors` ada).
+- [ ] **Pemantau error:** buka aplikasi, sengaja picu satu error (mis. buka halaman dengan akun yang
+      belum punya migration), lalu pastikan `select * from public.client_error_summary;` menampilkannya.
+      Pasang pengingat harian untuk mengecek ringkasan ini ([OPERASI.md](OPERASI.md) bagian 1).
+- [ ] **Prosedur ekspor dan hapus data** sudah kamu latih di toko uji
+      ([OPERASI.md](OPERASI.md) bagian 3 dan 4), termasuk cara memverifikasi peminta.
 - [ ] **`VITE_SUPPORT_WA` terisi** di variabel hosting (format `62…`), lalu deploy ulang. Tanpa itu
       tombol hijau **Bantuan** (pojok kanan bawah, juga di halaman login) tidak tampil, dan
       "Lupa password?", "Perpanjang lewat WhatsApp", dan "Laporkan file ini" hanya teks biasa. Cek:

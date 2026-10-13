@@ -7,6 +7,7 @@ import { APP_NAME } from './lib/brand'
 import { formatDate } from './lib/format'
 import { expiryNotice, subscriptionStatus } from './lib/subscription'
 import { needsPasswordChange } from './lib/password'
+import { setErrorContext } from './lib/reportError'
 import { fetchStores } from './lib/api'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import type { Store } from './lib/types'
@@ -163,6 +164,8 @@ function MainApp({ user }: { user: User }) {
   }
 
   const selectedStore = stores?.find((s) => s.id === storeId) ?? null
+  // Laporan error hanya membawa toko yang terbukti milik akun ini (id dari localStorage bisa basi).
+  useEffect(() => setErrorContext({ storeId: selectedStore ? selectedStore.id : null }), [selectedStore])
   const subscription = subscriptionStatus(selectedStore?.active_until)
   // Layar penuh menggantikan semua halaman: belum punya toko, atau langganan toko terpilih habis.
   const expired = subscription.state === 'expired' && selectedStore !== null

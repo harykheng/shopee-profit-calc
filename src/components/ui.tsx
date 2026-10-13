@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
 import { APP_NAME, hasSupportWhatsApp, supportUrl } from '../lib/brand'
 import { adminHint, errorText, friendlyError } from '../lib/errors'
+import { ParseError } from '../lib/parsers/common'
+import { reportError } from '../lib/reportError'
 import { IconAlertCircle, IconCheckCircle, IconError, IconInfo } from './icons'
 
 type Variant = 'primary' | 'secondary' | 'danger'
@@ -176,6 +178,8 @@ export function ErrorBox({
     if (!error) return
     const hint = adminHint(error)
     if (hint) console.error(`[${APP_NAME}] ${hint}`, error)
+    // Ke pengelola (client_errors): error server yang tampil ke pelanggan, dan file yang gagal dibaca.
+    reportError(error instanceof ParseError ? 'parse' : 'handled', error)
   }, [error])
   if (!error) return null
   const friendly = friendlyError(error)
