@@ -83,7 +83,11 @@ with inc as (
          sum(oi.returned_qty * oi.hpp_snapshot * (1 - coalesce(ss.return_recovery_pct, 100) / 100.0))
            as returned_loss,
          sum(oi.qty - oi.returned_qty) as total_qty,
-         count(*) filter (where oi.hpp_snapshot is null and oi.qty - oi.returned_qty > 0)
+         -- HPP kosong dihitung juga untuk barang yang SELURUHNYA diretur, kalau retur ikut jadi kerugian
+         -- (recovery < 100): tanpa HPP-nya, kerugian itu tidak bisa dihitung.
+         count(*) filter (where oi.hpp_snapshot is null
+                            and (oi.qty - oi.returned_qty > 0
+                                 or (oi.returned_qty > 0 and coalesce(ss.return_recovery_pct, 100) < 100)))
            as items_missing_hpp
   from public.order_items oi
   left join public.store_settings ss on ss.store_id = oi.store_id
@@ -167,7 +171,9 @@ select oi.store_id,
        -- Sama dengan monthly_recap: ikut menghitung barang retur yang tidak bisa dijual lagi.
        sum((oi.qty - oi.returned_qty) * oi.hpp_snapshot
            + oi.returned_qty * oi.hpp_snapshot * (1 - coalesce(ss.return_recovery_pct, 100) / 100.0)) as total_modal,
-       bool_or(oi.hpp_snapshot is null and oi.qty - oi.returned_qty > 0) as missing_hpp
+       bool_or(oi.hpp_snapshot is null
+               and (oi.qty - oi.returned_qty > 0
+                    or (oi.returned_qty > 0 and coalesce(ss.return_recovery_pct, 100) < 100))) as missing_hpp
 from public.order_items oi
 left join public.store_settings ss on ss.store_id = oi.store_id
 where oi.status_group = 'selesai' and oi.completed_at is not null

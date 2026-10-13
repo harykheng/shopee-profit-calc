@@ -129,6 +129,12 @@ describe('estimateProfit: barang retur yang tidak bisa dijual lagi', () => {
     expect(b.income).toBe(a.income)
     expect(a.profit - b.profit).toBe(40_000)
   })
+  it('retur penuh tanpa HPP: baru dianggap HPP kosong kalau retur ikut jadi kerugian', () => {
+    const full = [{ ...items[0], qty: 2, returned_qty: 2, hpp: null }]
+    expect(estimateProfit(full, days, 1)!.missingHpp).toBe(0) // bawaan: perilaku lama
+    expect(estimateProfit(full, days, 0)!.missingHpp).toBe(1)
+    expect(estimateProfit(full, days, 0.5)!.missingHpp).toBe(1)
+  })
   it('barang tanpa HPP tidak ikut (tetap dihitung sebagai HPP kosong)', () => {
     const r = estimateProfit([{ ...items[0], hpp: null }], days, 0)!
     expect(r.modal).toBe(0)

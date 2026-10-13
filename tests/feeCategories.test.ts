@@ -128,5 +128,6 @@ describe('analyzeAds: potongan per produk', () => {
   it('hanya satu produk yang diketahui: tidak ada pembanding, jadi tidak ada pergeseran', () => {
     const p = byName(analyze(new Map([['serum', 0.14]])))
     expect(p.Serum.feeRate).toBeCloseTo(0.15)
+    expect(p.Serum.feeSource).toBe('rata-rata') // tidak berpura-pura sudah disesuaikan
   })
 })

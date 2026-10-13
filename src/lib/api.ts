@@ -293,16 +293,19 @@ export async function fetchMonthlyRecap(storeId: number, from: string, to: strin
 }
 
 export async function fetchProductRecap(storeId: number, from: string, to: string) {
-  return check(
-    await supabase
+  // Dipaging: Supabase membatasi 1.000 baris per permintaan (mengalahkan .limit), jadi toko dengan
+  // banyak produk × bulan terpotong diam-diam kalau tidak.
+  return fetchAllPages<ProductRecap>((a, b) =>
+    supabase
       .from('product_monthly_recap')
       .select('*')
       .eq('store_id', storeId)
       .gte('month', from)
       .lte('month', to)
-      .order('product_name')
-      .limit(5000),
-  ) as ProductRecap[]
+      .order('month')
+      .order('sku')
+      .range(a, b),
+  )
 }
 
 /** Tambah/kurangi hari: ("2026-08-01", -3) → "2026-07-29". */
@@ -330,17 +333,19 @@ export async function fetchReconciliation(storeId: number, from: string, to: str
 }
 
 export async function fetchReturnedItems(storeId: number, from: string, to: string) {
-  // Batas bulan menurut WIB.
-  return check(
-    await supabase
+  // Batas bulan menurut WIB. Dipaging agar tidak terpotong di 1.000 baris.
+  return fetchAllPages<ReturnedItem>((a, b) =>
+    supabase
       .from('order_items')
       .select('order_no, sku, product_name, variant_name, qty, returned_qty, return_status, completed_at')
       .eq('store_id', storeId)
       .gt('returned_qty', 0)
       .gte('completed_at', `${from}T00:00:00+07:00`)
       .lte('completed_at', `${monthEnd(to)}T23:59:59.999+07:00`)
-      .order('completed_at'),
-  ) as ReturnedItem[]
+      .order('completed_at')
+      .order('id')
+      .range(a, b),
+  )
 }
 
 export async function fetchOrdersByCreated(storeId: number, from: string, to: string) {

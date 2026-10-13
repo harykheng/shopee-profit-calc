@@ -73,7 +73,7 @@ export interface AdProductResult {
   hppIncomplete: boolean
   /** Potongan Shopee (0–1) yang dipakai untuk produk ini: rata-rata toko, disesuaikan admin produk kalau diketahui. */
   feeRate: number
-  /** 'produk' = admin produk/kategori dipakai; 'rata-rata' = produk ini belum diisi, pakai rata-rata toko. */
+  /** 'produk' = potongan digeser sesuai admin produk/kategori; 'rata-rata' = rata-rata toko apa adanya (belum diisi, atau belum ada produk lain sebagai pembanding). */
   feeSource: 'produk' | 'rata-rata'
   /** Sisa per barang setelah potongan Shopee dan HPP (sebelum iklan). */
   unitProfit: number | null
@@ -333,7 +333,9 @@ export function analyzeAds(input: {
       hpp,
       hppIncomplete,
       feeRate: productFee,
-      feeSource: component !== undefined ? 'produk' : 'rata-rata',
+      // Dengan hanya satu produk yang diketahui tidak ada pembanding, jadi potongannya tidak bergeser:
+      // jujur disebut rata-rata toko.
+      feeSource: component !== undefined && components.size >= 2 ? 'produk' : 'rata-rata',
       unitProfit,
       margin,
       bepRoas,

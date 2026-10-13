@@ -116,7 +116,8 @@ export function estimateProfit(
     // Uang barang retur dikembalikan ke pembeli, jadi hanya bagian yang tidak diretur yang jadi uang masuk.
     income += i.qty > 0 ? i.subtotal * (netQty / i.qty) * r : 0
     if (i.hpp === null) {
-      if (netQty > 0) missingHpp++
+      // Barang yang seluruhnya diretur juga butuh HPP kalau retur ikut jadi kerugian (returnRecovery < 1).
+      if (netQty > 0 || (i.returned_qty > 0 && returnRecovery < 1)) missingHpp++
     } else {
       // Barang retur yang tidak bisa dijual lagi menjadi kerugian modal (sama dengan hitungan di database).
       modal += netQty * i.hpp + i.returned_qty * i.hpp * (1 - returnRecovery)
