@@ -47,9 +47,9 @@ kuat dari pengalaman umum, **[Tebakan]** = belum ada dasar, harus diuji.
 
 ### Siapa yang dituju
 
-Seller Shopee yang sudah beriklan di Shopee Ads dan menghitung untung dengan spreadsheet atau
-perasaan. Contoh nyata: pemilik toko kecil-menengah yang mengelola 1–3 toko sendiri atau bersama
-keluarga **[Kemungkinan besar]** (itu pemakai aslinya, lihat `PRODUCT.md`). Mereka tidak teknis,
+Seller Shopee kecil yang sudah beriklan di Shopee Ads dan menghitung untung dengan spreadsheet
+atau perasaan. `PRODUCT.md` menyebut pelanggan HitungCuan: seller Indonesia, umumnya kecil dan
+tidak teknis, satu toko per akun (sebagian beberapa toko). Mereka tidak teknis,
 berbahasa Indonesia sehari-hari, dan sudah akrab dengan istilah ROAS tapi tidak yakin
 membacanya.
 
@@ -64,6 +64,9 @@ membacanya.
 | Status **Angka final** vs **Belum lengkap** (apa yang kurang disebut jelas) | PANDUAN bagian 7 |
 | Simulasi harga sebelum jualan: harga minimum, target ROAS yang diisi di Shopee | PANDUAN bagian 9 |
 | Data pembeli (nama, alamat, HP, resi) tidak pernah dibaca atau disimpan | README bagian 6 |
+| **Persen admin diisi per toko dan per kategori** (tidak ada tabel tarif bawaan yang bisa basi) | PANDUAN, "Kategori biaya admin" |
+| Target untung (bawaan 5% setelah iklan, 20% sebelum iklan) dan nasib barang retur **bisa diatur per toko** | PANDUAN, Akun → Pengaturan hitungan |
+| Pengingat bulanan kalau rekap bulan lalu belum lengkap | PANDUAN bagian 2 |
 
 Belum diriset: aplikasi sejenis di pasaran. **[Tebakan]** bahwa pembeda di atas cukup unik. Cek
 2–3 pesaing sebelum menulis kalimat "satu-satunya".
@@ -224,8 +227,10 @@ Jawaban pendek, pakai kata-kata di PANDUAN. Pertanyaan yang pasti muncul:
 4. `Bagaimana kalau tokonya lebih dari satu?` → toko dipilih sekali di bar atas dan berlaku untuk semua halaman.
 5. `Kalau Shopee mengganti format file?` → aplikasi menolak file dengan pesan jelas, bukan diam-diam salah hitung; format diperbarui pengelola. **[Pasti]** (README bagian 7)
 6. `Bisa untuk Tokopedia / TikTok Shop?` → Saat ini hanya Shopee.
-7. `Berhenti berlangganan?` → `[ISI]`. Data tetap tersimpan, layar "Langganan habis" tampil. **[Pasti]**
+7. `Berhenti berlangganan?` → `[ISI aturan]`. Setelah langganan habis, data tetap tersimpan dan hanya bisa dilihat (mode baca saja); perpanjang lewat admin. **[Pasti]**
 8. `Salah upload ke toko lain?` → cukup satu kalimat, kontak admin untuk dihapus.
+9. `Persen admin tokonya berapa?` → Berbeda tiap kategori dan bisa berubah; kamu isi sekali dari Seller Centre, tidak ada tarif bawaan yang bisa salah.
+10. `Barang retur dihitung rugi?` → Bawaannya barang retur kembali ke stok; bisa diatur kalau returmu biasanya rusak.
 
 ### 4.11 CTA penutup
 
@@ -255,8 +260,12 @@ browser, tanpa server, tanpa menyimpan apa pun.
 | Harga jual | Rp45.000 | |
 | ROAS di laporan Shopee | 6,0 | slider 1–15, boleh ketik |
 
-Tetap (ditampilkan di tautan "lihat hitungannya", bisa dibuka): admin 8,25%, Gratis Ongkir XTRA
-4%, biaya proses Rp1.250, packaging Rp0. Ini bawaan aplikasi **[Pasti]**.
+Input keempat, tersembunyi di "atur potongan Shopee": **% admin** (bawaan 8,25%). Potongan lain
+tetap: Gratis Ongkir XTRA 4%, biaya proses Rp1.250, packaging Rp0, target untung 5% setelah iklan.
+**Penting:** persen admin Shopee berbeda tiap kategori dan bisa berubah, dan aplikasi sengaja tidak
+punya tabel tarif; tiap toko mengisi sendiri dari Seller Centre. Jadi di simulator tulis 8,25% sebagai
+**contoh** (`Contoh: admin 8,25%, di aplikasi kamu isi sesuai kategori tokomu`), jangan sebagai tarif
+Shopee. Target 5% juga bawaan yang bisa diubah per toko.
 
 **Rumus (jangan diubah tanpa mengubah aplikasi):**
 
