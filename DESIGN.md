@@ -14,6 +14,7 @@ colors:
   counter: "#eef0f7"
   line: "#dfe2ee"
   rule: "#b4b9cf"
+  edge: "#8187ad"
   ink: "#16173d"
   ink-soft: "#3b3d63"
   ink-muted: "#5d6088"
@@ -193,7 +194,7 @@ It was chosen by the user from three rendered previews (Resi & Kardus, Cerita Bu
 - **Gain** (`gain`, #146c43): also the floating Bantuan (WhatsApp) button, white text (6.4:1).
 
 ### Sheets
-- **Paper** (#ffffff) sheets; **Counter** (#eef0f7) wells and table washes; **Line** (#dfe2ee) hairlines; **Rule** (#b4b9cf) dashed dividers.
+- **Paper** (#ffffff) sheets; **Counter** (#eef0f7) wells and table washes; **Line** (#dfe2ee) hairlines; **Rule** (#b4b9cf) dashed dividers; **Edge** (#8187ad) the outline of every control (3.5:1 on Paper, 3.1:1 on Counter, the 3:1 non-text minimum).
 - **Ink** (#16173d), **Ink Soft** (#3b3d63), **Ink Muted** (#5d6088): text on sheets.
 - **Stamp** (#3a3fb8) / **Stamp Strong** / **Stamp Tint** (#ecedfb): primary buttons, links and selection on sheets; Stamp Tint also fills the total pills.
 - **Status**: Loss, Gain, Warn, Info with their tints, unchanged meanings (rugi, untung, perlu perhatian, informasi). Each always carries a word or icon, never colour alone.
@@ -236,13 +237,13 @@ Pills (9999px) for buttons, nav, selects on the field, tabs and stickers; 12px f
 - **Primary:** Stamp fill, white text, pill, 44px. **Secondary:** Stamp Tint fill, Stamp Strong text. **Danger:** Loss fill. Press scales to 97%.
 
 ### Field controls
-- **Field select** (`FieldSelect` in `pickers.tsx`): pill with a 35% On Field border on a 10% white wash, On Field text, chevron icon; used for Bulan (Rekap, Biaya), Periode iklan, and the store picker in the top bar. Focus ring lime.
+- **Field select** (`FieldSelect` in `pickers.tsx`): pill with a 50% On Field border (3.5:1 on the field) on a 10% white wash, On Field text, chevron icon; used for Bulan (Rekap, Biaya), Periode iklan, and the store picker in the top bar. Focus ring lime.
 - **Tabs (Rekap Bab 4):** pills inside a 10% white track; the active tab is On Field with Field text.
 - **Filter chips (Iklan):** pills on the field; active is On Field with Field text.
 
 ### Sheets, inputs, alerts
 - **Sheet** (`Card`): Paper, 24px radius, 20 / 28px padding, display-face title.
-- **Inputs:** 44px, 12px radius, Line border, Stamp focus ring; money right-aligned with a muted "Rp". Text fields share `inputClass`.
+- **Inputs:** 44px, 12px radius, Edge border (Line is too faint to find a field), Stamp focus ring; money right-aligned with a muted "Rp". Text fields share `inputClass`.
 - **Alerts:** 16px radius, tinted border and wash, line icon; readable on the field and on sheets.
 
 ### Arithmetic (`NotaLine`)

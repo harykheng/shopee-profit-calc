@@ -368,7 +368,7 @@ function Why({ label, children }: { label: string; children: ReactNode }) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line bg-paper px-3 text-sm font-medium text-ink-soft transition-colors hover:border-ink-muted hover:text-ink"
+        className="inline-flex min-h-11 items-center gap-2 rounded-md border border-edge bg-paper px-3 text-sm font-medium text-ink-soft transition-colors hover:border-ink-muted hover:text-ink"
       >
         <IconInfo size={18} className="text-stamp" />
         {label}

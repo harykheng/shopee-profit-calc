@@ -833,7 +833,7 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
       className={`on-field min-h-11 rounded-full border px-4 font-semibold transition duration-150 active:scale-[0.97] ${
         active
           ? 'border-on-field bg-on-field text-field'
-          : 'border-on-field/30 bg-white/10 text-on-field hover:border-on-field/70 hover:bg-white/15'
+          : 'border-on-field/50 bg-white/10 text-on-field hover:border-on-field/70 hover:bg-white/15'
       }`}
     >
       {children}

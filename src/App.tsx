@@ -183,7 +183,7 @@ function MainApp({ user }: { user: User }) {
           <select
             value={storeId ?? ''}
             onChange={(e) => setStoreId(Number(e.target.value))}
-            className="min-h-11 w-full max-w-[12rem] cursor-pointer appearance-none truncate rounded-full border border-on-field/35 bg-transparent pl-9 pr-8 font-semibold text-on-field transition-colors hover:border-on-field/70 [&>option]:text-ink"
+            className="min-h-11 w-full max-w-[12rem] cursor-pointer appearance-none truncate rounded-full border border-on-field/50 bg-transparent pl-9 pr-8 font-semibold text-on-field transition-colors hover:border-on-field/70 [&>option]:text-ink"
           >
             {stores.map((s) => (
               <option key={s.id} value={s.id}>

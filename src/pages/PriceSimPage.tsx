@@ -370,7 +370,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                     disabled={categoryId !== null}
                   />
                 </Field>
-                <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-line px-3 transition-colors hover:border-ink-muted">
+                <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-edge px-3 transition-colors hover:border-ink-muted">
                   <input
                     type="checkbox"
                     checked={xtra}
@@ -743,7 +743,7 @@ function ProductPicker({
           placeholder={products ? 'Ketik nama produk, mis. pigeon' : 'Memuat produk…'}
           aria-label="Cari produk"
           disabled={!products}
-          className="min-h-11 w-full rounded-md border border-line bg-paper pl-10 pr-3 transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25"
+          className="min-h-11 w-full rounded-md border border-edge bg-paper pl-10 pr-3 transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25"
         />
       </div>
       <p className="mt-1 text-sm text-ink-muted">

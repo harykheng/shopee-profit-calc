@@ -351,8 +351,8 @@ export function Stamp({
 }
 
 export const selectClass =
-  'min-h-11 rounded-xl border border-line bg-paper px-3 text-base text-ink transition-colors hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'
+  'min-h-11 rounded-xl border border-edge bg-paper px-3 text-base text-ink transition-colors hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'
 
 /** Kotak isian teks biasa (email, catatan, cari). */
 export const inputClass =
-  'min-h-11 w-full rounded-xl border border-line bg-paper px-3 text-base text-ink transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'
+  'min-h-11 w-full rounded-xl border border-edge bg-paper px-3 text-base text-ink transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'

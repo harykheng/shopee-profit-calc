@@ -142,8 +142,8 @@ export function DecimalInput({
         }}
         className={`num min-h-11 w-full rounded-md border px-3 text-right text-base transition-colors placeholder:font-sans placeholder:text-ink-muted focus:outline-none focus:ring-2 ${
           suffix ? 'pr-9' : ''
-        } ${invalid ? 'border-loss ring-loss/20' : 'border-line bg-paper hover:border-ink-muted focus:border-stamp focus:ring-stamp/25'} ${
-          disabled ? 'cursor-not-allowed bg-counter text-ink-soft hover:border-line' : ''
+        } ${invalid ? 'border-loss ring-loss/20' : 'border-edge bg-paper hover:border-ink-muted focus:border-stamp focus:ring-stamp/25'} ${
+          disabled ? 'cursor-not-allowed bg-counter text-ink-soft hover:border-edge' : ''
         }`}
       />
       {suffix && (

@@ -364,7 +364,7 @@ function GroupRowCard({
             onChange={(e) => onChange({ name: e.target.value })}
             placeholder="Nama produk baru"
             aria-label="Nama produk baru"
-            className="min-h-11 w-full rounded-xl border border-line bg-paper px-3 font-semibold text-ink placeholder:font-normal placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25"
+            className="min-h-11 w-full rounded-xl border border-edge bg-paper px-3 font-semibold text-ink placeholder:font-normal placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25"
           />
         ) : (
           <p className="line-clamp-2 font-semibold">{row.name}</p>
@@ -469,7 +469,7 @@ function GroupPicker({
           placeholder={products && !disabled ? 'Ketik nama produk, mis. bedak' : 'Memuat produk…'}
           aria-label="Cari produk untuk grup"
           disabled={!products || disabled}
-          className="min-h-11 w-full rounded-xl border border-line bg-paper pl-10 pr-3 transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25"
+          className="min-h-11 w-full rounded-xl border border-edge bg-paper pl-10 pr-3 transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25"
         />
       </div>
       {query.trim() !== '' && (

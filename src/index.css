@@ -63,6 +63,8 @@
   --color-paper: #ffffff;
   --color-line: #dfe2ee;
   --color-rule: #b4b9cf;
+  /* Garis tepi kontrol (input, pilihan, tombol outline): 3,5:1 di atas Paper, 3,1:1 di atas Counter. */
+  --color-edge: #8187ad;
 
   /* Tinta di atas lembar. */
   --color-ink: #16173d;

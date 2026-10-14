@@ -10,7 +10,7 @@ export function FieldSelect({ className = '', ...props }: SelectHTMLAttributes<H
     <span className="relative inline-block">
       <select
         {...props}
-        className={`min-h-11 cursor-pointer appearance-none rounded-full border border-on-field/35 bg-white/10 pl-4 pr-10 font-semibold text-on-field transition-colors hover:border-on-field/70 hover:bg-white/15 [&>option]:text-ink ${className}`}
+        className={`min-h-11 cursor-pointer appearance-none rounded-full border border-on-field/50 bg-white/10 pl-4 pr-10 font-semibold text-on-field transition-colors hover:border-on-field/70 hover:bg-white/15 [&>option]:text-ink ${className}`}
       />
       <IconChevronDown size={18} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-on-field-muted" />
     </span>
@@ -41,7 +41,7 @@ export function StorePicker({
             className={`min-h-11 rounded-md border px-4 font-semibold transition-colors ${
               active
                 ? 'border-stamp bg-stamp text-white'
-                : 'border-line bg-paper text-ink-soft hover:border-ink-muted'
+                : 'border-edge bg-paper text-ink-soft hover:border-ink-muted'
             }`}
           >
             {s.name}
@@ -191,7 +191,7 @@ export function RupiahInput({
             ? 'border-loss ring-loss/20'
             : highlight
               ? 'border-loss/60 bg-loss-tint focus:ring-loss/20'
-              : 'border-line bg-paper hover:border-ink-muted focus:border-stamp focus:ring-stamp/25'
+              : 'border-edge bg-paper hover:border-ink-muted focus:border-stamp focus:ring-stamp/25'
         }`}
       />
       {invalid && <p className="mt-1 text-sm text-loss">Isi angka saja, mis. 12500</p>}
