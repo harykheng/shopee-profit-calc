@@ -11,7 +11,7 @@ const VARIANTS: Record<Variant, string> = {
   primary:
     'bg-stamp text-white hover:bg-stamp-strong active:bg-stamp-strong disabled:bg-stamp/40 disabled:text-white/90',
   secondary:
-    'bg-stamp-tint text-stamp-strong hover:bg-[#dfe1fa] active:bg-[#d4d7f7] disabled:bg-counter disabled:text-ink-muted',
+    'bg-stamp-tint text-stamp-strong hover:bg-stamp-tint-hover active:bg-stamp-tint-press disabled:bg-counter disabled:text-ink-muted',
   danger: 'bg-loss text-white hover:bg-loss/90 active:bg-loss/80 disabled:bg-loss/40',
 }
 
@@ -315,7 +315,7 @@ export type StampTone = 'final' | 'warn' | 'loss' | 'gain' | 'neutral'
 const STAMP_TONES: Record<StampTone, string> = {
   final: 'bg-lime text-field-deep',
   gain: 'bg-lime text-field-deep',
-  warn: 'bg-[#ffcf5c] text-[#4a2c00]',
+  warn: 'bg-amber text-amber-ink',
   loss: 'bg-coral text-white',
   neutral: 'bg-counter text-ink-soft',
 }

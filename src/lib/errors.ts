@@ -56,7 +56,7 @@ export function friendlyError(err: unknown): string {
   }
   if (adminHint(err)) return SYSTEM_TROUBLE
   if (lower.includes('permission denied') || lower.includes('row-level security')) {
-    return 'Anda tidak punya akses untuk data ini. Coba login ulang.'
+    return 'Kamu tidak punya akses untuk data ini. Coba login ulang.'
   }
   return 'Terjadi kesalahan. Coba lagi; kalau masih gagal, hubungi pengelola aplikasi.'
 }

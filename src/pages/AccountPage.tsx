@@ -55,12 +55,12 @@ export function AccountPage({
     setDone(true)
   }
 
-  // Selama masih memakai password dari admin, formnya tampil paling atas (itu tujuan tombol di banner kuning).
+  // Selama masih memakai password dari pengelola, formnya tampil paling atas (itu tujuan tombol di banner kuning).
   const passwordCard = (
     <Card title="Ganti password" className="max-w-xl">
         {mustChange && (
           <div className="mb-5">
-            <Alert tone="warning" title="Kamu masih memakai password dari admin.">
+            <Alert tone="warning" title="Kamu masih memakai password dari pengelola.">
               Ganti dengan password milikmu sendiri supaya akunmu aman. Cukup sekali.
             </Alert>
           </div>

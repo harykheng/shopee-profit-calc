@@ -10,6 +10,9 @@ colors:
   lime: "#d7f45a"
   coral: "#c4361e"
   coral-soft: "#ff9b85"
+  on-coral-muted: "#ffeee8"
+  amber: "#ffcf5c"
+  amber-ink: "#4a2c00"
   paper: "#ffffff"
   counter: "#eef0f7"
   line: "#dfe2ee"
@@ -21,6 +24,8 @@ colors:
   stamp: "#3a3fb8"
   stamp-strong: "#2c309b"
   stamp-tint: "#ecedfb"
+  stamp-tint-hover: "#dfe1fa"
+  stamp-tint-press: "#d4d7f7"
   loss: "#b3261e"
   loss-tint: "#fdeceb"
   gain: "#146c43"
@@ -151,7 +156,7 @@ components:
     rounded: "{rounded.chapter}"
     padding: "36px"
   password-banner:
-    backgroundColor: "#ffcf5c"
+    backgroundColor: "{colors.amber}"
     textColor: "{colors.ink}"
     height: "auto"
   support-button:
@@ -178,6 +183,11 @@ It was chosen by the user from three rendered previews (Resi & Kardus, Cerita Bu
 - Verdicts are colour stickers that pop on; real results get a small paper-confetti burst.
 - Operate rules still hold: standard controls, 44px targets, plain Indonesian, no horizontal scroll from 360px.
 
+**Dial: ENERGY 3 / RHYTHM 2 / MOTION 2** (antislop dials; inferred on 2026-10-14 from this document, the owner confirms or changes them).
+- ENERGY 3: one saturated field for the whole page, an answer set at hero size (up to 8.5rem), stickers and a confetti burst. The working sheets stay calm; the energy lives in the answer, not in the tables.
+- RHYTHM 2: every page repeats the same field-then-sheet structure, with deliberate breaks (the coral Iklan chapter, the lime answer, the amber banner).
+- MOTION 2: transitions and reveals tied to a state change (see Motion), no parallax, no looping animation.
+
 ## Colors
 
 **The Field-and-Sheet Rule.** Text sitting directly on the blue field uses On Field (`#f6f4ff`) or On Field Muted (`#c3c5f2`) and is wrapped in an element with the `on-field` class (which also turns the focus ring lime). Text on a white sheet uses the ink scale. Never put ink on the field or on-field colours on a sheet.
@@ -189,14 +199,14 @@ It was chosen by the user from three rendered previews (Resi & Kardus, Cerita Bu
 - **On Field / On Field Muted**: sentences, chapter titles, labels on the field (9.4:1 and 6.1:1).
 - **Lime** (`lime`, #d7f45a): the answer figure, chapter kickers ("Bab 1 · Untung"), the bottom-bar marker, the final/gain sticker, the focus ring on the field (8.2:1 on Field).
 - **Coral Soft** (`coral-soft`, #ff9b85): a loss figure written on the field (5.0:1). Never the deep coral there (2.5:1).
-- **Coral** (`coral`, #c4361e): **means loss, and only loss.** The Iklan chapter card in Rekap when ads lose money, the loss sticker, the "Dengan iklan, rugi" card in Simulasi. Text on it is white (5.4:1); the kicker uses #ffe4dc at large size only. "No ad data yet", "could not calculate" and "ads are profitable" use the neutral wash instead, so a new customer does not read an empty state as a warning.
-- **Amber** (literal `#ffcf5c`, not yet a CSS token): the sticky "ganti password" banner (Ink text, 11.7:1), the "Belum final: …" line and a range warning on the field (7.0:1), and the warn sticker. Always with words, never a bare colour.
+- **Coral** (`coral`, #c4361e): **means loss, and only loss.** The Iklan chapter card in Rekap when ads lose money, the loss sticker, the "Dengan iklan, rugi" card in Simulasi. Text on it is white (5.4:1); the small kicker uses On Coral Muted (`#ffeee8`, 4.8:1). "No ad data yet", "could not calculate" and "ads are profitable" use the neutral wash instead, so a new customer does not read an empty state as a warning.
+- **Amber** (`amber`, #ffcf5c; text on it is Amber Ink `#4a2c00`, 8.7:1): the sticky "ganti password" banner (Ink text, 11.7:1), the "Belum final: …" line and a range warning on the field (7.0:1), and the warn sticker. Always with words, never a bare colour.
 - **Gain** (`gain`, #146c43): also the floating Bantuan (WhatsApp) button, white text (6.4:1).
 
 ### Sheets
 - **Paper** (#ffffff) sheets; **Counter** (#eef0f7) wells and table washes; **Line** (#dfe2ee) hairlines; **Rule** (#b4b9cf) dashed dividers; **Edge** (#8187ad) the outline of every control (3.5:1 on Paper, 3.1:1 on Counter, the 3:1 non-text minimum).
 - **Ink** (#16173d), **Ink Soft** (#3b3d63), **Ink Muted** (#5d6088): text on sheets.
-- **Stamp** (#3a3fb8) / **Stamp Strong** / **Stamp Tint** (#ecedfb): primary buttons, links and selection on sheets; Stamp Tint also fills the total pills.
+- **Stamp** (#3a3fb8) / **Stamp Strong** / **Stamp Tint** (#ecedfb; hover #dfe1fa, pressed #d4d7f7): primary buttons, links and selection on sheets; Stamp Tint also fills the total pills.
 - **Status**: Loss, Gain, Warn, Info with their tints, unchanged meanings (rugi, untung, perlu perhatian, informasi). Each always carries a word or icon, never colour alone.
 
 ## Typography
@@ -253,7 +263,7 @@ Pills (9999px) for buttons, nav, selects on the field, tabs and stickers; 12px f
 - One bar split into modal (10% white), biaya (35% white), untung (lime), sized by their true share of the money in; labelled inside only when a part is at least 12% on laptops and 22% on phones (others are named in the caption). Vertical from 1024px, horizontal below. Hidden with a plain sentence when the month is a loss (the parts no longer sum to 100).
 
 ### Sticker (`Stamp`)
-- Display face, 700, pill, slight −3° tilt, solid fill: final/gain = lime on Field Deep, warn = amber (#ffcf5c) on brown, loss = coral on white, neutral = Counter on Ink Soft. Text, never an image.
+- Display face, 700, pill, slight −3° tilt, solid fill: final/gain = lime on Field Deep, warn = Amber on Amber Ink, loss = coral on white, neutral = Counter on Ink Soft. Text, never an image.
 
 ### Iklan chapter (Rekap Bab 3)
 - Kicker, the answer sentence ("Iklan rugi Rp283 ribu. 4 iklan sebaiknya dimatikan."), the exact figure, up to three takedown products as white-wash tiles, and a white pill to the Iklan page (hidden when the store is read-only). **Coral only when ads lose money**; every other state (profitable, no data, error, loading) is the neutral 10% white wash with a lime kicker and a lime profit figure. Only for a single month with a full-month ad report; otherwise it invites an upload.
@@ -271,6 +281,11 @@ Pills (9999px) for buttons, nav, selects on the field, tabs and stickers; 12px f
 
 ### Reminder and banners
 - Info or warning alerts, never red: the reminder is a nudge, not an error. Each missing step is a sentence plus one Stamp pill to the page that fixes it. The password banner is the only full-width coloured strip; it never blocks anything.
+
+### Icons
+- One hand-drawn set in `src/components/icons.tsx` (24 grid, 1.75 stroke, round caps) instead of an icon library. The reason is practical: the project allows no new runtime dependency without the owner's approval, and one stroke style lets the bottom bar, buttons and alerts read as one family. It is not a look chosen for its own sake.
+- Icons support a word, they do not replace it. Each menu icon names an object from the work (upload arrow = Upload, tag = HPP, wallet = Biaya, receipt = Rekap, megaphone = Iklan, calculator = Simulasi) and sits above or beside its label; status icons sit beside their sentence. The two exceptions are Akun and Keluar in the top bar: icon-only, with a screen-reader label and a tooltip.
+- No sparkle, star, bolt or robot glyphs, and nothing decorative; if no honest icon exists, use none.
 
 ## Motion
 
@@ -293,6 +308,7 @@ Motion marks an answer arriving or a state changing. All of it lives in `src/ind
 - **Do** keep controls standard, pill-shaped and at least 44px tall.
 - **Do** write a setting's default next to it, and say when changing it rewrites past numbers.
 - **Do** explain an empty state with the next step instead of showing zeros.
+- **Do** address the reader as "kamu" (never "Anda"), and call the person who runs the app "pengelola". "Admin" is reserved for Shopee's admin fee ("biaya admin"), so it never also names a person.
 - **Do** tie any new motion to a state change and add it to the reduced-motion block.
 
 ### Don't:

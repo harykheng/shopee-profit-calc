@@ -598,7 +598,7 @@ Yang perlu diingat:
 
 ### Ganti password
 
-Dijelaskan di banner kuning bagian atas selama kamu masih memakai password dari admin. Selama
+Dijelaskan di banner kuning bagian atas selama kamu masih memakai password dari pengelola. Selama
 password itu belum diganti, kartu **Ganti password** tampil paling atas di halaman Akun.
 
 ### Data saya

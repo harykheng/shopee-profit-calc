@@ -90,7 +90,7 @@ export function HppPage({
         <Spinner />
       ) : products.length === 0 ? (
         <Alert tone="info" title="Belum ada produk">
-          Produk otomatis muncul di sini setelah Anda meng-upload export pesanan.
+          Produk otomatis muncul di sini setelah kamu meng-upload export pesanan.
         </Alert>
       ) : (
         <Card>

@@ -206,12 +206,12 @@ function MainApp({ user }: { user: User }) {
         }}
       />
       <header className="on-field sticky top-0 z-10 bg-field/90 backdrop-blur-md">
-        {/* Selalu tampil (ikut menempel di atas) sampai pelanggan mengganti password dari admin. */}
+        {/* Selalu tampil (ikut menempel di atas) sampai pelanggan mengganti password dari pengelola. */}
         {mustChangePassword && route !== 'akun' && (
-          <div role="region" aria-label="Pengingat ganti password" className="bg-[#ffcf5c] text-ink">
+          <div role="region" aria-label="Pengingat ganti password" className="bg-amber text-ink">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
               <p className="min-w-0 flex-1 font-semibold">
-                Kamu masih memakai password dari admin. Ganti sekarang supaya akunmu aman.
+                Kamu masih memakai password dari pengelola. Ganti sekarang supaya akunmu aman.
               </p>
               <a
                 href="#/akun"
@@ -340,12 +340,12 @@ function MainApp({ user }: { user: User }) {
 function NoStoreScreen() {
   return (
     <div className="mx-auto max-w-xl">
-      <Alert tone="warning" title="Akun ini belum terhubung ke toko. Hubungi admin.">
-        <p>Setelah admin menghubungkan akunmu ke sebuah toko, muat ulang halaman ini.</p>
+      <Alert tone="warning" title="Akun ini belum terhubung ke toko. Hubungi pengelola.">
+        <p>Setelah pengelola menghubungkan akunmu ke sebuah toko, muat ulang halaman ini.</p>
         {hasSupportWhatsApp && (
           <p className="mt-3">
             <SupportLink message={`Halo, akun ${APP_NAME} saya belum terhubung ke toko.`}>
-              Hubungi admin lewat WhatsApp
+              Hubungi pengelola lewat WhatsApp
             </SupportLink>
           </p>
         )}

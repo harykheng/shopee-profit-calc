@@ -163,7 +163,7 @@ export function RecapPage({
           {multi ? 'Satu bulan saja' : 'Lihat beberapa bulan'}
         </button>
       </div>
-      {!rangeValid && <p className="mb-4 font-semibold text-[#ffcf5c]">Bulan "Dari" harus sebelum atau sama dengan "Sampai".</p>}
+      {!rangeValid && <p className="mb-4 font-semibold text-amber">Bulan "Dari" harus sebelum atau sama dengan "Sampai".</p>}
 
       {recalcResult && (
         <div className="mb-5">
@@ -488,7 +488,7 @@ function NotaCard({
                 <span className="sr-only">{showStatus ? 'Tutup' : 'Lihat'} rincian status</span>
               </button>
             )}
-            {!allFinal && firstTodo && <span className="font-semibold text-[#ffcf5c]">Belum final: {firstTodo.short}</span>}
+            {!allFinal && firstTodo && <span className="font-semibold text-amber">Belum final: {firstTodo.short}</span>}
           </div>
         </div>
         <MoneySplit income={t.modal + t.expenses + t.profit} modal={t.modal} expenses={t.expenses} profit={t.profit} />
@@ -732,7 +732,7 @@ function AdsChapter({ storeId, month }: { storeId: number; month: string }) {
   // supaya bab ini tidak terbaca sebagai peringatan padahal tidak ada yang salah.
   const loss = state.kind === 'ok' && state.profitAfterAds < 0
   const tone = loss
-    ? { box: 'bg-coral text-white shadow-sheet', kicker: 'text-[#ffe4dc]', text: 'text-white', button: 'text-coral' }
+    ? { box: 'bg-coral text-white shadow-sheet', kicker: 'text-on-coral-muted', text: 'text-white', button: 'text-coral' }
     : { box: 'bg-white/10 text-on-field', kicker: 'text-lime', text: 'text-on-field', button: 'text-field' }
 
   return (

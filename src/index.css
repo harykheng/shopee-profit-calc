@@ -57,6 +57,11 @@
   /* Bab iklan & stiker rugi (teks putih 5,4:1); versi terang untuk teks rugi di atas bidang biru (5:1). */
   --color-coral: #c4361e;
   --color-coral-soft: #ff9b85;
+  /* Teks kecil di atas Coral (4,8:1). */
+  --color-on-coral-muted: #ffeee8;
+  /* Peringatan di atas bidang biru dan stiker "perlu perhatian": Amber 7:1 di atas Field, teks Amber Ink 8,7:1 di atas Amber. */
+  --color-amber: #ffcf5c;
+  --color-amber-ink: #4a2c00;
 
   /* Lembar kerja di atas bidang. */
   --color-counter: #eef0f7;
@@ -75,6 +80,8 @@
   --color-stamp: #3a3fb8;
   --color-stamp-strong: #2c309b;
   --color-stamp-tint: #ecedfb;
+  --color-stamp-tint-hover: #dfe1fa;
+  --color-stamp-tint-press: #d4d7f7;
 
   /* Status. */
   --color-loss: #b3261e;

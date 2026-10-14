@@ -1,14 +1,14 @@
 /**
- * Password dari admin vs password milik pelanggan.
+ * Password dari pengelola vs password milik pelanggan.
  *
- * Akun dibuat admin dengan password sementara. Selama pelanggan belum menggantinya sendiri lewat
+ * Akun dibuat pengelola dengan password sementara. Selama pelanggan belum menggantinya sendiri lewat
  * halaman Akun, user_metadata.password_changed belum ada dan aplikasi menampilkan banner pengingat.
  * Ini hanya pengingat, bukan pengaman: pelanggan bisa mengubah metadata-nya sendiri.
  */
 
 export const MIN_PASSWORD_LENGTH = 8
 
-/** true selama akun masih memakai password dari admin. */
+/** true selama akun masih memakai password dari pengelola. */
 export function needsPasswordChange(user: { user_metadata?: Record<string, unknown> | null } | null | undefined): boolean {
   return user?.user_metadata?.password_changed !== true
 }
