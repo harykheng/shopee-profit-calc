@@ -157,15 +157,15 @@ export function FeeCategoriesPanel({ storeId, categories, onCategories, products
                 <span className="text-ink-muted">{formatNumber(usage.get(c.id) ?? 0)} produk</span>
                 {confirmId === c.id ? (
                   <>
-                    <Button variant="danger" className="!min-h-10 !px-4" disabled={busy} onClick={() => remove(c)}>
+                    <Button variant="danger" className="!px-4" disabled={busy} onClick={() => remove(c)}>
                       Ya, hapus
                     </Button>
-                    <Button variant="secondary" className="!min-h-10 !px-4" onClick={() => setConfirmId(null)}>
+                    <Button variant="secondary" className="!px-4" onClick={() => setConfirmId(null)}>
                       Batal
                     </Button>
                   </>
                 ) : (
-                  <Button variant="secondary" className="!min-h-10 !px-4" disabled={busy} onClick={() => setConfirmId(c.id)}>
+                  <Button variant="secondary" className="!px-4" disabled={busy} onClick={() => setConfirmId(c.id)}>
                     Hapus
                   </Button>
                 )}
@@ -259,7 +259,7 @@ export function FeeCategoriesPanel({ storeId, categories, onCategories, products
                     aria-label={`Kategori ${g.name}`}
                     className={inputClass}
                   >
-                    <option value="">— Isi manual / belum dipilih —</option>
+                    <option value="">Isi manual / belum dipilih</option>
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name} ({decimal(c.admin_pct)}%)

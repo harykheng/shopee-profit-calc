@@ -427,7 +427,8 @@ aman: seed tidak menambah apa pun.
       ([OPERASI.md](OPERASI.md) bagian 3 dan 4), termasuk cara memverifikasi peminta.
 - [ ] **`VITE_SUPPORT_WA` terisi** di variabel hosting (format `62…`), lalu deploy ulang. Tanpa itu
       tombol hijau **Bantuan** (pojok kanan bawah, juga di halaman login) tidak tampil, dan
-      "Lupa password?", "Perpanjang lewat WhatsApp", dan "Laporkan file ini" hanya teks biasa. Cek:
+      "Lupa password?", "Perpanjang lewat WhatsApp", "Laporkan file ini", serta "Minta salinan data" /
+      "Minta hapus data & akun" disembunyikan (pelanggan tidak punya jalur kontak). Cek:
       buka halaman login, klik "Lupa password?", harus membuka WhatsApp ke nomormu. Build produksi
       juga menulis peringatan di console browser kalau variabel ini kosong.
 - [ ] Dua akun uji dengan dua toko: masing-masing hanya melihat tokonya sendiri.

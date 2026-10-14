@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Alert, Button, Card, ErrorBox, PageTitle, SupportLink, inputClass } from '../components/ui'
+import { hasSupportWhatsApp } from '../lib/brand'
 import { MIN_PASSWORD_LENGTH, validateNewPassword } from '../lib/password'
 import { supabase } from '../lib/supabase'
 import type { Store } from '../lib/types'
@@ -116,14 +117,18 @@ export function AccountPage({
       <p className="mt-2 text-sm text-ink-muted">
         Penghapusan tidak bisa dibatalkan. Minta salinan dulu kalau kamu masih membutuhkan datanya.
       </p>
-      <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-        <SupportLink message={supportRequest('Halo, saya ingin meminta salinan seluruh data toko saya.', email, store?.name)}>
-          Minta salinan data
-        </SupportLink>
-        <SupportLink message={supportRequest('Halo, saya ingin data toko dan akun saya dihapus.', email, store?.name)}>
-          Minta hapus data & akun
-        </SupportLink>
-      </p>
+      {hasSupportWhatsApp ? (
+        <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+          <SupportLink message={supportRequest('Halo, saya ingin meminta salinan seluruh data toko saya.', email, store?.name)}>
+            Minta salinan data
+          </SupportLink>
+          <SupportLink message={supportRequest('Halo, saya ingin data toko dan akun saya dihapus.', email, store?.name)}>
+            Minta hapus data & akun
+          </SupportLink>
+        </p>
+      ) : (
+        <p className="mt-4 font-semibold">Untuk meminta salinan atau penghapusan, hubungi pengelola aplikasi.</p>
+      )}
     </Card>
   )
 

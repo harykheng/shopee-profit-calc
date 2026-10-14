@@ -162,7 +162,7 @@ export function UploadPage({
             ) : (
               'Data akan disimpan ke akunmu.'
             )}{' '}
-            Upload file yang sama dua kali aman — data tidak akan dobel.
+            Upload file yang sama dua kali aman, data tidak akan dobel.
           </p>
           {saveError ? <div className="mb-4"><ErrorBox error={saveError} /></div> : null}
           <div className="flex flex-wrap gap-3">
@@ -254,7 +254,7 @@ function OrdersPreview({ parsed }: { parsed: Parsed<OrdersParseResult> | null })
                 <td className="num py-2 pr-3 text-xs">{i.order_no}</td>
                 <td className="py-2 pr-3">
                   {i.product_name}
-                  {i.variant_name && <span className="text-ink-muted"> — {i.variant_name}</span>}
+                  {i.variant_name && <span className="text-ink-muted"> ({i.variant_name})</span>}
                 </td>
                 <td className="py-2 pr-3 text-right num">
                   {i.qty}
@@ -436,7 +436,7 @@ function SaveSummaryCard({
               {missingHpp.slice(0, 15).map((p) => (
                 <li key={p.id}>
                   {p.product_name}
-                  {p.variant_name && ` — ${p.variant_name}`}
+                  {p.variant_name && ` (${p.variant_name})`}
                 </li>
               ))}
               {missingHpp.length > 15 && <li>…dan {missingHpp.length - 15} lainnya</li>}

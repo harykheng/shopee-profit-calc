@@ -3,7 +3,7 @@ import type { Session, User } from '@supabase/supabase-js'
 import { Alert, ErrorBox, Spinner, SupportLink } from './components/ui'
 import { MonthlyReminderCard } from './components/MonthlyReminder'
 import { SupportButton } from './components/SupportButton'
-import { APP_NAME } from './lib/brand'
+import { APP_NAME, hasSupportWhatsApp } from './lib/brand'
 import { formatDate } from './lib/format'
 import { expiryNotice, subscriptionStatus } from './lib/subscription'
 import { needsPasswordChange } from './lib/password'
@@ -65,7 +65,7 @@ function NavLink({ route, current, variant }: { route: Route; current: boolean; 
     <a
       href={`#/${route}`}
       aria-current={current ? 'page' : undefined}
-      className={`relative flex min-h-10 items-center gap-2 whitespace-nowrap rounded-full px-4 font-semibold transition-colors duration-[260ms] ${
+      className={`relative flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 font-semibold transition-colors duration-[260ms] ${
         current ? 'text-field' : 'text-on-field-muted hover:text-on-field'
       }`}
     >
@@ -183,7 +183,7 @@ function MainApp({ user }: { user: User }) {
           <select
             value={storeId ?? ''}
             onChange={(e) => setStoreId(Number(e.target.value))}
-            className="min-h-10 w-full max-w-[12rem] cursor-pointer appearance-none truncate rounded-full border border-on-field/35 bg-transparent pl-9 pr-8 font-semibold text-on-field transition-colors hover:border-on-field/70 [&>option]:text-ink"
+            className="min-h-11 w-full max-w-[12rem] cursor-pointer appearance-none truncate rounded-full border border-on-field/35 bg-transparent pl-9 pr-8 font-semibold text-on-field transition-colors hover:border-on-field/70 [&>option]:text-ink"
           >
             {stores.map((s) => (
               <option key={s.id} value={s.id}>
@@ -215,7 +215,7 @@ function MainApp({ user }: { user: User }) {
               </p>
               <a
                 href="#/akun"
-                className="inline-flex min-h-10 shrink-0 items-center rounded-full bg-ink px-5 font-semibold text-white transition active:scale-[0.97]"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-ink px-5 font-semibold text-white transition active:scale-[0.97]"
               >
                 Ganti password
               </a>
@@ -244,7 +244,7 @@ function MainApp({ user }: { user: User }) {
               href="#/akun"
               aria-current={route === 'akun' ? 'page' : undefined}
               title={`Akun (${email})`}
-              className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10 hover:text-on-field ${
+              className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10 hover:text-on-field ${
                 route === 'akun' ? 'bg-white/15 text-on-field' : 'text-on-field-muted'
               }`}
             >
@@ -255,7 +255,7 @@ function MainApp({ user }: { user: User }) {
               type="button"
               onClick={() => supabase.auth.signOut()}
               title={`Keluar (${email})`}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-field-muted transition-colors hover:bg-white/10 hover:text-on-field"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-field-muted transition-colors hover:bg-white/10 hover:text-on-field"
             >
               <IconLogout size={19} />
               <span className="sr-only">Keluar</span>
@@ -342,11 +342,13 @@ function NoStoreScreen() {
     <div className="mx-auto max-w-xl">
       <Alert tone="warning" title="Akun ini belum terhubung ke toko. Hubungi admin.">
         <p>Setelah admin menghubungkan akunmu ke sebuah toko, muat ulang halaman ini.</p>
-        <p className="mt-3">
-          <SupportLink message={`Halo, akun ${APP_NAME} saya belum terhubung ke toko.`}>
-            Hubungi admin lewat WhatsApp
-          </SupportLink>
-        </p>
+        {hasSupportWhatsApp && (
+          <p className="mt-3">
+            <SupportLink message={`Halo, akun ${APP_NAME} saya belum terhubung ke toko.`}>
+              Hubungi admin lewat WhatsApp
+            </SupportLink>
+          </p>
+        )}
       </Alert>
     </div>
   )
@@ -371,9 +373,11 @@ function ExpiryReminder({
   return (
     <Alert tone="warning" title={`Langganan ${showStore ? `toko ${storeName} ` : ''}${notice} (${formatDate(activeUntil)}).`}>
       <p>Setelah habis, data tetap aman dan bisa dilihat di Rekap, tapi upload dan perubahan data dimatikan.</p>
-      <p className="mt-2">
-        <SupportLink message={renewMessage(storeName)}>Perpanjang lewat WhatsApp</SupportLink>
-      </p>
+      {hasSupportWhatsApp && (
+        <p className="mt-2">
+          <SupportLink message={renewMessage(storeName)}>Perpanjang lewat WhatsApp</SupportLink>
+        </p>
+      )}
     </Alert>
   )
 }
@@ -386,9 +390,11 @@ function ExpiredBanner({ storeName, activeUntil }: { storeName: string; activeUn
         Data kamu aman dan tetap bisa dilihat di Rekap di bawah. Upload, HPP, biaya, iklan, dan simulasi aktif lagi
         setelah langganan diperpanjang.
       </p>
-      <p className="mt-2">
-        <SupportLink message={renewMessage(storeName)}>Perpanjang lewat WhatsApp</SupportLink>
-      </p>
+      {hasSupportWhatsApp && (
+        <p className="mt-2">
+          <SupportLink message={renewMessage(storeName)}>Perpanjang lewat WhatsApp</SupportLink>
+        </p>
+      )}
     </Alert>
   )
 }

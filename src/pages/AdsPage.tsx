@@ -241,7 +241,7 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
   return (
     <>
       <PageTitle subtitle="Upload data iklan Shopee, lalu lihat produk mana yang perlu dimatikan, dipertahankan, atau dinaikkan ROAS-nya.">
-        Iklan — {store?.name ?? '-'}
+        Iklan: {store?.name ?? '-'}
       </PageTitle>
 
       <UploadCard
@@ -470,13 +470,13 @@ function UploadCard({
             Untuk tiap periode, download file ini, lalu pilih semuanya sekaligus di bawah:
             <ul className="mt-1 list-disc pl-6">
               <li>
-                <strong>Data Keseluruhan</strong> — total semua iklan (untuk Biaya)
+                <strong>Data Keseluruhan</strong>: total semua iklan (untuk Biaya)
               </li>
               <li>
-                <strong>Rincian Data Iklan Produk Otomatis</strong> — biaya per produk
+                <strong>Rincian Data Iklan Produk Otomatis</strong>: biaya per produk
               </li>
               <li>
-                <strong>Semua Data Grup Iklan</strong> — kalau memakai grup iklan
+                <strong>Semua Data Grup Iklan</strong>: kalau memakai grup iklan
               </li>
             </ul>
           </li>
@@ -802,7 +802,7 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
       {noSales.length > 0 && (filter === 'semua' || filter === 'belum_cukup') && (
         <details className="rounded-3xl bg-paper p-5 shadow-sheet">
           <summary className="cursor-pointer font-semibold">
-            {noSales.length} produk lain belum ada penjualan — total biaya{' '}
+            {noSales.length} produk lain belum ada penjualan, total biaya{' '}
             {formatRupiah(noSales.reduce((s, p) => s + p.spend, 0))}
           </summary>
           <p className="mt-2 text-ink-soft">Biayanya masih kecil, tunggu dulu. Kalau sudah banyak klik tapi tetap tidak laku, matikan.</p>
@@ -922,7 +922,7 @@ function SummaryCard({ data, period }: { data: Loaded; period: Period }) {
         )}{' '}
         · Potongan Shopee{' '}
         <strong>{formatPercent(data.feeRate * 100)}</strong>{' '}
-        {data.feeFrom ? `(dari laporan penghasilan ${data.feeFrom})` : '(perkiraan — laporan penghasilan belum di-upload)'}
+        {data.feeFrom ? `(dari laporan penghasilan ${data.feeFrom})` : '(perkiraan: laporan penghasilan belum di-upload)'}
       </p>
       <FeeCoverage products={a.products} />
       <dl className="mt-4 space-y-2 border-t-2 border-dashed border-rule pt-3">

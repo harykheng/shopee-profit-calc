@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Button, ErrorBox, SupportLink, inputClass } from '../components/ui'
-import { APP_NAME } from '../lib/brand'
+import { APP_NAME, hasSupportWhatsApp } from '../lib/brand'
 import { SupportButton } from '../components/SupportButton'
 import { supabase } from '../lib/supabase'
 
@@ -61,17 +61,23 @@ export function LoginPage() {
           {busy ? 'Memproses…' : 'Masuk'}
         </Button>
         <p className="mt-4 text-sm text-ink-muted">
-          <SupportLink
-            message={`Halo, saya lupa password ${APP_NAME}${email.trim() ? ` (email: ${email.trim()})` : ''}. Mohon bantu reset.`}
-            className="text-stamp-strong"
-          >
-            Lupa password?
-          </SupportLink>{' '}
-          Belum punya akun?{' '}
-          <SupportLink message={`Halo, saya ingin memakai ${APP_NAME}.`} className="text-stamp-strong">
-            Hubungi pengelola aplikasi
-          </SupportLink>
-          .
+          {!hasSupportWhatsApp ? (
+            'Lupa password atau belum punya akun? Hubungi pengelola aplikasi.'
+          ) : (
+            <>
+              <SupportLink
+                message={`Halo, saya lupa password ${APP_NAME}${email.trim() ? ` (email: ${email.trim()})` : ''}. Mohon bantu reset.`}
+                className="text-stamp-strong"
+              >
+                Lupa password?
+              </SupportLink>{' '}
+              Belum punya akun?{' '}
+              <SupportLink message={`Halo, saya ingin memakai ${APP_NAME}.`} className="text-stamp-strong">
+                Hubungi pengelola aplikasi
+              </SupportLink>
+              .
+            </>
+          )}
         </p>
       </form>
     </main>

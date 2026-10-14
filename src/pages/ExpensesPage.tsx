@@ -107,7 +107,7 @@ export function ExpensesPage({
       ) : !values ? (
         <Spinner />
       ) : (
-        <Card title={`${storeName} — ${formatMonth(month)}`}>
+        <Card title={`${storeName}: ${formatMonth(month)}`}>
           <div className="space-y-5">
             {EXPENSE_CATEGORIES.map(({ key, label }) => (
               <div key={key} className="grid gap-3 md:grid-cols-[12rem_16rem_1fr] md:items-center">

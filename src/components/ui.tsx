@@ -137,7 +137,10 @@ export function Alert({ tone = 'info', title, children }: { tone?: Tone; title?:
   )
 }
 
-/** Link WhatsApp ke pengelola. Kalau nomor belum diisi (VITE_SUPPORT_WA), hanya teks biasa. */
+/**
+ * Link WhatsApp ke pengelola. Kalau nomor belum diisi (VITE_SUPPORT_WA) tidak tampil sama sekali, supaya tidak ada
+ * teks yang tampak bisa diklik padahal tidak. Pemanggil yang kalimatnya bergantung pada link ini memeriksa `hasSupportWhatsApp`.
+ */
 export function SupportLink({
   message = `Halo, saya butuh bantuan untuk ${APP_NAME}.`,
   className = '',
@@ -148,7 +151,7 @@ export function SupportLink({
   children?: ReactNode
 }) {
   const href = supportUrl(message)
-  if (!href) return <span className={className}>{children}</span>
+  if (!href) return null
   return (
     <a
       href={href}
@@ -216,6 +219,85 @@ export function Spinner({ label = 'Memuat…' }: { label?: string }) {
       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/25 border-t-lime" />
       {label}
     </p>
+  )
+}
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+/**
+ * Dialog modal. Escape dan klik di luar menutupnya (kecuali `dismissible` false, mis. saat proses berjalan),
+ * Tab berputar di dalam dialog, dan fokus kembali ke pemicu saat ditutup. Fokus awal ke kotak dialog, bukan ke
+ * tombol, supaya Enter tidak langsung menjalankan aksi.
+ */
+export function Modal({
+  labelledBy,
+  onClose,
+  dismissible = true,
+  children,
+}: {
+  /** id elemen judul di dalam `children`. */
+  labelledBy: string
+  onClose: () => void
+  dismissible?: boolean
+  children: ReactNode
+}) {
+  const panel = useRef<HTMLDivElement>(null)
+  const latest = useRef({ onClose, dismissible })
+  latest.current = { onClose, dismissible }
+
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    panel.current?.focus()
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (!latest.current.dismissible) return
+        e.preventDefault()
+        latest.current.onClose()
+        return
+      }
+      if (e.key !== 'Tab' || !panel.current) return
+      const items = Array.from(panel.current.querySelectorAll<HTMLElement>(FOCUSABLE))
+      if (items.length === 0) {
+        e.preventDefault()
+        panel.current.focus()
+        return
+      }
+      const first = items[0]
+      const last = items[items.length - 1]
+      const outside = !panel.current.contains(document.activeElement) || document.activeElement === panel.current
+      if (e.shiftKey && (outside || document.activeElement === first)) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && (outside || document.activeElement === last)) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      if (opener?.isConnected) opener.focus()
+    }
+  }, [])
+
+  return (
+    <div
+      className="fixed inset-0 z-20 flex items-center justify-center bg-ink/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && latest.current.dismissible) latest.current.onClose()
+      }}
+    >
+      <div
+        ref={panel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
+        tabIndex={-1}
+        className="w-full max-w-lg rounded-3xl bg-paper p-6 shadow-xl"
+      >
+        {children}
+      </div>
+    </div>
   )
 }
 

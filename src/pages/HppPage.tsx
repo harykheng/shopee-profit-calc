@@ -72,8 +72,8 @@ export function HppPage({
 
   return (
     <>
-      <PageTitle subtitle="Harga pokok (modal) per 1 unit yang dijual di Shopee — untuk paket grosir, isi HPP per paket. Ketik angka lalu tekan Enter untuk menyimpan.">
-        HPP — {stores.find((s) => s.id === storeId)?.name}
+      <PageTitle subtitle="Harga pokok (modal) per 1 unit yang dijual di Shopee. Untuk paket grosir, isi HPP per paket. Ketik angka lalu tekan Enter untuk menyimpan.">
+        HPP: {stores.find((s) => s.id === storeId)?.name}
       </PageTitle>
 
 

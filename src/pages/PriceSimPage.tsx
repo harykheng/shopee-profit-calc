@@ -110,7 +110,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
         ? `Dari kategori "${cat.name}".`
         : effective !== null
           ? 'Tersimpan untuk produk ini.'
-          : 'Nilai bawaan — belum pernah disimpan untuk produk ini.',
+          : 'Nilai bawaan, belum pernah disimpan untuk produk ini.',
       price: 'Mengambil harga…',
       roas: 'Mengambil data iklan…',
     })
@@ -127,7 +127,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
       ...n,
       price: last
         ? `Harga pesanan terakhir${last.date ? `, ${formatDate(last.date)}` : ''}.`
-        : 'Belum ada pesanan untuk variasi ini — isi harga jual sendiri.',
+        : 'Belum ada pesanan untuk variasi ini. Isi harga jual sendiri.',
       roas:
         roas !== null && ads
           ? `ROAS nyata dari data iklan ${ads.periodLabel}.`
@@ -204,7 +204,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
   return (
     <>
       <PageTitle subtitle="Sebelum jualan atau ganti harga: hitung untung per order, ROAS minimum supaya iklan tidak rugi, dan harga jual yang masuk akal. Bisa pilih produk yang sudah di-upload supaya angkanya terisi otomatis, atau hitung satu target ROAS untuk grup iklan.">
-        Simulasi Harga — {store?.name ?? '-'}
+        Simulasi Harga: {store?.name ?? '-'}
       </PageTitle>
 
       {/* Satu produk atau satu grup iklan (beberapa produk, satu target ROAS). */}
@@ -221,7 +221,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
             role="tab"
             aria-selected={mode === id}
             onClick={() => setMode(id)}
-            className={`min-h-10 rounded-full px-4 font-semibold transition-colors duration-150 ${
+            className={`min-h-11 rounded-full px-4 font-semibold transition-colors duration-150 ${
               mode === id ? 'bg-on-field text-field' : 'text-on-field-muted hover:text-on-field'
             }`}
           >
@@ -349,7 +349,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                       aria-label="Kategori biaya admin"
                       className={inputClass}
                     >
-                      <option value="">— Isi persen sendiri —</option>
+                      <option value="">Isi persen sendiri</option>
                       {categories.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name} ({decimal(c.admin_pct)}%)
@@ -771,7 +771,7 @@ function ProductPicker({
           ))}
           {results.length > MAX_RESULTS && (
             <li className="p-3 text-sm text-ink-muted">
-              {results.length - MAX_RESULTS} produk lain — ketik lebih spesifik.
+              {results.length - MAX_RESULTS} produk lain. Ketik lebih spesifik.
             </li>
           )}
         </ul>

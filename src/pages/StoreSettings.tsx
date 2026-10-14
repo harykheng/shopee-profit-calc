@@ -77,7 +77,7 @@ export function StoreSettingsCard({
   const isDefault = values !== null && JSON.stringify(values) === JSON.stringify(DEFAULT_PERCENT)
 
   return (
-    <Card title={showStoreName ? `Pengaturan hitungan — ${storeName}` : 'Pengaturan hitungan'} className="mb-8 max-w-3xl">
+    <Card title={showStoreName ? `Pengaturan hitungan: ${storeName}` : 'Pengaturan hitungan'} className="mb-8 max-w-3xl">
       {loadError ? (
         <ErrorBox error={loadError} />
       ) : !values ? (

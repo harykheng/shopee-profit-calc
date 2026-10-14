@@ -1,6 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { MonthSelect } from '../components/pickers'
-import { Alert, Button, ButtonLink, Card, ErrorBox, ScrollX, Spinner, Stamp } from '../components/ui'
+import { Alert, Button, ButtonLink, Card, ErrorBox, Modal, ScrollX, Spinner, Stamp } from '../components/ui'
 import { IconAlertCircle, IconCheck, IconChevronDown, IconInfo } from '../components/icons'
 import {
   countItemsWithoutCreatedAt,
@@ -350,7 +350,7 @@ function TabButton({ id, tab, setTab, children }: { id: Tab; tab: Tab; setTab: (
       role="tab"
       aria-selected={on}
       onClick={() => setTab(id)}
-      className={`min-h-10 rounded-full px-4 font-semibold transition-colors duration-150 ${
+      className={`min-h-11 rounded-full px-4 font-semibold transition-colors duration-150 ${
         on ? 'bg-on-field text-field' : 'text-on-field-muted hover:text-on-field'
       }`}
     >
@@ -902,7 +902,7 @@ function Checklist({
           <IconInfo size={16} className="mt-0.5 shrink-0 text-info" />
           <span>
             {formatRupiah(s.shifted.amount)} cair 1–2 hari setelah tanggal pesanan selesai di export (
-            {dayList(s.shifted.days)}). Normal — datanya sudah cocok.
+            {dayList(s.shifted.days)}). Normal: datanya sudah cocok.
           </span>
         </p>
       )}
@@ -1118,7 +1118,7 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
                         {formatRupiah(g.subtotal)}
                       </td>
                       <td className="num py-3 pr-3 text-right">
-                        {g.group === 'batal' ? <span className="text-ink-muted">—</span> : formatRupiah(g.modal)}
+                        {g.group === 'batal' ? <span className="text-ink-muted">-</span> : formatRupiah(g.modal)}
                       </td>
                     </tr>
                   ))}
@@ -1218,7 +1218,7 @@ function ProductsTab({ products, returned, period }: { products: ProductRecap[];
             {returned.map((r) => (
               <li key={r.order_no + r.sku}>
                 {formatDate(r.completed_at)} · {r.order_no} · {r.product_name}
-                {r.variant_name && ` — ${r.variant_name}`} · retur {r.returned_qty} dari {r.qty}
+                {r.variant_name && ` (${r.variant_name})`} · retur {r.returned_qty} dari {r.qty}
               </li>
             ))}
           </ul>
@@ -1312,6 +1312,7 @@ function RecalcDialog({
   onCancel: () => void
   onRun: (onlyMissing: boolean) => Promise<void>
 }) {
+  const titleId = useId()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
   const run = async (onlyMissing: boolean) => {
@@ -1325,29 +1326,27 @@ function RecalcDialog({
     }
   }
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-ink/40 p-4" role="dialog" aria-modal="true">
-      <div className="w-full max-w-lg rounded-3xl bg-paper p-6 shadow-xl">
-        <h2 className="text-xl font-semibold tracking-tight">Hitung ulang HPP — {formatMonth(month)}</h2>
-        <p className="mt-3 text-ink-soft">
-          Modal bulan ini memakai HPP yang terkunci saat pesanan selesai. Pilih cara menghitung ulang:
-        </p>
-        {error ? <div className="mt-4"><ErrorBox error={error} /></div> : null}
-        <div className="mt-5 flex flex-col gap-3">
-          <Button onClick={() => run(true)} disabled={busy}>
-            Isi yang HPP-nya kosong saja (disarankan)
-          </Button>
-          <Button variant="secondary" onClick={() => run(false)} disabled={busy}>
-            Semua barang pakai HPP saat ini
-          </Button>
-          <Button variant="secondary" onClick={onCancel} disabled={busy}>
-            Batal
-          </Button>
-        </div>
-        <p className="mt-4 text-sm text-ink-muted">
-          "Semua barang" mengganti HPP lama dengan HPP yang sekarang tercatat di halaman HPP, sehingga untung{' '}
-          {formatMonth(month)} bisa berubah.
-        </p>
+    <Modal labelledBy={titleId} onClose={onCancel} dismissible={!busy}>
+      <h2 id={titleId} className="text-xl font-semibold tracking-tight">Hitung ulang HPP: {formatMonth(month)}</h2>
+      <p className="mt-3 text-ink-soft">
+        Modal bulan ini memakai HPP yang terkunci saat pesanan selesai. Pilih cara menghitung ulang:
+      </p>
+      {error ? <div className="mt-4"><ErrorBox error={error} /></div> : null}
+      <div className="mt-5 flex flex-col gap-3">
+        <Button onClick={() => run(true)} disabled={busy}>
+          Isi yang HPP-nya kosong saja (disarankan)
+        </Button>
+        <Button variant="secondary" onClick={() => run(false)} disabled={busy}>
+          Semua barang pakai HPP saat ini
+        </Button>
+        <Button variant="secondary" onClick={onCancel} disabled={busy}>
+          Batal
+        </Button>
       </div>
-    </div>
+      <p className="mt-4 text-sm text-ink-muted">
+        "Semua barang" mengganti HPP lama dengan HPP yang sekarang tercatat di halaman HPP, sehingga untung{' '}
+        {formatMonth(month)} bisa berubah.
+      </p>
+    </Modal>
   )
 }
