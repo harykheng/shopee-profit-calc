@@ -56,7 +56,7 @@ export function MonthlyReminderCard({ storeId, route }: { storeId: number; route
               <span className="min-w-0 flex-1">{i.text}</span>
               <a
                 href={hrefFor(i.route, i.params)}
-                className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-stamp px-4 text-sm font-semibold text-white transition active:scale-[0.97]"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-accent px-4 text-sm font-semibold text-white transition-[background-color,transform] hover:bg-accent-hover active:translate-y-px"
               >
                 {i.action}
               </a>
@@ -65,7 +65,7 @@ export function MonthlyReminderCard({ storeId, route }: { storeId: number; route
         </ul>
         <button
           type="button"
-          className="mt-3 min-h-11 text-sm font-semibold text-stamp-strong underline"
+          className="mt-3 min-h-11 text-sm font-semibold text-accent underline decoration-accent/35 decoration-2 underline-offset-4 hover:decoration-accent"
           onClick={() => {
             try {
               localStorage.setItem(reminderDismissKey(storeId, month), wibToday())

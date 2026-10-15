@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { Alert, ErrorBox, Spinner, SupportLink } from './components/ui'
+import { Alert, Brand, Card, ErrorBox, Spinner, Stamp, SupportLink, WhatsAppButton } from './components/ui'
 import { MonthlyReminderCard } from './components/MonthlyReminder'
 import { SupportButton } from './components/SupportButton'
-import { APP_NAME, hasSupportWhatsApp } from './lib/brand'
+import { APP_NAME, hasSupportWhatsApp, isHitungCuan } from './lib/brand'
 import { formatDate } from './lib/format'
 import { expiryNotice, subscriptionStatus } from './lib/subscription'
 import { needsPasswordChange } from './lib/password'
@@ -46,13 +46,13 @@ function NavLink({ route, current, variant }: { route: Route; current: boolean; 
         href={`#/${route}`}
         aria-current={current ? 'page' : undefined}
         className={`relative flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-semibold transition duration-[260ms] active:scale-95 ${
-          current ? 'text-on-field' : 'text-on-field-muted hover:text-on-field'
+          current ? 'text-ink' : 'text-ink-3 hover:text-ink'
         }`}
       >
         <span
           data-pill
           className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-[260ms] ${
-            current ? 'text-field-deep' : ''
+            current ? 'text-paper' : ''
           }`}
         >
           <Icon size={18} />
@@ -65,8 +65,8 @@ function NavLink({ route, current, variant }: { route: Route; current: boolean; 
     <a
       href={`#/${route}`}
       aria-current={current ? 'page' : undefined}
-      className={`relative flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 font-semibold transition-colors duration-[260ms] ${
-        current ? 'text-field' : 'text-on-field-muted hover:text-on-field'
+      className={`relative flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-3 font-semibold transition-colors duration-[260ms] ${
+        current ? 'text-paper' : 'text-ink-2 hover:text-ink'
       }`}
     >
       <Icon size={17} />
@@ -176,14 +176,14 @@ function MainApp({ user }: { user: User }) {
   // Pemilih toko hanya muncul kalau user punya lebih dari satu toko.
   const storeSelect =
     stores && stores.length > 1 ? (
-      <label className="min-w-0">
+      <label className="min-w-[9.5rem] shrink">
         <span className="sr-only">Toko</span>
         <span className="relative block">
-          <IconStore size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-field-muted" />
+          <IconStore size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-accent" />
           <select
             value={storeId ?? ''}
             onChange={(e) => setStoreId(Number(e.target.value))}
-            className="min-h-11 w-full max-w-[12rem] cursor-pointer appearance-none truncate rounded-full border border-on-field/50 bg-transparent pl-9 pr-8 font-semibold text-on-field transition-colors hover:border-on-field/70 [&>option]:text-ink"
+            className="min-h-11 w-full max-w-[13rem] cursor-pointer appearance-none truncate rounded-full border border-control bg-paper pl-9 pr-8 font-semibold text-ink transition-colors hover:border-ink"
           >
             {stores.map((s) => (
               <option key={s.id} value={s.id}>
@@ -191,7 +191,7 @@ function MainApp({ user }: { user: User }) {
               </option>
             ))}
           </select>
-          <IconChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-field-muted" />
+          <IconChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-3" />
         </span>
       </label>
     ) : null
@@ -205,31 +205,40 @@ function MainApp({ user }: { user: User }) {
           page: ROUTES.find((r) => r.route === route)?.label,
         }}
       />
-      <header className="on-field sticky top-0 z-10 bg-field/90 backdrop-blur-md">
+      <header className="sticky top-0 z-10 border-b border-line bg-canvas/95 backdrop-blur-md">
         {/* Selalu tampil (ikut menempel di atas) sampai pelanggan mengganti password dari pengelola. */}
         {mustChangePassword && route !== 'akun' && (
-          <div role="region" aria-label="Pengingat ganti password" className="bg-amber text-ink">
+          <div role="region" aria-label="Pengingat ganti password" className="bg-sun text-ink">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
               <p className="min-w-0 flex-1 font-semibold">
                 Kamu masih memakai password dari pengelola. Ganti sekarang supaya akunmu aman.
               </p>
               <a
                 href="#/akun"
-                className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-ink px-5 font-semibold text-white transition active:scale-[0.97]"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-ink px-5 font-semibold text-paper transition-transform active:translate-y-px"
               >
                 Ganti password
               </a>
             </div>
           </div>
         )}
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <a href="#/rekap" className="shrink-0 font-display text-xl font-bold tracking-tight text-on-field max-sm:sr-only">
-            {APP_NAME}
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
+          <a href="#/rekap" aria-label={`${APP_NAME}, ke Rekap`} className="inline-flex min-h-11 shrink-0 items-center rounded-md">
+            {/* Logo HitungCuan menyusut jadi tandanya saja di HP dan di 1024-1279px (menu ikut di bar atas), supaya
+                nama toko tetap terbaca. */}
+            {isHitungCuan ? (
+              <>
+                <img src="/logo/mark.svg" alt="" width={28} height={28} className="size-7 sm:hidden lg:block xl:hidden" />
+                <Brand className="max-sm:hidden lg:max-xl:hidden" />
+              </>
+            ) : (
+              <Brand className="max-sm:sr-only" />
+            )}
           </a>
           {storeSelect}
           <nav ref={topRef} aria-label="Menu utama" className={`relative ml-auto hidden ${blocked ? '' : 'lg:block'}`}>
             {topIndicator && (
-              <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-on-field" style={topIndicator} />
+              <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-ink" style={topIndicator} />
             )}
             <ul className="flex gap-1">
               {NAV_ORDER.map((r) => (
@@ -244,8 +253,8 @@ function MainApp({ user }: { user: User }) {
               href="#/akun"
               aria-current={route === 'akun' ? 'page' : undefined}
               title={`Akun (${email})`}
-              className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10 hover:text-on-field ${
-                route === 'akun' ? 'bg-white/15 text-on-field' : 'text-on-field-muted'
+              className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
+                route === 'akun' ? 'bg-ink text-paper' : 'text-ink-2 hover:bg-tint hover:text-ink'
               }`}
             >
               <IconUser size={19} />
@@ -255,7 +264,7 @@ function MainApp({ user }: { user: User }) {
               type="button"
               onClick={() => supabase.auth.signOut()}
               title={`Keluar (${email})`}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-field-muted transition-colors hover:bg-white/10 hover:text-on-field"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors hover:bg-tint hover:text-ink"
             >
               <IconLogout size={19} />
               <span className="sr-only">Keluar</span>
@@ -269,10 +278,10 @@ function MainApp({ user }: { user: User }) {
         ref={barRef}
         aria-label="Menu utama"
         hidden={blocked}
-        className="on-field fixed inset-x-0 bottom-0 z-10 bg-field-deep pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
       >
         {barIndicator && (
-          <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-lime" style={barIndicator} />
+          <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-ink" style={barIndicator} />
         )}
         <ul className="mx-auto grid max-w-2xl grid-cols-6 px-1">
           {NAV_ORDER.map((r) => (
@@ -337,19 +346,22 @@ function MainApp({ user }: { user: User }) {
   )
 }
 
+/** Belum bisa memakai aplikasi: jawabannya dulu, lalu satu jalan keluar (chat pengelola). */
 function NoStoreScreen() {
   return (
-    <div className="mx-auto max-w-xl">
-      <Alert tone="warning" title="Akun ini belum terhubung ke toko. Hubungi pengelola.">
-        <p>Setelah pengelola menghubungkan akunmu ke sebuah toko, muat ulang halaman ini.</p>
-        {hasSupportWhatsApp && (
-          <p className="mt-3">
-            <SupportLink message={`Halo, akun ${APP_NAME} saya belum terhubung ke toko.`}>
-              Hubungi pengelola lewat WhatsApp
-            </SupportLink>
-          </p>
-        )}
-      </Alert>
+    <div className="mx-auto max-w-xl py-4 sm:py-10">
+      <Card>
+        <Stamp tone="warn">Belum ada toko</Stamp>
+        <h1 className="mt-5 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+          Akunmu belum terhubung ke toko.
+        </h1>
+        <p className="mt-3 text-lg leading-relaxed text-ink-2">
+          Pengelola perlu menghubungkan akunmu ke tokomu dulu. Setelah itu, muat ulang halaman ini.
+        </p>
+        <WhatsAppButton className="mt-6" message={`Halo, akun ${APP_NAME} saya belum terhubung ke toko.`}>
+          Chat pengelola
+        </WhatsAppButton>
+      </Card>
     </div>
   )
 }

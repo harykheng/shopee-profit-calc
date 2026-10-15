@@ -3,7 +3,8 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-// <title> diisi dari VITE_APP_NAME saat build (default "Profit Shopee").
+// <title> diisi dari VITE_APP_NAME saat build (default "Profit Shopee"). Deploy HitungCuan memakai tanda logo
+// landing sebagai favicon (sama dengan isHitungCuan di src/lib/brand.ts).
 function appName(): Plugin {
   let name = 'Profit Shopee'
   return {
@@ -11,7 +12,12 @@ function appName(): Plugin {
     configResolved(config) {
       name = loadEnv(config.mode, process.cwd(), 'VITE_').VITE_APP_NAME?.trim() || name
     },
-    transformIndexHtml: (html) => html.replaceAll('__APP_NAME__', name.replace(/[<>&"]/g, '')),
+    transformIndexHtml: (html) => {
+      const hitungCuan = name.replace(/\s+/g, '').toLowerCase() === 'hitungcuan'
+      return html
+        .replaceAll('__APP_NAME__', name.replace(/[<>&"]/g, ''))
+        .replaceAll('__FAVICON__', hitungCuan ? '/logo/mark.svg' : '/favicon.svg')
+    },
   }
 }
 

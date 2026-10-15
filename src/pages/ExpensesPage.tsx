@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { MonthPicker, RupiahInput } from '../components/pickers'
-import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, inputClass } from '../components/ui'
+import { Alert, Button, Card, ErrorBox, NotaTotal, PageTitle, Spinner, inputClass } from '../components/ui'
 import { IconAlertCircle } from '../components/icons'
 import { fetchExpenses, saveExpenses } from '../lib/api'
 import { notifyDataChanged } from '../lib/events'
@@ -94,12 +94,15 @@ export function ExpensesPage({
 
   return (
     <>
-      <PageTitle subtitle="Biaya di luar laporan penghasilan Shopee, mis. iklan (dibayar dari saldo iklan), Meta Ads, packaging.">
+      <PageTitle
+        kicker={stores.length > 1 ? storeName : undefined}
+        subtitle="Biaya yang tidak ada di laporan penghasilan Shopee: iklan Shopee (dari saldo iklan), Meta Ads, packaging, dan lain-lain. Kalau bulan ini memang tidak ada biaya, simpan Rp0 supaya Rekap bisa jadi angka final."
+      >
         Biaya
       </PageTitle>
 
       <div className="mb-6">
-        <MonthPicker value={month} onChange={setMonth} label="Bulan:" />
+        <MonthPicker value={month} onChange={setMonth} label="Bulan" />
       </div>
 
       {loadError ? (
@@ -107,11 +110,11 @@ export function ExpensesPage({
       ) : !values ? (
         <Spinner />
       ) : (
-        <Card title={`${storeName}: ${formatMonth(month)}`}>
+        <Card title={`Biaya ${formatMonth(month)}`}>
           <div className="space-y-5">
             {EXPENSE_CATEGORIES.map(({ key, label }) => (
               <div key={key} className="grid gap-3 md:grid-cols-[12rem_16rem_1fr] md:items-center">
-                <p className="font-medium">{label}</p>
+                <p className="font-semibold">{label}</p>
                 <RupiahInput
                   value={values[key].amount}
                   onCommit={(amount) => update(key, { amount })}
@@ -129,14 +132,11 @@ export function ExpensesPage({
             ))}
           </div>
 
-          <div className="mt-6 flex flex-wrap items-baseline justify-between gap-3 rounded-2xl bg-stamp-tint px-4 py-3">
-            <span className="font-display text-lg font-bold">Total biaya</span>
-            <strong className="num font-display text-2xl font-bold">{formatRupiah(total)}</strong>
-          </div>
+          <NotaTotal className="mt-6" label="Total biaya" amount={formatRupiah(total)} />
 
           {/* Pesan status di BAWAH tombol, supaya tombol tidak bergeser saat ditekan. */}
-          <Button className="mt-4" onClick={save} disabled={saving}>
-            {saving ? 'Menyimpan…' : 'Simpan biaya'}
+          <Button className="mt-5" onClick={save} disabled={saving}>
+            {saving ? 'Menyimpan…' : `Simpan biaya ${formatMonth(month)}`}
           </Button>
 
           {saveError ? <div className="mt-4"><ErrorBox error={saveError} /></div> : null}
@@ -146,7 +146,7 @@ export function ExpensesPage({
             </div>
           )}
           {dirty && !saving && (
-            <p className="mt-4 flex items-center gap-2 text-warn">
+            <p className="mt-4 flex items-center gap-2 font-semibold text-warn">
               <IconAlertCircle size={18} />
               Ada perubahan yang belum disimpan.
             </p>

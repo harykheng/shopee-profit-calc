@@ -70,7 +70,7 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 membuka WhatsApp ke pengelola. Pesan awalnya sudah berisi akun, toko, dan halaman yang sedang kamu
 buka, jadi tinggal tulis masalahnya lalu kirim. Tombol ini ada juga di halaman login.
 
-**Pengingat otomatis.** Kalau rekap bulan lalu belum lengkap, kartu biru muncul di atas halaman
+**Pengingat otomatis.** Kalau rekap bulan lalu belum lengkap, kartu pengingat muncul di atas halaman
 ("Rekap September 2026 belum lengkap") dengan tombol langsung ke langkah yang tersisa: Upload laporan,
 Upload pesanan, Isi HPP, atau Isi biaya. Kartu ini ikut berubah begitu kamu menyimpan data, dan
 hilang sendiri saat angka sudah final. **Ingatkan besok** menyembunyikannya sampai hari berikutnya.
@@ -114,12 +114,16 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
 
 ## 4. Halaman Upload
 
-1. Cek kotak **"Upload ke toko: …"**. Kalau salah, ganti toko di pilihan Toko pada menu.
+1. Kalau akunmu punya lebih dari satu toko, cek kotak **"Disimpan ke toko …"**. Kalau salah, ganti toko di pilihan toko
+   pada bar atas.
 2. **Kotak 1:** pilih file Excel export pesanan.
 3. **Kotak 2:** pilih file PDF laporan penghasilan.
 4. Cek **preview**: jumlah pesanan per status, jumlah hari uang cair, total penghasilan, dan biaya
    penyesuaian kalau ada.
 5. Tekan **Simpan ke …**.
+
+Data iklan (CSV) tidak di-upload di sini: kotak **3. Data iklan** membawa ke halaman Iklan, karena
+tiap periode iklan terdiri dari beberapa file.
 
 Setelah disimpan muncul ringkasan:
 - berapa data baru, diperbarui, atau sama seperti sebelumnya;
@@ -134,7 +138,7 @@ Kalau salah memilih file (misalnya PDF di kotak Excel), aplikasi akan memberi ta
 HPP = harga modal per barang.
 
 - Produk baru **otomatis masuk** dari upload export pesanan.
-- Produk yang HPP-nya kosong berwarna **merah**. Isi langsung di kolomnya, lalu angkanya
+- Produk yang HPP-nya kosong berlatar **merah muda** dan bertuliskan **Belum diisi**. Isi langsung di kolomnya, lalu angkanya
   tersimpan. Centang **Hanya yang belum ada HPP** untuk menampilkan yang kosong saja.
 - **Isi per 1 unit yang dijual di Shopee.** Untuk paket grosir (contoh: "Bedak 6PCS"), isi HPP
   **untuk 1 paket**, bukan per pcs.
@@ -177,7 +181,7 @@ Rekap dibaca seperti cerita, dari atas ke bawah:
 
 | Bab | Isi |
 |---|---|
-| **Bab 1 · Untung** | Kalimat besar, mis. "Agustus 2026, Harel Beauty untung **Rp2,78 juta**", lalu angka tepatnya (Rp2.785.162), status bulan, dan batang **"Dari setiap Rp100 yang masuk"** (berapa untuk modal, biaya, dan berapa yang jadi untung). Kalau rugi, kalimatnya bilang "rugi". |
+| **Bab 1 · Untung bersih** | Kalimat besar, mis. "Agustus 2026, Harel Beauty untung bersih", lalu angkanya besar berwarna hijau (**Rp2,78 juta**), angka tepatnya (Rp2.785.162), stiker status bulan, dan lembar **"Dari setiap Rp100 yang masuk"** (berapa untuk modal, biaya, dan berapa yang jadi untung). Kalau rugi, kalimatnya bilang "rugi" dan angkanya merah. |
 | **Bab 2 · Dari mana angkanya** | Hitungannya (lihat di bawah). |
 | **Bab 3 · Iklan** | Ringkasan iklan bulan yang sama (untung/rugi setelah iklan, iklan yang sebaiknya dimatikan). Hanya muncul kalau melihat satu bulan; kalau belum ada data iklan 1 bulan penuh, ada ajakan untuk upload. |
 | **Bab 4 · Pesanan & produk** | Tab-tab rincian (lihat di bawah). |
@@ -408,7 +412,7 @@ Semua angka tetap **bisa diubah**. Contoh: ubah harga jual untuk melihat efeknya
 dinaikkan. Mengubah angka di sini tidak mengubah data di halaman lain.
 
 **% admin dan XTRA tidak ada di file export Shopee**, jadi diisi sendiri. Isi sekali yang benar,
-lalu tekan **Simpan % admin & XTRA untuk produk ini**. Nilainya tersimpan untuk **semua variasi**
+lalu tekan **Simpan untuk produk ini**. Nilainya tersimpan untuk **semua variasi**
 produk itu dan dipakai lagi di semua perangkat dan semua akun.
 
 **Kategori biaya admin.** Biaya admin Shopee berbeda tiap kategori dan bisa berubah, jadi aplikasi
@@ -459,7 +463,7 @@ harus dinaikkan dulu, belum usah memikirkan iklan.
 
 ### Kalau ROAS aktual diisi
 
-Muncul kotak **"Iklan untung"** (hijau) atau **"Iklan rugi"** (merah) dengan rupiahnya per order:
+Muncul kotak dengan stiker **IKLAN UNTUNG** (hijau) atau **IKLAN RUGI** (merah) dan rupiahnya per order:
 
 - **Biaya iklan per order** = harga jual ÷ ROAS aktual
 - **Untung setelah iklan** = untung per order − biaya iklan per order
@@ -544,8 +548,8 @@ Dua alasan:
    supaya tidak rugi. Lihat baris **Balik modal butuh ROAS** di kartu produk.
 
 **Salah upload ke toko lain?**
-Hubungi pengelola aplikasi untuk menghapus datanya. Untuk mencegahnya, selalu cek nama toko di
-menu sebelum upload. Halaman Iklan juga memberi peringatan kalau tokonya terlihat beda.
+Hubungi pengelola aplikasi untuk menghapus datanya. Untuk mencegahnya, selalu cek nama toko di bar atas
+sebelum upload. Halaman Iklan juga memberi peringatan kalau tokonya terlihat beda.
 
 **Apakah data pembeli tersimpan?**
 Tidak. Nama, alamat, no. HP, username, catatan, dan no. resi pembeli **tidak pernah dibaca maupun

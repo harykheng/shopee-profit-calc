@@ -1,137 +1,134 @@
 @import 'tailwindcss';
 
-/* Huruf disimpan sendiri di public/fonts (lisensi OFL, lihat public/fonts/OFL-*.txt). */
+/*
+ * Huruf disimpan sendiri di public/fonts (lisensi OFL, lihat public/fonts/OFL-*.txt), sama dengan landing HitungCuan:
+ * Parkinsans untuk judul, kalimat jawaban, angka besar tunggal, dan stiker; Plus Jakarta Sans untuk semua teks lain.
+ * Keduanya versi variable, satu file per subset huruf.
+ */
 @font-face {
-  font-family: 'Public Sans';
+  font-family: 'Plus Jakarta Sans';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 200 800;
   font-display: swap;
-  src: url('/fonts/public-sans-latin.woff2') format('woff2');
+  src: url('/fonts/plus-jakarta-sans-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Public Sans';
+  font-family: 'Plus Jakarta Sans';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 200 800;
   font-display: swap;
-  src: url('/fonts/public-sans-latin-ext.woff2') format('woff2');
+  src: url('/fonts/plus-jakarta-sans-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Bricolage Grotesque';
+  font-family: 'Parkinsans';
   font-style: normal;
-  font-weight: 400 800;
+  font-weight: 300 800;
   font-display: swap;
-  src: url('/fonts/bricolage-grotesque-latin.woff2') format('woff2');
+  src: url('/fonts/parkinsans-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Bricolage Grotesque';
+  font-family: 'Parkinsans';
   font-style: normal;
-  font-weight: 400 800;
+  font-weight: 300 800;
   font-display: swap;
-  src: url('/fonts/bricolage-grotesque-latin-ext.woff2') format('woff2');
+  src: url('/fonts/parkinsans-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 /*
- * Dunia "cerita bulan ini": seluruh halaman adalah satu bidang warna (biru tinta),
- * jawaban ditulis besar seperti kalimat cerita, sorotan hijau limau untuk angka yang dicari,
- * dan lembar putih membulat untuk tabel & formulir yang dikerjakan.
+ * PALET "Dapur Terang", sama dengan landing HitungCuan (repo harykheng/hitung-cuan, src/index.css). Nilai yang sama
+ * di sana memakai nama lama (ember = accent, peach = accent-tint). Rasio kontras dihitung dengan skrip WCAG 2.x.
+ *  - Inti: netral hangat. canvas (halaman), paper (lembar), tint (sumur di dalam lembar, latar tab), line (garis rambut),
+ *    rule (garis putus-putus), control (batas input dan tombol bergaris, 3,8:1 terhadap putih), skala ink.
+ *  - Satu aksen: indigo. accent untuk tombol utama (teks putih 9,54:1), tautan, kicker, ikon aksen, dan cincin fokus.
+ *    accent-tint hanya untuk pita sorotan .hl dan baris yang sedang disorot. Aksen tidak pernah berarti untung/rugi.
+ *  - Status, arti tetap, selalu dengan kata atau ikon: loss (rugi), gain (untung), sun (perlu perhatian).
+ *    Turunannya: loss-tint, mintbg (latar positif), sun-tint (latar perhatian), warn (teks perhatian di permukaan terang).
+ * Pilihan yang aktif (menu, tab, filter) diisi penuh ink dengan teks paper, seperti tombol terpilih di landing.
  */
 @theme {
-  --font-sans: 'Public Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Bricolage Grotesque', 'Public Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Parkinsans', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
 
-  /* Bidang halaman. */
-  --color-field: #2b2fa6;
-  --color-field-deep: #1d2079;
-  --color-field-raised: #3b3fb4;
-  --color-on-field: #f6f4ff;
-  --color-on-field-muted: #c3c5f2;
-  --color-lime: #d7f45a;
-  /* Bab iklan & stiker rugi (teks putih 5,4:1); versi terang untuk teks rugi di atas bidang biru (5:1). */
-  --color-coral: #c4361e;
-  --color-coral-soft: #ff9b85;
-  /* Teks kecil di atas Coral (4,8:1). */
-  --color-on-coral-muted: #ffeee8;
-  /* Peringatan di atas bidang biru dan stiker "perlu perhatian": Amber 7:1 di atas Field, teks Amber Ink 8,7:1 di atas Amber. */
-  --color-amber: #ffcf5c;
-  --color-amber-ink: #4a2c00;
-
-  /* Lembar kerja di atas bidang. */
-  --color-counter: #eef0f7;
+  --color-canvas: #fffbf6;
   --color-paper: #ffffff;
-  --color-line: #dfe2ee;
-  --color-rule: #b4b9cf;
-  /* Garis tepi kontrol (input, pilihan, tombol outline): 3,5:1 di atas Paper, 3,1:1 di atas Counter. */
-  --color-edge: #8187ad;
+  --color-tint: #f7f1e8;
+  --color-line: #ece2d4;
+  --color-rule: #d6cab9;
+  --color-control: #8a8178;
 
-  /* Tinta di atas lembar. */
-  --color-ink: #16173d;
-  --color-ink-soft: #3b3d63;
-  --color-ink-muted: #5d6088;
+  /* ink di paper 17,2:1; ink-2 7,6:1; ink-3 5,49:1 (4,89:1 di atas tint). */
+  --color-ink: #1c1917;
+  --color-ink-2: #57534e;
+  --color-ink-3: #6f6860;
 
-  /* Aksi & pilihan di atas lembar. */
-  --color-stamp: #3a3fb8;
-  --color-stamp-strong: #2c309b;
-  --color-stamp-tint: #ecedfb;
-  --color-stamp-tint-hover: #dfe1fa;
-  --color-stamp-tint-press: #d4d7f7;
+  --color-accent: #2b3a9e;
+  --color-accent-hover: #3546b5;
+  --color-accent-tint: #dde2fa;
 
-  /* Status. */
-  --color-loss: #b3261e;
-  --color-loss-tint: #fdeceb;
+  --color-loss: #c4361e;
+  --color-loss-tint: #fcebe6;
   --color-gain: #146c43;
-  --color-gain-tint: #e5f3eb;
+  --color-mintbg: #ddf3e9;
+  --color-sun: #f5d547;
+  --color-sun-ink: #4a3200;
+  --color-sun-tint: #fdf3d0;
+  /* Teks "perlu perhatian" di permukaan terang: 6,3:1 di paper, 5,7:1 di sun-tint. */
   --color-warn: #8a5300;
-  --color-warn-tint: #fff3d9;
-  --color-warn-line: #ebc06a;
-  --color-info: #1d4f86;
-  --color-info-tint: #e8f0fa;
 
-  --shadow-sheet: 0 2px 4px rgb(16 18 70 / 0.12), 0 14px 34px rgb(16 18 70 / 0.18);
+  /* Satu bayangan lembut untuk lembar, nilainya sama dengan landing. */
+  --shadow-sheet: 0 1px 2px rgba(28, 25, 23, 0.06), 0 14px 34px -14px rgba(28, 25, 23, 0.28);
 }
 
 @layer base {
   html {
-    background: var(--color-field);
+    background: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
     text-rendering: optimizeLegibility;
-    accent-color: var(--color-stamp);
-    caret-color: var(--color-stamp);
-    scrollbar-color: var(--color-field-raised) var(--color-field-deep);
+    accent-color: var(--color-accent);
+    caret-color: var(--color-accent);
+    scrollbar-color: var(--color-rule) var(--color-canvas);
+  }
+  body {
+    overflow-x: clip;
   }
   ::selection {
-    background: var(--color-stamp-tint);
+    background: var(--color-accent-tint);
     color: var(--color-ink);
   }
   :focus-visible {
-    outline: 2px solid var(--focus, var(--color-stamp));
-    outline-offset: 2px;
-  }
-  /* Di atas bidang biru, cincin fokus memakai hijau limau supaya terlihat. */
-  .on-field {
-    --focus: var(--color-lime);
+    outline: 3px solid var(--color-accent);
+    outline-offset: 3px;
   }
   a {
-    text-underline-offset: 3px;
+    text-underline-offset: 4px;
   }
   h1,
   h2,
   h3 {
     text-wrap: balance;
   }
+  details > summary {
+    list-style: none;
+  }
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
 }
 
 @layer components {
-  /* Angka di nota: Rupiah, persen, ROAS, qty. */
+  /* Angka yang berderet di kolom: Plus Jakarta Sans punya angka tabular, Parkinsans tidak. */
   .num {
     font-variant-numeric: tabular-nums;
   }
@@ -139,35 +136,43 @@
   .tear {
     border-top: 2px dashed var(--color-rule);
   }
+  /*
+   * Sorotan jawaban (dari landing): pita accent-tint di separuh bawah huruf, bukan latar penuh. Hanya di atas teks ink
+   * (13,6:1). Jangan dipakai di bawah teks loss (4,19:1).
+   */
+  .hl {
+    background: linear-gradient(var(--color-accent-tint), var(--color-accent-tint)) no-repeat 0 85% / 100% 0.52em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  details[open] > summary .chev {
+    transform: rotate(180deg);
+  }
+  .chev {
+    transition: transform 200ms ease-out;
+  }
 }
 
 /*
- * Gerak: hanya untuk perubahan keadaan & umpan balik, singkat, dan mati total
- * kalau perangkat meminta gerak dikurangi (prefers-reduced-motion).
+ * Gerak: hanya untuk jawaban yang datang atau keadaan yang berubah, hanya transform dan opacity, tanpa pengulangan,
+ * dan mati total kalau perangkat meminta gerak dikurangi. Seperti landing: tanpa konfeti dan tanpa judul per kata.
  */
 @layer components {
-  /* Stiker ditempel: muncul kecil, memantul sedikit kebesaran, lalu menempel. Kemiringan dari kelas -rotate-3. */
+  /* Stiker "tersetempel": muncul kecil, sedikit kebesaran, lalu menempel. Kemiringan dari properti rotate. */
   .stamp-in {
-    animation: stamp-in 460ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+    animation: stamp-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: var(--stamp-delay, 0ms);
   }
-  /* Struk dicetak: baris nota muncul satu per satu dari atas. */
+  /* Nota "tercetak": baris muncul satu per satu. */
   .print-in > * {
-    animation: print-line 320ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+    animation: print-line 300ms ease-out both;
   }
-  .print-in > :nth-child(2) { animation-delay: 70ms; }
-  .print-in > :nth-child(3) { animation-delay: 140ms; }
-  .print-in > :nth-child(4) { animation-delay: 210ms; }
-  .print-in > :nth-child(5) { animation-delay: 280ms; }
-  .print-in > :nth-child(n + 6) { animation-delay: 350ms; }
+  .print-in > :nth-child(2) { animation-delay: 120ms; }
+  .print-in > :nth-child(3) { animation-delay: 240ms; }
+  .print-in > :nth-child(4) { animation-delay: 360ms; }
+  .print-in > :nth-child(n + 5) { animation-delay: 480ms; }
   .print-last {
-    animation: print-line 320ms cubic-bezier(0.2, 0.7, 0.3, 1) 260ms both;
-  }
-  /* Kata-kata judul cerita naik satu per satu. */
-  .word-rise {
-    display: inline-block;
-    white-space: pre;
-    animation: word-rise 520ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+    animation: print-line 300ms ease-out 420ms both;
   }
   /* Batang "dari setiap Rp100" tumbuh dari dasar (tegak) atau dari kiri (mendatar). */
   .grow-split {
@@ -182,7 +187,7 @@
   }
   /* Panel yang dibuka (status, "Kenapa…?", form upload iklan). */
   .reveal {
-    animation: reveal 200ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+    animation: reveal 200ms ease-out both;
   }
   /* Ganti halaman / tab. */
   .page-in {
@@ -196,27 +201,16 @@
       width 260ms cubic-bezier(0.3, 0.7, 0.2, 1),
       height 260ms cubic-bezier(0.3, 0.7, 0.2, 1);
   }
-  /* Potongan kertas nota untuk perayaan kecil. */
-  .confetti-bit {
-    position: absolute;
-    left: 0;
-    top: 0;
-    animation: confetti 1100ms cubic-bezier(0.15, 0.6, 0.35, 1) both;
-    animation-delay: var(--d);
-  }
 }
 
 @keyframes stamp-in {
   0% {
     opacity: 0;
-    transform: scale(0.3) rotate(-14deg);
+    transform: scale(0.3) rotate(-10deg);
   }
-  55% {
+  60% {
     opacity: 1;
-    transform: scale(1.14) rotate(3deg);
-  }
-  78% {
-    transform: scale(0.95) rotate(-1deg);
+    transform: scale(1.14);
   }
   100% {
     opacity: 1;
@@ -227,21 +221,7 @@
 @keyframes print-line {
   from {
     opacity: 0;
-    transform: translateY(-6px);
-    clip-path: inset(0 0 100% 0);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-    /* Lebih lebar dari barisnya supaya cincin fokus tautan di dalamnya tidak terpotong. */
-    clip-path: inset(-1rem);
-  }
-}
-
-@keyframes word-rise {
-  from {
-    opacity: 0;
-    transform: translateY(0.45em);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -289,23 +269,8 @@
   }
 }
 
-@keyframes confetti {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) rotate(0deg);
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--x), var(--y)) rotate(var(--r));
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .stamp-in,
-  .word-rise,
   .grow-split,
   .print-in > *,
   .print-last,
@@ -313,10 +278,8 @@
   .page-in {
     animation: none;
   }
-  .nav-indicator {
+  .nav-indicator,
+  .chev {
     transition: none;
-  }
-  .confetti-bit {
-    display: none;
   }
 }

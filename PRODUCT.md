@@ -109,8 +109,12 @@ What differs per store is a **setting, never a hard-coded assumption**, and ever
 
 - App name comes from `VITE_APP_NAME`: "Profit Shopee" (family) or "HitungCuan" (customers).
 - Family store names: Harel Beauty, Oraiste Beauty House.
-- No logo files or brand colours exist in the repository beyond the design system's palette; none have
-  been made binding.
+- Since 15 Oct 2026 the app wears the HitungCuan landing page's skin (repo `harykheng/hitung-cuan`): warm cream page,
+  ink text, one indigo accent (#2b3a9e), Parkinsans + Plus Jakarta Sans. The palette values are binding and shared with
+  the landing; see DESIGN.md.
+- The HitungCuan logo and mark (`public/logo/`, copied from the landing's `assets/logo`) appear only in the HitungCuan
+  deploy; the family deploy shows its name as text.
+- Not an official Shopee product; the login page says so, as the landing does.
 
 ## Evidence on Hand
 

@@ -57,7 +57,7 @@ export function AccountPage({
 
   // Selama masih memakai password dari pengelola, formnya tampil paling atas (itu tujuan tombol di banner kuning).
   const passwordCard = (
-    <Card title="Ganti password" className="max-w-xl">
+    <Card title="Ganti password" className="mb-8 max-w-xl">
         {mustChange && (
           <div className="mb-5">
             <Alert tone="warning" title="Kamu masih memakai password dari pengelola.">
@@ -66,7 +66,7 @@ export function AccountPage({
           </div>
         )}
         <form onSubmit={submit} noValidate>
-          <label className="block font-medium">
+          <label className="block font-semibold">
             Password baru
             <input
               type="password"
@@ -75,9 +75,9 @@ export function AccountPage({
               onChange={(e) => setPassword(e.target.value)}
               className={`mt-1.5 font-normal ${inputClass}`}
             />
-            <span className="mt-1 block text-sm font-normal text-ink-muted">Minimal {MIN_PASSWORD_LENGTH} karakter.</span>
+            <span className="mt-1 block text-sm font-normal text-ink-3">Minimal {MIN_PASSWORD_LENGTH} karakter.</span>
           </label>
-          <label className="mt-4 block font-medium">
+          <label className="mt-4 block font-semibold">
             Ulangi password baru
             <input
               type="password"
@@ -110,11 +110,11 @@ export function AccountPage({
 
   const dataCard = (
     <Card title="Data saya" className="mb-8 max-w-3xl">
-      <p className="text-ink-soft">
+      <p className="text-ink-2">
         Data tokomu (pesanan, penghasilan, HPP, biaya, iklan) adalah milikmu. Kamu bisa meminta salinannya, atau meminta
         data dan akunmu dihapus, kapan saja. Pengelola memprosesnya secara manual.
       </p>
-      <p className="mt-2 text-sm text-ink-muted">
+      <p className="mt-2 text-sm text-ink-3">
         Penghapusan tidak bisa dibatalkan. Minta salinan dulu kalau kamu masih membutuhkan datanya.
       </p>
       {hasSupportWhatsApp ? (

@@ -37,15 +37,15 @@ export function Field({
 }) {
   return (
     <div>
-      <p className="mb-1.5 font-medium">{label}</p>
+      <p className="mb-1.5 font-semibold">{label}</p>
       {children}
       {note && (
-        <p className="mt-1.5 flex gap-1.5 text-sm font-medium text-info">
-          <IconCornerDownRight size={16} className="mt-0.5 shrink-0" />
+        <p className="mt-1.5 flex gap-1.5 text-sm font-medium text-ink-2">
+          <IconCornerDownRight size={16} className="mt-0.5 shrink-0 text-accent" />
           {note}
         </p>
       )}
-      {hint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
+      {hint && <p className="mt-1 text-sm text-ink-3">{hint}</p>}
     </div>
   )
 }
@@ -68,12 +68,12 @@ export function Result({
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <dt className="font-medium text-ink">{label}</dt>
         <dd
-          className={`${bad ? 'font-medium text-loss' : strong ? 'num text-2xl font-bold' : 'num text-xl font-semibold'}`}
+          className={`${bad ? 'font-medium text-loss' : strong ? 'num font-display text-2xl font-extrabold' : 'num text-xl font-semibold'}`}
         >
           {value}
         </dd>
       </div>
-      {hint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
+      {hint && <p className="mt-1 text-sm text-ink-3">{hint}</p>}
     </div>
   )
 }
@@ -140,14 +140,14 @@ export function DecimalInput({
         onKeyDown={(e) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
         }}
-        className={`num min-h-11 w-full rounded-md border px-3 text-right text-base transition-colors placeholder:font-sans placeholder:text-ink-muted focus:outline-none focus:ring-2 ${
+        className={`num min-h-11 w-full rounded-xl border px-3 text-right text-base text-ink transition-colors placeholder:font-sans placeholder:text-ink-3 focus:outline-none focus:ring-[3px] ${
           suffix ? 'pr-9' : ''
-        } ${invalid ? 'border-loss ring-loss/20' : 'border-edge bg-paper hover:border-ink-muted focus:border-stamp focus:ring-stamp/25'} ${
-          disabled ? 'cursor-not-allowed bg-counter text-ink-soft hover:border-edge' : ''
+        } ${invalid ? 'border-loss bg-paper ring-loss/20' : 'border-control bg-paper hover:border-ink focus:border-accent focus:ring-accent/25'} ${
+          disabled ? 'cursor-not-allowed bg-tint text-ink-2 hover:border-control' : ''
         }`}
       />
       {suffix && (
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted">{suffix}</span>
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-3">{suffix}</span>
       )}
       {invalid && <p className="mt-1 text-sm text-loss">Isi angka saja, mis. 8,25</p>}
     </div>

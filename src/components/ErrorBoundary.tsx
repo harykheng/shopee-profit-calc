@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
           <p className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
             <button
               type="button"
-              className="min-h-11 rounded-full bg-stamp px-5 font-semibold text-white transition active:scale-[0.97]"
+              className="min-h-11 rounded-full bg-accent px-5 font-semibold text-white transition-[background-color,transform] hover:bg-accent-hover active:translate-y-px"
               onClick={() => window.location.reload()}
             >
               Muat ulang

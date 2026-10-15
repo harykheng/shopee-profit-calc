@@ -1,92 +1,80 @@
 ---
-name: Profit Shopee
-description: Profit, ads and price tool for Shopee sellers (the family's "Profit Shopee" and the multi-tenant "HitungCuan"). Every page answers first in a sentence, then shows its working.
+name: Profit Shopee / HitungCuan
+description: Profit, ads and price tool for Shopee sellers (the family's "Profit Shopee" and the multi-tenant "HitungCuan"). Every page answers first in a sentence on a warm light page, then shows its working on white sheets. Same skin as the HitungCuan landing page.
 colors:
-  field: "#2b2fa6"
-  field-deep: "#1d2079"
-  field-raised: "#3b3fb4"
-  on-field: "#f6f4ff"
-  on-field-muted: "#c3c5f2"
-  lime: "#d7f45a"
-  coral: "#c4361e"
-  coral-soft: "#ff9b85"
-  on-coral-muted: "#ffeee8"
-  amber: "#ffcf5c"
-  amber-ink: "#4a2c00"
+  canvas: "#fffbf6"
   paper: "#ffffff"
-  counter: "#eef0f7"
-  line: "#dfe2ee"
-  rule: "#b4b9cf"
-  edge: "#8187ad"
-  ink: "#16173d"
-  ink-soft: "#3b3d63"
-  ink-muted: "#5d6088"
-  stamp: "#3a3fb8"
-  stamp-strong: "#2c309b"
-  stamp-tint: "#ecedfb"
-  stamp-tint-hover: "#dfe1fa"
-  stamp-tint-press: "#d4d7f7"
-  loss: "#b3261e"
-  loss-tint: "#fdeceb"
+  tint: "#f7f1e8"
+  line: "#ece2d4"
+  rule: "#d6cab9"
+  control: "#8a8178"
+  ink: "#1c1917"
+  ink-2: "#57534e"
+  ink-3: "#6f6860"
+  accent: "#2b3a9e"
+  accent-hover: "#3546b5"
+  accent-tint: "#dde2fa"
+  loss: "#c4361e"
+  loss-tint: "#fcebe6"
   gain: "#146c43"
-  gain-tint: "#e5f3eb"
+  mintbg: "#ddf3e9"
+  sun: "#f5d547"
+  sun-ink: "#4a3200"
+  sun-tint: "#fdf3d0"
   warn: "#8a5300"
-  warn-tint: "#fff3d9"
-  warn-line: "#ebc06a"
-  info: "#1d4f86"
-  info-tint: "#e8f0fa"
 typography:
   hero-figure:
-    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "8.5rem"
+    fontFamily: "Parkinsans, Plus Jakarta Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "7.5rem"
     fontWeight: 800
-    lineHeight: 0.9
+    lineHeight: 0.95
     letterSpacing: "-0.05em"
-    fontFeature: "tnum"
   story:
-    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Parkinsans, Plus Jakarta Sans, ui-sans-serif, system-ui, sans-serif"
     fontSize: "3.75rem"
-    fontWeight: 700
-    lineHeight: 1.04
-    letterSpacing: "-0.025em"
-  headline:
-    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "3rem"
-    fontWeight: 700
+    fontWeight: 800
     lineHeight: 1.05
     letterSpacing: "-0.025em"
+  headline:
+    fontFamily: "Parkinsans, Plus Jakarta Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "2.75rem"
+    fontWeight: 800
+    lineHeight: 1.08
+    letterSpacing: "-0.025em"
   chapter:
-    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Parkinsans, Plus Jakarta Sans, ui-sans-serif, system-ui, sans-serif"
     fontSize: "2.25rem"
-    fontWeight: 700
+    fontWeight: 800
     lineHeight: 1.1
     letterSpacing: "-0.025em"
   title:
-    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Parkinsans, Plus Jakarta Sans, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1.25rem"
     fontWeight: 700
     lineHeight: 1.3
   kicker:
-    fontFamily: "Bricolage Grotesque, Public Sans, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.125rem"
-    fontWeight: 700
-    lineHeight: 1.4
+    fontFamily: "Plus Jakarta Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 600
+    lineHeight: 1.5
+    letterSpacing: "0.025em"
   body:
-    fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Plus Jakarta Sans, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.5
   figure:
-    fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Plus Jakarta Sans, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
     fontFeature: "tnum"
 rounded:
+  tag: "6px"
+  file: "8px"
   control: "12px"
-  pill: "9999px"
   well: "16px"
   sheet: "24px"
-  chapter: "32px"
+  pill: "9999px"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -96,25 +84,28 @@ spacing:
   chapter-gap: "56px"
 components:
   button-primary:
-    backgroundColor: "{colors.stamp}"
+    backgroundColor: "{colors.accent}"
     textColor: "{colors.paper}"
     rounded: "{rounded.pill}"
     padding: "0 20px"
     height: "44px"
   button-secondary:
-    backgroundColor: "{colors.stamp-tint}"
-    textColor: "{colors.stamp-strong}"
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    borderColor: "{colors.control}"
     rounded: "{rounded.pill}"
     padding: "0 20px"
     height: "44px"
   input:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
+    borderColor: "{colors.control}"
     rounded: "{rounded.control}"
     height: "44px"
-  field-select:
-    backgroundColor: "{colors.field-raised}"
-    textColor: "{colors.on-field}"
+  pill-select:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    borderColor: "{colors.control}"
     rounded: "{rounded.pill}"
     height: "44px"
   sheet:
@@ -122,200 +113,238 @@ components:
     rounded: "{rounded.sheet}"
     padding: "28px"
   nav-item-active:
-    backgroundColor: "{colors.on-field}"
-    textColor: "{colors.field}"
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.paper}"
     rounded: "{rounded.pill}"
     height: "40px"
   nav-item:
-    backgroundColor: "{colors.field}"
-    textColor: "{colors.on-field-muted}"
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink-2}"
     rounded: "{rounded.pill}"
     height: "40px"
-  bottom-bar-marker:
-    backgroundColor: "{colors.lime}"
-    textColor: "{colors.field-deep}"
-    rounded: "{rounded.pill}"
-  sticker-final:
-    backgroundColor: "{colors.lime}"
-    textColor: "{colors.field-deep}"
-    rounded: "{rounded.pill}"
-    padding: "4px 12px"
+  sticker-positive:
+    backgroundColor: "{colors.mintbg}"
+    textColor: "{colors.gain}"
+    borderColor: "{colors.gain}"
+    rounded: "{rounded.tag}"
   sticker-loss:
-    backgroundColor: "{colors.coral}"
+    backgroundColor: "{colors.loss}"
     textColor: "{colors.paper}"
-    rounded: "{rounded.pill}"
-    padding: "4px 12px"
-  ads-chapter-loss:
-    backgroundColor: "{colors.coral}"
-    textColor: "{colors.paper}"
-    rounded: "{rounded.chapter}"
-    padding: "36px"
-  ads-chapter-neutral:
-    backgroundColor: "rgba(255,255,255,0.10)"
-    textColor: "{colors.on-field}"
-    rounded: "{rounded.chapter}"
-    padding: "36px"
-  password-banner:
-    backgroundColor: "{colors.amber}"
-    textColor: "{colors.ink}"
-    height: "auto"
-  support-button:
-    backgroundColor: "{colors.gain}"
-    textColor: "{colors.paper}"
-    rounded: "{rounded.pill}"
-    height: "48px"
+    rounded: "{rounded.tag}"
+  sticker-warn:
+    backgroundColor: "{colors.sun}"
+    textColor: "{colors.sun-ink}"
+    borderColor: "{colors.sun-ink}"
+    rounded: "{rounded.tag}"
 ---
 
-# Design System: Profit Shopee
+# Design System: Profit Shopee / HitungCuan
 
 ## Overview
 
-**Creative North Star: "Cerita Bulan Ini" (this month's story)**
+**Creative North Star: "Cerita Bulan Ini" (this month's story), in the "Dapur Terang" skin of the landing page.**
 
-The app does not look like a dashboard. Every page answers its question first, as a sentence set large on one committed field of ink blue: "Agustus 2026, Harel Beauty untung **Rp2,78 juta**." The working (the arithmetic, the tables, the forms) follows on rounded white sheets. Rekap is told in chapters: Bab 1 Untung, Bab 2 Dari mana angkanya, Bab 3 Iklan, Bab 4 Pesanan & produk. Iklan opens with "Juli 2026, iklan rugi Rp283 ribu"; Simulasi Harga with "Dijual Rp198.200, untung Rp9.671 per order", which updates while the numbers are typed.
+The structure is unchanged: every page answers its question first, as a big sentence ("September 2026, Harel Beauty
+**untung bersih** Rp3,42 juta"), and the working (arithmetic, tables, forms) follows on rounded white sheets. Rekap is
+told in chapters: Bab 1 Untung bersih, Bab 2 Dari mana angkanya, Bab 3 Iklan, Bab 4 Pesanan & produk.
 
-It was chosen by the user from three rendered previews (Resi & Kardus, Cerita Bulan Ini, Papan Toko), replacing the earlier "Nota kasir" receipt system, which they found "masih terlalu dashboard". The structures that worked there stay: answer before line items, operator column in the arithmetic, verdict labels, celebration on a real result.
+**What changed on 15 Oct 2026 (owner's request): the skin now matches the HitungCuan landing page** (repo
+`harykheng/hitung-cuan`, `DESIGN.md` and `src/index.css` there). The ink-blue field, lime, coral card, Bricolage
+Grotesque and Public Sans are gone. The app uses the landing's warm cream page, ink text, one indigo accent,
+Parkinsans for display and Plus Jakarta Sans for everything else. Reasons: someone who clicks "Coba gratis" on the
+landing and logs in should land in the same world; the landing's own rules (no confetti, no word-by-word headlines, no
+colour used as decoration) apply here too. The landing's Rekap mock card ("Toko kamu untung bersih Rp3,42 juta", stickers
+Takedown and Hero) is what Rekap Bab 1 now looks like.
 
-**Key Characteristics:**
-- One saturated field for the whole page; colour commits at page scale, not as scattered accents.
-- Answers are sentences in a display face; the one figure the reader came for is lime (or light coral when it is a loss).
-- Work happens on white sheets with plain Public Sans and tabular numerals.
-- Verdicts are colour stickers that pop on; real results get a small paper-confetti burst.
-- Operate rules still hold: standard controls, 44px targets, plain Indonesian, no horizontal scroll from 360px.
+**Key characteristics:**
+- Warm light page (`canvas`), white sheets with one soft shadow and a 1px `line` ring.
+- Answers are sentences in Parkinsans 800; the key word carries the `.hl` band (indigo tint under ink), and the figure is
+  `gain` or `loss` when it is a profit or a loss.
+- One accent, indigo, for the primary button, links, kickers, accent icons and focus rings. Never a status.
+- Selected states (nav, tabs, filters) are filled `ink` with `paper` text, like the landing's selected button.
+- Verdicts are stamp stickers: uppercase, tilted, 2px border, always word + icon.
+- Operate rules hold: standard controls, 44px targets, plain Indonesian ("kamu"), no horizontal scroll from 360px.
 
-**Dial: ENERGY 3 / RHYTHM 2 / MOTION 2** (antislop dials; inferred on 2026-10-14 from this document, the owner confirms or changes them).
-- ENERGY 3: one saturated field for the whole page, an answer set at hero size (up to 8.5rem), stickers and a confetti burst. The working sheets stay calm; the energy lives in the answer, not in the tables.
-- RHYTHM 2: every page repeats the same field-then-sheet structure, with deliberate breaks (the coral Iklan chapter, the lime answer, the amber banner).
-- MOTION 2: transitions and reveals tied to a state change (see Motion), no parallax, no looping animation.
+**Dial: ENERGY 2 / RHYTHM 2 / MOTION 2** (antislop dials, the landing's values; inferred on 15 Oct 2026 with the reskin,
+the owner confirms or changes them). The earlier ENERGY 3 came from the saturated blue field and the confetti; both are
+gone, so the energy now lives only in the answer sentence, the green or red figure and the stickers.
 
 ## Colors
 
-**The Field-and-Sheet Rule.** Text sitting directly on the blue field uses On Field (`#f6f4ff`) or On Field Muted (`#c3c5f2`) and is wrapped in an element with the `on-field` class (which also turns the focus ring lime). Text on a white sheet uses the ink scale. Never put ink on the field or on-field colours on a sheet.
+The palette is the landing's, value for value. The landing still uses legacy names for the accent (`ember` = `accent`,
+`ember-text` = `accent`, `peach` = `accent-tint`); the values are identical. If either side changes a value, change both.
 
-### Field
-- **Field** (`field`, #2b2fa6): page background everywhere, including Login.
-- **Field Deep** (`field-deep`, #1d2079): bottom bar on phones/iPad; text on lime.
-- **Field Raised** (`field-raised`, #3b3fb4): scrollbar thumb; pills drawn with `bg-white/10` read the same.
-- **On Field / On Field Muted**: sentences, chapter titles, labels on the field (9.4:1 and 6.1:1).
-- **Lime** (`lime`, #d7f45a): the answer figure, chapter kickers ("Bab 1 · Untung"), the bottom-bar marker, the final/gain sticker, the focus ring on the field (8.2:1 on Field).
-- **Coral Soft** (`coral-soft`, #ff9b85): a loss figure written on the field (5.0:1). Never the deep coral there (2.5:1).
-- **Coral** (`coral`, #c4361e): **means loss, and only loss.** The Iklan chapter card in Rekap when ads lose money, the loss sticker, the "Dengan iklan, rugi" card in Simulasi. Text on it is white (5.4:1); the small kicker uses On Coral Muted (`#ffeee8`, 4.8:1). "No ad data yet", "could not calculate" and "ads are profitable" use the neutral wash instead, so a new customer does not read an empty state as a warning.
-- **Amber** (`amber`, #ffcf5c; text on it is Amber Ink `#4a2c00`, 8.7:1): the sticky "ganti password" banner (Ink text, 11.7:1), the "Belum final: …" line and a range warning on the field (7.0:1), and the warn sticker. Always with words, never a bare colour.
-- **Gain** (`gain`, #146c43): also the floating Bantuan (WhatsApp) button, white text (6.4:1).
+**Three groups, no more:**
 
-### Sheets
-- **Paper** (#ffffff) sheets; **Counter** (#eef0f7) wells and table washes; **Line** (#dfe2ee) hairlines; **Rule** (#b4b9cf) dashed dividers; **Edge** (#8187ad) the outline of every control (3.5:1 on Paper, 3.1:1 on Counter, the 3:1 non-text minimum).
-- **Ink** (#16173d), **Ink Soft** (#3b3d63), **Ink Muted** (#5d6088): text on sheets.
-- **Stamp** (#3a3fb8) / **Stamp Strong** / **Stamp Tint** (#ecedfb; hover #dfe1fa, pressed #d4d7f7): primary buttons, links and selection on sheets; Stamp Tint also fills the total pills.
-- **Status**: Loss, Gain, Warn, Info with their tints, unchanged meanings (rugi, untung, perlu perhatian, informasi). Each always carries a word or icon, never colour alone.
+- **Core, warm neutrals:** `canvas` (page), `paper` (sheets), `tint` (wells inside sheets, tab tracks, info alerts),
+  `line` (hairlines, sheet ring), `rule` (dashed "tear" lines, column headers' underline), `control` (borders of inputs
+  and outlined buttons, 3.8:1 on paper, WCAG 1.4.11 needs 3:1), and the ink scale: `ink` 17.2:1, `ink-2` 7.6:1, `ink-3`
+  5.49:1 on paper (4.89:1 on tint).
+- **One accent, indigo:** `accent` #2b3a9e (white on it 9.54:1; on canvas 9.26:1, on tint 8.49:1), `accent-hover`
+  #3546b5 (white 7.79:1), `accent-tint` #dde2fa only for the `.hl` band under ink text (13.6:1) and nothing else.
+- **Status, fixed meanings, always with a word or icon:** `loss` (rugi; 5.39:1 on paper, white on it 5.39:1) with
+  `loss-tint`; `gain` (untung; 6.45:1 on paper, 5.55:1 on `mintbg`) with `mintbg`; `sun` (perlu perhatian) with `sun-ink`
+  for text on it, `sun-tint` for warning wells and `warn` #8a5300 for warning text on light surfaces (6.3:1 on paper, 5.7:1
+  on `sun-tint`).
+
+Info alerts are neutral (`tint` well, accent icon): the landing has no blue "info" status, and adding one would be a
+fourth group. Do not put `loss` text on the `.hl` band (4.19:1).
+
+Charts stay neutral unless the segment is a status: the Rp100 bar uses `line` (modal), `rule` (biaya) and `gain`
+(untung); the orders bar uses `ink` (selesai), `control` (diproses) and `line` (batal).
 
 ## Typography
 
-**Display Font:** Bricolage Grotesque (self-hosted, OFL; latin + latin-ext) for every sentence, chapter title, page title, sheet title, total and sticker.
-**Body Font:** Public Sans (self-hosted, OFL) for everything else, figures included (`.num` = tabular numerals so columns line up).
+- **Display: Parkinsans** (variable, self-hosted in `public/fonts`, OFL) at 700/800 for answer sentences, page and
+  chapter titles, sheet titles, single big figures, nota totals and stickers.
+- **Body: Plus Jakarta Sans** (variable, self-hosted, OFL) for everything else. Figures in columns use it with `.num`
+  (tabular numerals); Parkinsans digits are proportional, so it is only used for single figures.
 
 ### Hierarchy
-- **Hero Figure** (800, 8.5rem on ≥640px / 4.5rem below, 0.9, −0.05em): the one answer figure in Rekap Bab 1, written short ("Rp2,78 juta", `formatRupiahShort`, rounded down) with the exact amount in the next sentence.
-- **Story** (700, 3.75rem / 2.25rem): the Bab 1 sentence; Iklan and Simulasi answer lines use 3rem / 1.875rem.
-- **Headline** (700, 3rem / 2.25rem): page titles (`PageTitle`).
-- **Chapter** (700, 2.25rem / 1.875rem): "Dari mana angkanya", "Pesanan & produk".
-- **Kicker** (700, 1.125rem, lime): "Bab 2 · Hitungannya".
-- **Title** (700, 1.25rem): sheet titles.
-- **Body** (400, 1rem, 1.5) and **Figure** (600, 1.125rem, tabular) on sheets.
+- **Hero Figure** (800; 3.75rem / 6rem from 640px / 7.5rem from 1024px; 0.95): Rekap Bab 1, short form
+  (`formatRupiahShort`) with the exact amount in the next sentence. `gain` or `loss`.
+- **Story** (800; 2.25rem / 3rem / 3.75rem): the Bab 1 sentence; Iklan, Simulasi and Grup answers use 1.875rem / 3rem.
+- **Headline** (800; 1.875rem / 2.25rem / 2.75rem, the landing's H2 scale): page titles (`PageTitle`), so the answer
+  sentence below them stays the loudest thing on the page.
+- **Chapter** (800; 1.875rem / 2.25rem): Rekap chapter titles.
+- **Kicker** (Plus Jakarta Sans 600, `accent`, wide tracking): store name above page titles, "Bab 2 · Hitungannya".
+- **Title** (700, 1.25rem): sheet titles. **Body** 400 / 1rem / 1.5; **Figure** 600 / 1.125rem tabular.
 
 ## Layout
 
-- **Shell:** sticky top bar on the field at every width: brand, store pill (only when the account has more than one store), account icon (Akun), logout. While the user still has the operator's temporary password, an amber banner sits at the very top of the same sticky bar (hidden on the Akun page). From 1024px the six nav pills sit in it (Rekap, Iklan, Simulasi, Upload, HPP, Biaya) with one sliding marker; Akun is reached from the icon, not the menu. Below 1024px the nav moves to a fixed Field Deep bottom bar of six equal cells (icon over short label) with a lime marker; the page reserves room for it plus the safe-area inset. The brand text hides under 640px so the store name fits.
-- **Floating help:** a green "Bantuan" pill (48px, bottom right) opens WhatsApp to the operator with a prefilled message (account, store, page). Above the bottom bar on phones, 24px from the corner on laptops; on Login it sits 16px from the bottom. Absent when `VITE_SUPPORT_WA` is empty.
-- **Above the page content (not sticky):** the monthly reminder card (info alert, one pill action per missing step, "Ingatkan besok") and the subscription banners (expiring: warning alert; expired: warning alert over a read-only Rekap). The reminder lives outside the per-page wrapper so it does not flicker on navigation.
+- **Shell:** sticky top bar on `canvas` (1px `line` under it, 64px): brand (HitungCuan logo for the HitungCuan deploy,
+  only its mark below 640px and between 1024 and 1279px where the nav shares the bar; the app name as text for other
+  deploys), store pill select (only when the account has several stores), nav from 1024px (six pills with one sliding
+  `ink` marker), Akun and Keluar icon buttons.
+  Below 1024px the nav is a fixed `paper` bottom bar of six cells (icon over short label) with an `ink` pill marker
+  behind the active icon; the page reserves room for it plus the safe-area inset.
+- **Password banner:** while the user still has the operator's temporary password, a full-width `sun` strip with `ink`
+  text sits at the top of the same sticky bar (hidden on the Akun page), with an `ink` pill "Ganti password". It is the
+  only full-width coloured strip and never blocks anything. Akun and Keluar are icon buttons at the right of the bar
+  (Akun turns `ink` when it is the current page).
+- **Floating help:** a "Bantuan" pill (48px, bottom right) opens WhatsApp to the operator with a prefilled message
+  (account, store, page). White with a 2px `control` border, `shadow-sheet` and the WhatsApp logo in `accent`: it is on
+  every page, so it must not compete with the page's own primary button. Above the bottom bar on phones, 24px from the
+  corner on laptops, 16px from the bottom on Login. Absent when `VITE_SUPPORT_WA` is empty.
+- **Above the page content (not sticky):** the monthly reminder (info alert, one indigo pill per missing step,
+  "Ingatkan besok" link) and the subscription banners (expiring: warning alert; expired: warning alert over a read-only
+  Rekap where every button that changes data is hidden).
+- **Store name:** shown (store select in the bar, kicker above page titles, "Disimpan ke toko") only when the account
+  has more than one store.
 - **Content:** max 72rem, 16 / 24 / 32px side padding.
-- **Empty Rekap:** no chapters and no Rp0. A store with no data at all gets one sheet, "Mulai dengan data …", with three numbered steps (upload orders, upload income report, fill HPP), each with a pill to its page; a store that has data in other months gets a short info alert and an Upload pill. Nothing renders until the check has finished, so the empty state never flashes after zeros.
-- **Rekap chapters:** 56px apart. Bab 1 is two columns from 1024px (sentence + hero figure left at ~70%, the "Dari setiap Rp100" bar right); one column below. Bab 2 and the tabs of Bab 4 are sheets under a chapter title; Bab 3 is the coral card.
-- **Answer first:** Iklan puts its answer line between the period select and the summary sheet; Simulasi puts its live answer line between the product picker and the input/results grid.
+- **Rekap:** chapters 56px apart. Bab 1 is two columns from 1024px (sentence + hero figure left, the "Dari setiap Rp100"
+  sheet right, stretched to the same height); one column below. Bab 2 and Bab 3 are sheets; Bab 4 is a tab track over a
+  sheet.
+- **Empty Rekap:** no chapters and no Rp0, and nothing renders until the check has finished, so it never flashes after
+  zeros. A store with no data at all gets the first-step screen: answer sentence "Mulai dengan 3 langkah ini.", one
+  primary "Upload laporan" button, and a sheet with the three steps (export pesanan, laporan penghasilan, HPP; the last
+  turns into a green check when done). For a new HitungCuan customer it is the first screen after login. A store that has
+  data in other months gets a short info alert with an Upload button.
+- **Answer first:** Iklan's answer sits between the period select and the summary sheet; Simulasi's between the product
+  picker and the input/results grid, updating live.
+- **HPP list:** stacked rows on phones (name, SKU, full-width input, status), four columns from 640px.
 
 ## Elevation & Depth
 
-Two levels: the field, and sheets on it with one soft shadow (`--shadow-sheet`: 0 2px 4px / 0 14px 34px in field-tinted black). No nested sheets; wells inside sheets use Counter or Stamp Tint without shadow.
+Two levels: the page, and sheets on it with one soft shadow (`--shadow-sheet`, the landing's value) plus a 1px `line`
+ring. No nested sheets: wells inside a sheet use `tint` without shadow. Buttons have no shadow.
 
 ## Shapes
 
-Pills (9999px) for buttons, nav, selects on the field, tabs and stickers; 12px for inputs; 16px for wells and total pills; 24px for sheets; 32px for the coral chapter card.
+Radius marks the kind of element: 6px stickers, 8px the file button, 12px inputs, 16px wells and alerts, 24px sheets,
+pill for buttons, selects, tabs, filters and nav.
 
 ## Components
 
-### Buttons
-- **Primary:** Stamp fill, white text, pill, 44px. **Secondary:** Stamp Tint fill, Stamp Strong text. **Danger:** Loss fill. Press scales to 97%.
-
-### Field controls
-- **Field select** (`FieldSelect` in `pickers.tsx`): pill with a 50% On Field border (3.5:1 on the field) on a 10% white wash, On Field text, chevron icon; used for Bulan (Rekap, Biaya), Periode iklan, and the store picker in the top bar. Focus ring lime.
-- **Tabs (Rekap Bab 4):** pills inside a 10% white track; the active tab is On Field with Field text.
-- **Filter chips (Iklan):** pills on the field; active is On Field with Field text.
-
-### Sheets, inputs, alerts
-- **Sheet** (`Card`): Paper, 24px radius, 20 / 28px padding, display-face title.
-- **Inputs:** 44px, 12px radius, Edge border (Line is too faint to find a field), Stamp focus ring; money right-aligned with a muted "Rp". Text fields share `inputClass`.
-- **Alerts:** 16px radius, tinted border and wash, line icon; readable on the field and on sheets.
-
-### Arithmetic (`NotaLine`)
-- Operator column (`+ − = ≈`), label with a detail line, amount right-aligned in figures; on phones the amount drops under its label. Totals are a Stamp Tint pill ("= Untung bersih", "≈ Perkiraan untung", "= Untung per order", "Total biaya") with the amount in the display face; Simulasi colours its pill gain/loss.
-
-### Part-to-whole bar ("Dari setiap Rp100 yang masuk")
-- One bar split into modal (10% white), biaya (35% white), untung (lime), sized by their true share of the money in; labelled inside only when a part is at least 12% on laptops and 22% on phones (others are named in the caption). Vertical from 1024px, horizontal below. Hidden with a plain sentence when the month is a loss (the parts no longer sum to 100).
-
-### Sticker (`Stamp`)
-- Display face, 700, pill, slight −3° tilt, solid fill: final/gain = lime on Field Deep, warn = Amber on Amber Ink, loss = coral on white, neutral = Counter on Ink Soft. Text, never an image.
-
-### Iklan chapter (Rekap Bab 3)
-- Kicker, the answer sentence ("Iklan rugi Rp283 ribu. 4 iklan sebaiknya dimatikan."), the exact figure, up to three takedown products as white-wash tiles, and a white pill to the Iklan page (hidden when the store is read-only). **Coral only when ads lose money**; every other state (profitable, no data, error, loading) is the neutral 10% white wash with a lime kicker and a lime profit figure. Only for a single month with a full-month ad report; otherwise it invites an upload.
-
-### Wide tables (`ScrollX`)
-- Every wide table sits in `ScrollX`: horizontal scroll inside the sheet, a Paper-to-transparent fade on the right edge while columns are hidden, and a "Geser ke samping untuk kolom lainnya →" hint (Stamp Strong) until the first scroll. Nothing shows when the table fits.
-
-### Settings forms (Akun, kategori biaya admin)
-- Labels above fields, the default written in the hint ("Bawaan 5%"), money and percentages right-aligned with a muted suffix, locked fields use Counter with Ink Soft text. In Akun, a blank field returns to its default. Messages go **below** the buttons so the buttons never move: error alert first, then success. Destructive steps (delete a category) confirm inline with the consequence spelled out.
-- **Category panel** (Simulasi Harga, collapsed under a field pill): list of categories (name, %, product count, delete), an add row on a Counter well, then one row per product with a native select. Choosing a category fills and locks the product's admin %; "Isi persen sendiri" unlocks it.
-
-### Failure screens
-- A page that fails to render shows a single error alert on the field ("Halaman ini mengalami gangguan."): reassurance that data is safe, a primary pill "Muat ulang", and the WhatsApp link to the operator. It replaces what used to be a blank screen. Server errors shown to customers use the same neutral wording and never name SQL, migrations or hosting.
-- Akun ends with a "Data saya" sheet: two plain links that open WhatsApp with the account and store already written in.
-
-### Reminder and banners
-- Info or warning alerts, never red: the reminder is a nudge, not an error. Each missing step is a sentence plus one Stamp pill to the page that fixes it. The password banner is the only full-width coloured strip; it never blocks anything.
-
-### Icons
-- One hand-drawn set in `src/components/icons.tsx` (24 grid, 1.75 stroke, round caps) instead of an icon library. The reason is practical: the project allows no new runtime dependency without the owner's approval, and one stroke style lets the bottom bar, buttons and alerts read as one family. It is not a look chosen for its own sake.
-- Icons support a word, they do not replace it. Each menu icon names an object from the work (upload arrow = Upload, tag = HPP, wallet = Biaya, receipt = Rekap, megaphone = Iklan, calculator = Simulasi) and sits above or beside its label; status icons sit beside their sentence. The two exceptions are Akun and Keluar in the top bar: icon-only, with a screen-reader label and a tooltip.
-- No sparkle, star, bolt or robot glyphs, and nothing decorative; if no honest icon exists, use none.
+- **Buttons** (`Button`, `buttonClass` for links): primary = `accent` pill, white text; secondary = `paper` pill with a
+  2px `control` border, `ink` text, border turns `ink` on hover; danger = `loss` pill. All 44px, 2px border, press moves
+  1px down. One primary per screen where possible.
+- **Links** (`linkClass`): `accent`, semibold, thick underline at 35% that fills on hover. Secondary actions are links,
+  not extra buttons.
+- **WhatsApp button** (`WhatsAppButton`): primary pill with the WhatsApp logo, only on a screen whose only way forward
+  is the operator (account without a store).
+- **Pill select** (`PillSelect`): `paper`, `control` border, chevron; Bulan, Periode iklan, Toko.
+- **Tabs and filters:** tabs sit in a `tint` track with a `line` ring; the active tab and active filter chip are `ink`
+  with `paper` text; inactive chips are outlined with `control`.
+- **Sheet** (`Card`): `paper`, 24px, 20 / 28px padding, Parkinsans title.
+- **Inputs:** 44px, 12px radius, `control` border, `accent` border plus a 3px `accent` 25% ring on focus; money
+  right-aligned with a muted "Rp"; missing HPP uses `loss-tint` with a `loss` border.
+- **Alerts:** 16px radius, tinted well and border, line icon; info = `tint` + accent icon, warning = `sun-tint` + `sun`
+  border, error = `loss-tint`, success = `mintbg`.
+- **Nota** (`NotaLine`, `NotaTotal`): operator column (`+ − = ≈`), label with a detail line, amount right-aligned in
+  tabular figures (below its label on phones). A dashed `rule` tears the nota before sub-totals; totals get a 2px `ink`
+  line on top and a Parkinsans 800 amount, coloured `gain`/`loss` when it is a profit.
+- **Sticker** (`Stamp`): Parkinsans 800, uppercase, `tracking-wide`, 6px radius, 2px border, tilted −3° (lists alternate
+  −3° / 3°), with an icon per tone: positive = `mintbg`/`gain` + check (Angka final, Hero, Aman, Tersimpan, Disarankan);
+  loss = `loss`/white + cross (Takedown, Iklan rugi); warn = `sun`/`sun-ink` + triangle (Belum lengkap, ROAS terlalu
+  kecil); neutral = `tint`/`ink-2` + dash (HPP belum diisi, Data belum cukup). Sizes `xs`, `sm`, `md`.
+- **Modal** (`Modal`): sheet in the middle of a 45% `ink` scrim. Escape and a click outside close it (not while it is
+  working), Tab cycles inside, focus starts on the dialog box (so Enter does not run the action) and returns to the
+  opener. Titles are questions in Parkinsans ("Hitung ulang HPP September 2026?").
+- **Wide tables** (`ScrollX`): horizontal scroll inside the sheet, a `paper`-to-transparent fade on the right edge while
+  columns are hidden, and a "Geser ke samping untuk kolom lainnya" hint with an arrow icon (`accent`) until the first
+  scroll. Nothing shows when the table fits. The HPP list does not need it: it stacks on phones.
+- **Settings forms** (Akun, Pengaturan hitungan, Kategori biaya admin): labels above fields (semibold), the default
+  written in the hint ("Bawaan 5%"), money and percentages right-aligned with a muted suffix, locked fields use `tint`
+  with `ink-2` text. Messages go **below** the buttons so the buttons never move: error alert first, then success.
+  Destructive steps (delete a category) confirm inline with the consequence spelled out.
+- **Category panel** (Simulasi Harga): an outlined pill "Kategori biaya admin · N kategori" opens it; list of categories
+  (name, %, product count, delete), an add row on a `tint` well, then one row per product with a native select.
+  Choosing a category fills and locks the product's admin %; "Isi persen sendiri" unlocks it.
+- **Failure screens:** a page that fails to render shows one error alert ("Halaman ini mengalami gangguan."): data is
+  safe, a primary pill "Muat ulang", and the WhatsApp link to the operator. Server errors shown to customers use the same
+  neutral wording and never name SQL, migrations or hosting; operator hints go to the console only.
+- **Reminder and banners:** info or warning alerts, never red: the reminder is a nudge, not an error.
+- **Icons:** one hand-drawn line family in `src/components/icons.tsx` (24 viewBox, stroke 2 like the landing, round
+  caps) instead of an icon library: the project allows no new runtime dependency without the owner's approval, and one
+  stroke style lets the bottom bar, buttons and alerts read as one family. Icons support a word, they do not replace it
+  (Akun and Keluar in the top bar are the two icon-only buttons, with a screen-reader label and a tooltip). The only
+  filled icon is the WhatsApp logo on WhatsApp buttons. No emoji, sparkle, star, bolt or robot glyphs, and no unicode
+  glyphs as icons (arrows in prose such as "Pesanan Saya → Export" are text, not icons).
 
 ## Motion
 
-Motion marks an answer arriving or a state changing. All of it lives in `src/index.css` and `src/components/motion.tsx` (no library) and is off under `prefers-reduced-motion`: sentences appear whole, figures show their final value, stickers are simply there, no confetti.
+Motion marks an answer arriving or a state changing; only transform and opacity; all of it is in `src/index.css` and
+`src/components/motion.tsx` (no library) and is off under `prefers-reduced-motion`.
 
-- **Words rise** (`WordsRise`, `.word-rise`): answer sentences rise word by word, 55ms apart (520ms each).
 - **Counting** (`useCountUp`): the hero figure rolls up to its value (700ms ease-out).
-- **Bar grows** (`.grow-split`): the Rp100 bar segments grow from the base (vertical) or the left (horizontal), 140ms apart.
-- **Sticker pop** (`.stamp-in`): from 30% with a twist, overshoot to 114%, settle (460ms). Iklan cards stagger 60ms per card; Simulasi's verdict card re-appears when the verdict flips.
-- **Printing** (`.print-in`, `.print-last`): arithmetic lines appear one after another, the total last.
-- **Celebration** (`Confetti`): paper scraps burst once from the sticker: after every saved upload, and the first time a month shows ANGKA FINAL in this browser. Clipped to the viewport, mounted on `<body>`.
-- **Feedback:** nav marker slides (260ms) with link colours fading in step; buttons press to 97%; opened panels fade down 4px; pages and tabs fade up 4px.
+- **Sticker stamp** (`.stamp-in`): from 30% with a twist, overshoot to 114%, settle (460ms); lists stagger 60ms.
+- **Printing** (`.print-in`, `.print-last`): nota lines appear one after another (120ms apart), the total last.
+- **Bar grows** (`.grow-split`): Rp100 bar segments grow from the base (vertical) or left (horizontal).
+- **Feedback:** nav marker slides (260ms); opened panels fade down 4px; pages and tabs fade up 4px; buttons press 1px.
+- **Removed with the reskin:** confetti and word-by-word headlines. The landing dropped both as template patterns.
+
+## Voice
+
+- Everyday Indonesian, the reader is "kamu". Rupiah as `Rp1.250.000`, `Rp3,42 juta` for big rounded figures.
+- Seller words where they fit (untung bersih, cuan, boncos only in the login headline borrowed from the landing).
+  Glossary terms from PANDUAN.md: HPP, ROAS nyata, Balik modal, Takedown, Hero, Angka final.
+- No em dash in visible text. Ranges keep the en dash ("1–30 Sep 2026").
+- Buttons say the action and its object ("Simpan biaya September 2026", "Upload laporan", "Chat pengelola").
+- The person who runs the app is "pengelola" (in full "pengelola aplikasi"), never "admin": "admin" already names
+  Shopee's admin fee ("biaya admin"), so one word never names two things. (The landing says "admin"; the app keeps its
+  rule.)
+- Customers never see operator internals: no SQL, migration, Supabase or hosting in any message.
+- An empty state explains the next step instead of showing zeros; a setting writes its default next to it and says when
+  changing it rewrites past numbers.
+- Privacy and operational claims must be true in code: the login line "Nama, alamat, dan nomor HP pembeli tidak
+  disimpan" is backed by `BUYER_PRIVATE_COLUMNS` (README section 6).
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** answer in a sentence on the field before showing any table, and give the exact figure right after a rounded one.
-- **Do** keep working content on white sheets and wrap anything on the field in `on-field`.
-- **Do** use lime only for the answer, kickers, the marker and positive stickers; use coral-soft for losses on the field.
+- **Do** answer in a sentence before showing any table, and give the exact figure right after a rounded one.
+- **Do** keep working content on white sheets, and use `tint` wells (not sheets) inside a sheet.
+- **Do** use `accent` only for the primary action, links, kickers, accent icons and focus.
 - **Do** keep controls standard, pill-shaped and at least 44px tall.
-- **Do** write a setting's default next to it, and say when changing it rewrites past numbers.
-- **Do** explain an empty state with the next step instead of showing zeros.
-- **Do** address the reader as "kamu" (never "Anda"), and call the person who runs the app "pengelola". "Admin" is reserved for Shopee's admin fee ("biaya admin"), so it never also names a person.
 - **Do** tie any new motion to a state change and add it to the reduced-motion block.
+- **Do** change the landing's `src/index.css` and `DESIGN.md` together with this file when a shared token changes.
+- **Do** address the reader as "kamu" (never "Anda") and the operator as "pengelola".
 
 ### Don't:
 - **Don't** build grids of metric tiles; one answer per chapter.
-- **Don't** put ink text on the field or deep coral text on the field.
-- **Don't** nest sheets or add coloured side stripes.
-- **Don't** use coral or red for anything that is not a loss (empty, missing, expired, error-free-but-new).
-- **Don't** show customers operator language (SQL, migration, Supabase, hosting) in any message.
-- **Don't** use emoji or unicode glyphs as icons or status markers; use `src/components/icons.tsx`.
-- **Don't** loop animations or fire confetti for anything but a save or a first ANGKA FINAL.
+- **Don't** use `accent` as a status, or status colours as decoration (no coloured cards just for emphasis).
+- **Don't** use red for anything that is not a loss (empty, missing, expired, a new store); missing HPP is a warning.
+- **Don't** nest sheets, add coloured side stripes or gradients (the `.hl` band is the one exception).
+- **Don't** use emoji or unicode glyphs as icons or status markers.
+- **Don't** bring back confetti, looping animation or word-by-word headlines.

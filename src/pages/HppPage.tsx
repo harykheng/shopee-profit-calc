@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { RupiahInput } from '../components/pickers'
-import { Alert, Card, ErrorBox, PageTitle, ScrollX, Spinner, inputClass } from '../components/ui'
-import { IconCheck, IconCheckCircle, IconSearch } from '../components/icons'
+import { Alert, Card, ErrorBox, PageTitle, Spinner, buttonClass, inputClass } from '../components/ui'
+import { IconAlertCircle, IconCheck, IconCheckCircle, IconSearch, IconUpload } from '../components/icons'
 import { fetchProducts, updateHpp } from '../lib/api'
 import { friendlyError } from '../lib/errors'
 import { formatNumber } from '../lib/format'
@@ -72,15 +72,17 @@ export function HppPage({
 
   return (
     <>
-      <PageTitle subtitle="Harga pokok (modal) per 1 unit yang dijual di Shopee. Untuk paket grosir, isi HPP per paket. Ketik angka lalu tekan Enter untuk menyimpan.">
-        HPP: {stores.find((s) => s.id === storeId)?.name}
+      <PageTitle
+        kicker={stores.length > 1 ? stores.find((s) => s.id === storeId)?.name : undefined}
+        subtitle="Modal untuk 1 unit yang kamu jual di Shopee. Untuk paket grosir, isi modal per paket. Ketik angkanya, lalu tekan Enter atau pindah kolom: langsung tersimpan."
+      >
+        HPP (modal per barang)
       </PageTitle>
-
 
       <div className="mb-6">
         <Alert tone="info">
-          Mengubah HPP <strong>tidak</strong> mengubah profit bulan yang sudah tersimpan. Kalau ingin bulan tertentu
-          memakai HPP terbaru, gunakan tombol <strong>Hitung ulang HPP</strong> di halaman Rekap.
+          HPP baru dipakai untuk pesanan berikutnya. Untung bulan yang sudah tersimpan <strong className="text-ink">tidak</strong>{' '}
+          ikut berubah, kecuali kamu menekan <strong className="text-ink">Hitung ulang HPP</strong> di Rekap.
         </Alert>
       </div>
 
@@ -90,7 +92,11 @@ export function HppPage({
         <Spinner />
       ) : products.length === 0 ? (
         <Alert tone="info" title="Belum ada produk">
-          Produk otomatis muncul di sini setelah kamu meng-upload export pesanan.
+          <p>Produk muncul otomatis setelah kamu upload export pesanan.</p>
+          <a href="#/upload" className={`${buttonClass('secondary')} mt-3`}>
+            <IconUpload size={18} />
+            Ke halaman Upload
+          </a>
         </Alert>
       ) : (
         <Card>
@@ -98,7 +104,7 @@ export function HppPage({
             <div className="relative min-w-[14rem] flex-1">
               <IconSearch
                 size={18}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3"
               />
               <input
                 type="search"
@@ -121,7 +127,8 @@ export function HppPage({
           </div>
 
           {missingCount > 0 ? (
-            <p className="mb-4 font-semibold text-loss">
+            <p className="mb-4 flex items-center gap-2 font-semibold text-loss">
+              <IconAlertCircle size={20} className="shrink-0" />
               {formatNumber(missingCount)} dari {formatNumber(products.length)} produk belum punya HPP.
             </p>
           ) : (
@@ -131,60 +138,65 @@ export function HppPage({
             </p>
           )}
 
-          <ScrollX>
-            <table className="w-full text-left">
-              <thead className="border-b border-rule text-sm text-ink-muted">
-                <tr>
-                  <th className="py-2 pr-3 font-medium">Produk</th>
-                  <th className="py-2 pr-3 font-medium">SKU</th>
-                  <th className="w-56 py-2 pr-3 font-medium">HPP per pcs</th>
-                  <th className="w-28 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((p) => {
-                  const st = status[p.id]
-                  const sourceLabel = SOURCE_LABEL[p.sku_source]
-                  return (
-                    <tr key={p.id} className={`border-b border-line/70 align-middle ${p.hpp === null ? 'bg-loss-tint/50' : ''}`}>
-                      <td className="py-3 pr-3">
-                        <p className="font-medium">{p.product_name}</p>
-                        {p.variant_name && <p className="text-ink-soft">Variasi: {p.variant_name}</p>}
-                      </td>
-                      <td className="py-3 pr-3 text-sm">
-                        {p.sku_source === 'sku' ? (
-                          <span className="num text-ink-soft">{p.sku}</span>
-                        ) : (
-                          <span className="whitespace-nowrap rounded-md bg-warn-tint px-2 py-1 text-warn">{sourceLabel}</span>
-                        )}
-                      </td>
-                      <td className="py-3 pr-3">
-                        <RupiahInput
-                          value={p.hpp === null ? null : Number(p.hpp)}
-                          onCommit={(v) => save(p, v)}
-                          ariaLabel={`HPP ${p.product_name} ${p.variant_name}`}
-                          highlight={p.hpp === null}
-                          disabled={st?.state === 'saving'}
-                        />
-                      </td>
-                      <td className="py-3 text-sm">
-                        {st?.state === 'saving' && <span className="text-ink-muted">Menyimpan…</span>}
-                        {st?.state === 'saved' && (
-                          <span className="inline-flex items-center gap-1 text-gain">
-                            <IconCheck size={16} />
-                            Tersimpan
-                          </span>
-                        )}
-                        {st?.state === 'error' && <span className="text-loss">{st.message}</span>}
-                        {!st && p.hpp === null && <span className="font-semibold text-loss">Belum diisi</span>}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            {visible.length === 0 && <p className="py-6 text-center text-ink-muted">Tidak ada produk yang cocok.</p>}
-          </ScrollX>
+          {/* HP: tiap produk menumpuk (nama, SKU, lalu kolom HPP selebar layar). Dari 640px: empat kolom. */}
+          <div>
+            <div className="hidden grid-cols-[minmax(0,1fr)_9rem_14rem_7rem] gap-x-4 border-b border-rule py-2 text-sm font-semibold text-ink-3 sm:grid">
+              <span>Produk</span>
+              <span>SKU</span>
+              <span>HPP per unit</span>
+              <span />
+            </div>
+            <ul>
+              {visible.map((p) => {
+                const st = status[p.id]
+                const sourceLabel = SOURCE_LABEL[p.sku_source]
+                return (
+                  <li
+                    key={p.id}
+                    className={`grid gap-x-4 gap-y-2 border-b border-line py-3 sm:grid-cols-[minmax(0,1fr)_9rem_14rem_7rem] sm:items-center ${
+                      p.hpp === null ? '-mx-3 rounded-xl bg-loss-tint/60 px-3' : ''
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="font-semibold">{p.product_name}</p>
+                      {p.variant_name && <p className="text-ink-2">Variasi: {p.variant_name}</p>}
+                    </div>
+                    <div className="text-sm">
+                      {p.sku_source === 'sku' ? (
+                        <span className="num break-all text-ink-2">
+                          <span className="sm:hidden">SKU </span>
+                          {p.sku}
+                        </span>
+                      ) : (
+                        <span className="whitespace-nowrap rounded-full border border-sun bg-sun-tint px-2.5 py-0.5 font-semibold text-warn">
+                          {sourceLabel}
+                        </span>
+                      )}
+                    </div>
+                    <RupiahInput
+                      value={p.hpp === null ? null : Number(p.hpp)}
+                      onCommit={(v) => save(p, v)}
+                      ariaLabel={`HPP ${p.product_name} ${p.variant_name}`}
+                      highlight={p.hpp === null}
+                      disabled={st?.state === 'saving'}
+                    />
+                    <div className="text-sm" aria-live="polite">
+                      {st?.state === 'saving' && <span className="text-ink-3">Menyimpan…</span>}
+                      {st?.state === 'saved' && (
+                        <span className="inline-flex items-center gap-1 font-semibold text-gain">
+                          <IconCheck size={16} />
+                          Tersimpan
+                        </span>
+                      )}
+                      {st?.state === 'error' && <span className="text-loss">{st.message}</span>}
+                      {!st && p.hpp === null && <span className="font-semibold text-loss">Belum diisi</span>}
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+            {visible.length === 0 && <p className="py-6 text-center text-ink-2">Tidak ada produk yang cocok.</p>}
+          </div>
         </Card>
       )}
     </>

@@ -120,7 +120,7 @@ export function FeeCategoriesPanel({ storeId, categories, onCategories, products
 
   return (
     <Card title="Kategori biaya admin" className="mb-8">
-      <p className="max-w-3xl text-ink-soft">
+      <p className="max-w-3xl text-ink-2">
         Biaya admin Shopee berbeda tiap kategori produk dan bisa berubah. Isi kategori tokomu <strong>sekali</strong>{' '}
         beserta persennya (lihat Seller Centre → Pusat Edukasi Penjual), lalu pilihkan kategori untuk tiap produk.
         Kalau Shopee mengubah persennya, ubah di sini saja: semua produk di kategori itu ikut. Halaman Iklan dan
@@ -131,9 +131,9 @@ export function FeeCategoriesPanel({ storeId, categories, onCategories, products
 
       <h3 className="mt-6 font-display text-lg font-bold">Daftar kategori</h3>
       {categories.length === 0 ? (
-        <p className="mt-2 text-ink-muted">Belum ada kategori. Tambahkan yang pertama di bawah.</p>
+        <p className="mt-2 text-ink-3">Belum ada kategori. Tambahkan yang pertama di bawah.</p>
       ) : (
-        <ul className="mt-3 divide-y divide-line/70">
+        <ul className="mt-3 divide-y divide-line">
           {categories.map((c) => (
             <li key={c.id} className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_9rem_auto] sm:items-center">
               <input
@@ -154,7 +154,7 @@ export function FeeCategoriesPanel({ storeId, categories, onCategories, products
                 disabled={busy}
               />
               <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="text-ink-muted">{formatNumber(usage.get(c.id) ?? 0)} produk</span>
+                <span className="text-ink-3">{formatNumber(usage.get(c.id) ?? 0)} produk</span>
                 {confirmId === c.id ? (
                   <>
                     <Button variant="danger" className="!px-4" disabled={busy} onClick={() => remove(c)}>
@@ -182,7 +182,7 @@ export function FeeCategoriesPanel({ storeId, categories, onCategories, products
         </ul>
       )}
 
-      <div className="mt-4 grid gap-3 rounded-2xl bg-counter/60 p-4 sm:grid-cols-[minmax(0,1fr)_9rem_auto] sm:items-start">
+      <div className="mt-4 grid gap-3 rounded-2xl bg-tint p-4 sm:grid-cols-[minmax(0,1fr)_9rem_auto] sm:items-start">
         <input
           type="text"
           value={newName}
@@ -201,14 +201,14 @@ export function FeeCategoriesPanel({ storeId, categories, onCategories, products
 
       <h3 className="mt-8 font-display text-lg font-bold">Kategori tiap produk</h3>
       {!products ? (
-        <p className="mt-2 text-ink-muted">Memuat produk…</p>
+        <p className="mt-2 text-ink-3">Memuat produk…</p>
       ) : groups.length === 0 ? (
-        <p className="mt-2 text-ink-muted">Produk muncul di sini setelah export pesanan di-upload.</p>
+        <p className="mt-2 text-ink-3">Produk muncul di sini setelah export pesanan di-upload.</p>
       ) : categories.length === 0 ? (
-        <p className="mt-2 text-ink-muted">Buat kategori dulu, lalu pilihkan untuk tiap produk di sini.</p>
+        <p className="mt-2 text-ink-3">Buat kategori dulu, lalu pilihkan untuk tiap produk di sini.</p>
       ) : (
         <>
-          <p className="mt-2 text-ink-soft">
+          <p className="mt-2 text-ink-2">
             {withoutCategory === 0 ? (
               'Semua produk sudah punya kategori.'
             ) : (
@@ -220,7 +220,7 @@ export function FeeCategoriesPanel({ storeId, categories, onCategories, products
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-4">
             <div className="relative min-w-[14rem] flex-1">
-              <IconSearch size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+              <IconSearch size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
               <input
                 type="search"
                 placeholder="Cari produk…"
@@ -235,15 +235,15 @@ export function FeeCategoriesPanel({ storeId, categories, onCategories, products
               Hanya yang belum punya kategori
             </label>
           </div>
-          <ul className="mt-2 divide-y divide-line/70">
+          <ul className="mt-2 divide-y divide-line">
             {shown.slice(0, PRODUCT_ROWS).map((g) => {
               const eff = effectiveAdminPct(g.first, categories)
               const catId = hasCategory(g) ? (g.first.fee_category_id as number) : null
               return (
                 <li key={g.name} className="grid gap-2 py-3 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-center">
                   <div className="min-w-0">
-                    <p className="truncate font-medium" title={g.name}>{g.name}</p>
-                    <p className="text-sm text-ink-muted">
+                    <p className="truncate font-semibold" title={g.name}>{g.name}</p>
+                    <p className="text-sm text-ink-3">
                       {g.variants.length > 1 ? `${formatNumber(g.variants.length)} variasi · ` : ''}
                       {catId === null
                         ? eff === null
@@ -270,7 +270,7 @@ export function FeeCategoriesPanel({ storeId, categories, onCategories, products
               )
             })}
           </ul>
-          {shown.length === 0 && <p className="py-4 text-center text-ink-muted">Tidak ada produk yang cocok.</p>}
+          {shown.length === 0 && <p className="py-4 text-center text-ink-3">Tidak ada produk yang cocok.</p>}
           {shown.length > PRODUCT_ROWS && (
             <Alert tone="info">Menampilkan {PRODUCT_ROWS} dari {formatNumber(shown.length)} produk. Cari nama produk untuk mempersempit.</Alert>
           )}

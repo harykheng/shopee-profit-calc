@@ -256,9 +256,10 @@ src/lib/parsers/       Parser export pesanan (.xlsx), laporan penghasilan (.pdf)
 src/lib/monthStatus.ts Logika status "Angka final / Belum lengkap" (termasuk uang cair geser 1–2 hari)
 src/lib/adsMath.ts     Analisis iklan: ROAS nyata, balik modal, saran ROAS, label
 src/pages/             Halaman Login, Upload, HPP, Biaya, Rekap, Iklan, Simulasi Harga
-src/index.css          Token warna, huruf, gerak, dan gaya dasar ("cerita bulan ini")
+src/index.css          Token warna, huruf, gerak, dan gaya dasar (palet "Dapur Terang" landing HitungCuan)
 src/components/        Komponen dasar (tombol, lembar, cap stempel, ikon garis)
-public/fonts/          Huruf Public Sans & Bricolage Grotesque (lisensi OFL, disimpan sendiri)
+public/fonts/          Huruf Parkinsans & Plus Jakarta Sans (lisensi OFL, disimpan sendiri)
+public/logo/           Logo HitungCuan dari landing (dipakai kalau VITE_APP_NAME=HitungCuan)
 PRODUCT.md / DESIGN.md Fakta produk & sistem desain (dipakai skill desain Impeccable)
 tests/                 Test Vitest + fixture dummy
 scripts/make-fixtures.mjs  Pembuat fixture dummy

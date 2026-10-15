@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { MonthSelect } from '../components/pickers'
-import { Alert, Button, ButtonLink, Card, ErrorBox, Modal, ScrollX, Spinner, Stamp } from '../components/ui'
-import { IconAlertCircle, IconCheck, IconChevronDown, IconInfo } from '../components/icons'
+import { Alert, Button, ButtonLink, Card, ErrorBox, Kicker, Modal, NotaTotal, ScrollX, Spinner, Stamp, linkClass } from '../components/ui'
+import { IconAlertCircle, IconArrowRight, IconCheck, IconChevronDown, IconInfo, IconUpload } from '../components/icons'
 import {
   countItemsWithoutCreatedAt,
   fetchAdReports,
@@ -27,7 +27,7 @@ import { resolveSettings } from '../lib/storeSettings'
 import { navigate } from '../lib/router'
 import { fullMonthOf } from '../lib/adsMath'
 import { loadAdsAnalysis, type Period as AdsPeriod } from './AdsPage'
-import { Confetti, WordsRise, useCelebrateOnce, useCountUp } from '../components/motion'
+import { useCountUp } from '../components/motion'
 import type {
   DailyReconciliation,
   MonthlyRecap,
@@ -149,7 +149,7 @@ export function RecapPage({
 
   return (
     <>
-      <div className="on-field mb-8 flex flex-wrap items-center gap-x-4 gap-y-3">
+      <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-3">
         <MonthSelect value={from} onChange={setFrom} label={multi ? 'Dari' : 'Bulan'} />
         {multi && <MonthSelect value={to} onChange={setTo} label="Sampai" />}
         <button
@@ -158,12 +158,17 @@ export function RecapPage({
             setMulti((m) => !m)
             setTo(from)
           }}
-          className="min-h-11 rounded-full px-4 font-semibold text-on-field-muted underline decoration-on-field/40 underline-offset-4 transition-colors hover:text-on-field hover:decoration-on-field"
+          className="min-h-11 rounded-full px-2 font-semibold text-ink-2 underline decoration-ink-3/50 decoration-2 underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
         >
           {multi ? 'Satu bulan saja' : 'Lihat beberapa bulan'}
         </button>
       </div>
-      {!rangeValid && <p className="mb-4 font-semibold text-amber">Bulan "Dari" harus sebelum atau sama dengan "Sampai".</p>}
+      {!rangeValid && (
+        <p className="mb-4 flex items-center gap-2 font-semibold text-warn">
+          <IconAlertCircle size={18} className="shrink-0" />
+          Bulan "Dari" harus sebelum atau sama dengan "Sampai".
+        </p>
+      )}
 
       {recalcResult && (
         <div className="mb-5">
@@ -193,7 +198,6 @@ export function RecapPage({
             singleMonth={from === end ? from : null}
             rangeEnd={end}
             onRecalc={setRecalcMonth}
-            storeId={storeId}
             storeName={storeName}
           />
 
@@ -203,7 +207,7 @@ export function RecapPage({
             <ChapterTitle n={from === end ? 4 : 3} kicker="Rinciannya">
               Pesanan & produk
             </ChapterTitle>
-            <div role="tablist" aria-label="Rincian" className="on-field flex w-fit max-w-full flex-wrap gap-1 rounded-full bg-white/10 p-1">
+            <div role="tablist" aria-label="Rincian" className="flex w-fit max-w-full flex-wrap gap-1 rounded-full bg-tint p-1 ring-1 ring-line">
               <TabButton id="pesanan" tab={tab} setTab={setTab}>Semua pesanan</TabButton>
               <TabButton id="produk" tab={tab} setTab={setTab}>Per produk</TabButton>
               {data.months.length > 1 && <TabButton id="bulan" tab={tab} setTab={setTab}>Per bulan</TabButton>}
@@ -280,30 +284,44 @@ function EmptyRecap({ storeId, storeName, period }: { storeId: number | null; st
   }
 
   const hppDone = progress.hasProducts && !progress.hasMissingHpp
+  // Untuk pelanggan baru, ini layar pertama setelah masuk: kalimat jawaban dulu, satu tombol utama, lalu langkahnya.
   return (
-    <Card title={`Mulai dengan data ${storeName}`}>
-      <p className="mb-5 text-ink-soft">
-        Rekap muncul setelah tiga langkah ini. Setelah itu, tiap bulan cukup ulangi upload file terbaru dari Shopee.
-      </p>
-      <ol className="space-y-3">
-        <SetupStep n={1} title="Upload export pesanan (Excel)" action={<ButtonLink href="#/upload">Buka Upload</ButtonLink>}>
-          Seller Centre → Pesanan Saya → Export, status <strong>Semua</strong>. File .xlsx
-        </SetupStep>
-        <SetupStep n={2} title="Upload laporan penghasilan (PDF)" action={<ButtonLink href="#/upload">Buka Upload</ButtonLink>}>
-          Keuangan → Penghasilan Saya → laporan bulanan. File .pdf
-        </SetupStep>
-        <SetupStep
-          n={3}
-          title="Isi HPP (modal) tiap produk"
-          done={hppDone}
-          action={progress.hasProducts && !hppDone ? <ButtonLink href="#/hpp?kosong=1">Isi HPP</ButtonLink> : null}
-        >
-          {progress.hasProducts
-            ? 'Supaya untung dihitung setelah dikurangi modal.'
-            : 'Daftar produk muncul di sini setelah export pesanan di-upload.'}
-        </SetupStep>
-      </ol>
-    </Card>
+    <section className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-start lg:gap-12">
+      <div>
+        <Kicker>Rekap {period}</Kicker>
+        <h1 className="mt-3 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
+          Mulai dengan <span className="hl">3 langkah</span> ini.
+        </h1>
+        <p className="mt-4 max-w-xl text-lg leading-relaxed text-ink-2">
+          Untung bersih {storeName} muncul di sini setelah laporan Shopee di-upload dan HPP diisi. Setelah itu, tiap
+          bulan cukup upload file terbaru.
+        </p>
+        <ButtonLink href="#/upload" className="mt-6 font-display font-bold">
+          <IconUpload size={18} />
+          Upload laporan
+        </ButtonLink>
+      </div>
+      <Card title="Yang perlu disiapkan">
+        <ol className="divide-y divide-line">
+          <SetupStep n={1} title="Export pesanan (.xlsx)" action={null}>
+            Seller Centre → Pesanan Saya → Export, status <strong className="text-ink">Semua</strong>.
+          </SetupStep>
+          <SetupStep n={2} title="Laporan penghasilan (.pdf)" action={null}>
+            Seller Centre → Keuangan → Penghasilan Saya → laporan bulanan.
+          </SetupStep>
+          <SetupStep
+            n={3}
+            title="HPP (modal) tiap produk"
+            done={hppDone}
+            action={progress.hasProducts && !hppDone ? <ButtonLink href="#/hpp?kosong=1" variant="secondary">Isi HPP</ButtonLink> : null}
+          >
+            {progress.hasProducts
+              ? 'Supaya untung dihitung setelah dikurangi modal.'
+              : 'Daftar produknya muncul otomatis setelah export pesanan di-upload.'}
+          </SetupStep>
+        </ol>
+      </Card>
+    </section>
   )
 }
 
@@ -321,21 +339,21 @@ function SetupStep({
   children: ReactNode
 }) {
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-counter/50 p-4">
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 py-4 first:pt-0 last:pb-0">
       <span
         aria-hidden="true"
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-lg font-bold ${
-          done ? 'bg-gain text-white' : 'bg-stamp-tint text-stamp-strong'
+        className={`num flex size-9 shrink-0 items-center justify-center rounded-full font-display text-lg font-bold ${
+          done ? 'bg-gain text-white' : 'bg-ink text-paper'
         }`}
       >
-        {done ? <IconCheck size={18} /> : n}
+        {done ? <IconCheck size={18} strokeWidth={3} /> : n}
       </span>
       <div className="min-w-0 flex-1">
         <p className="font-semibold">
           {title}
           {done && <span className="sr-only"> (sudah)</span>}
         </p>
-        <p className="text-ink-soft">{children}</p>
+        <p className="text-sm text-ink-2">{children}</p>
       </div>
       {!done && action}
     </li>
@@ -351,7 +369,7 @@ function TabButton({ id, tab, setTab, children }: { id: Tab; tab: Tab; setTab: (
       aria-selected={on}
       onClick={() => setTab(id)}
       className={`min-h-11 rounded-full px-4 font-semibold transition-colors duration-150 ${
-        on ? 'bg-on-field text-field' : 'text-on-field-muted hover:text-on-field'
+        on ? 'bg-ink text-paper' : 'text-ink-2 hover:text-ink'
       }`}
     >
       {children}
@@ -368,13 +386,13 @@ function Why({ label, children }: { label: string; children: ReactNode }) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex min-h-11 items-center gap-2 rounded-md border border-edge bg-paper px-3 text-sm font-medium text-ink-soft transition-colors hover:border-ink-muted hover:text-ink"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-control bg-paper px-4 text-left text-sm font-semibold text-ink-2 transition-colors hover:border-ink hover:text-ink"
       >
-        <IconInfo size={18} className="text-stamp" />
+        <IconInfo size={18} className="shrink-0 text-accent" />
         {label}
-        <IconChevronDown size={16} className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+        <IconChevronDown size={16} className={`shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && <div className="reveal space-y-2 rounded-md bg-counter/60 px-4 py-3 text-ink-soft">{children}</div>}
+      {open && <div className="reveal space-y-2 rounded-2xl bg-tint px-4 py-3 text-ink-2">{children}</div>}
     </div>
   )
 }
@@ -388,7 +406,6 @@ function NotaCard({
   singleMonth,
   rangeEnd,
   onRecalc,
-  storeId,
   storeName,
 }: {
   data: RecapData
@@ -397,7 +414,6 @@ function NotaCard({
   singleMonth: string | null
   rangeEnd: string
   onRecalc: (month: string) => void
-  storeId: number | null
   storeName: string
 }) {
   const readOnly = useContext(ReadOnlyContext)
@@ -440,67 +456,62 @@ function NotaCard({
   const flow = orders ? buildFlow(orders, t.qty, rangeEnd) : null
   const biayaMonth = unfilledExpenses[0]?.month ?? singleMonth ?? data.months[0]?.month
 
-  // Kalimat naik, angka berputar naik, stiker ditempel; konfeti sekali per bulan yang final.
+  // Angka berputar naik, lalu stiker status ditempel.
   const shownProfit = useCountUp(t.profit)
-  const stampRef = useRef<HTMLButtonElement>(null)
-  const celebrate = useCelebrateOnce(allFinal && singleMonth && storeId ? `final:${storeId}:${singleMonth}` : null, 900)
   const loss = t.profit < 0
 
   return (
     <>
-      {/* Bab 1: jawabannya, ditulis seperti kalimat. */}
-      <section className="on-field grid gap-10 text-on-field lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.6fr)] lg:items-end">
+      {/* Bab 1: jawabannya, ditulis seperti kalimat (sama dengan kartu rekap di landing). */}
+      <section className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:items-stretch lg:gap-12">
         <div className="min-w-0">
-          <p className="font-display text-lg font-bold text-lime">Bab 1 · Untung</p>
-          <h1 className="mt-3 font-display text-4xl font-bold leading-[1.04] tracking-tight sm:text-6xl">
-            <WordsRise text={`${period}, ${storeName} ${loss ? 'rugi' : 'untung'}`} />
+          <Kicker>Bab 1 · Untung bersih</Kicker>
+          <h1 className="mt-3 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+            {period}, {storeName} <span className="hl">{loss ? 'rugi' : 'untung bersih'}</span>
           </h1>
           <p
-            className={`num mt-3 font-display text-7xl font-extrabold leading-[0.9] tracking-tighter sm:text-[8.5rem] ${
-              loss ? 'text-coral-soft' : 'text-lime'
+            className={`num mt-3 font-display text-6xl font-extrabold leading-[0.95] tracking-tighter sm:text-8xl lg:text-[7.5rem] ${
+              loss ? 'text-loss' : 'text-gain'
             }`}
           >
             {formatRupiahShort(Math.abs(shownProfit))}
           </p>
-          <p className="mt-5 max-w-2xl text-lg text-on-field-muted">
-            Tepatnya <b className="num text-on-field">{formatRupiah(t.profit)}</b>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink-2">
+            Tepatnya <b className="num text-ink">{formatRupiah(t.profit)}</b>
             {margin !== null && <> ({formatPercent(margin)} dari uang masuk)</>}, dari{' '}
-            <b className="text-on-field">{formatNumber(t.qty)} barang</b> yang sudah sampai ke pembeli dan uangnya cair.
+            <b className="text-ink">{formatNumber(t.qty)} barang</b> yang sudah sampai ke pembeli dan uangnya cair.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
-            <Confetti anchor={stampRef} fireKey={celebrate} />
             {statuses.length > 0 && (
               <button
-                ref={stampRef}
                 type="button"
                 aria-expanded={showStatus}
                 onClick={() => setShowStatus((s) => !s)}
                 className="group inline-flex min-h-11 items-center gap-1.5 rounded-full px-1"
               >
-                <Stamp tone={allFinal ? 'final' : 'warn'} delay={650} className="!text-base">
-                  {allFinal ? <IconCheck size={16} /> : <IconAlertCircle size={16} />}
+                <Stamp tone={allFinal ? 'final' : 'warn'} delay={650} size="md">
                   {allFinal ? 'Angka final' : `Belum lengkap · ${todoCount} hal`}
                 </Stamp>
                 <IconChevronDown
                   size={18}
-                  className={`text-on-field-muted transition-transform duration-150 group-hover:text-on-field ${showStatus ? 'rotate-180' : ''}`}
+                  className={`text-ink-3 transition-transform duration-150 group-hover:text-ink ${showStatus ? 'rotate-180' : ''}`}
                 />
                 <span className="sr-only">{showStatus ? 'Tutup' : 'Lihat'} rincian status</span>
               </button>
             )}
-            {!allFinal && firstTodo && <span className="font-semibold text-amber">Belum final: {firstTodo.short}</span>}
+            {!allFinal && firstTodo && <span className="font-semibold text-warn">Belum final: {firstTodo.short}</span>}
           </div>
         </div>
         <MoneySplit income={t.modal + t.expenses + t.profit} modal={t.modal} expenses={t.expenses} profit={t.profit} />
       </section>
 
       {showStatus && (
-        <div className={`reveal space-y-4 rounded-3xl p-5 shadow-sheet sm:p-6 ${allFinal ? 'bg-gain-tint' : 'bg-warn-tint'}`}>
+        <div className={`reveal space-y-4 rounded-3xl border p-5 sm:p-6 ${allFinal ? 'border-gain/30 bg-mintbg' : 'border-sun bg-sun-tint'}`}>
           {statuses.map((s) => (
             <Checklist key={s.month} month={s.month} status={s.status} showTitle={statuses.length > 1} onRecalc={onRecalc} />
           ))}
-          <p className="flex gap-2 border-t border-ink/10 pt-3 text-sm text-ink-soft">
-            <IconInfo size={16} className="mt-0.5 shrink-0 text-info" />
+          <p className="flex gap-2 border-t border-ink/10 pt-3 text-sm text-ink-2">
+            <IconInfo size={16} className="mt-0.5 shrink-0 text-accent" />
             <span>
               <strong>Soal tanggal batas bulan.</strong> Untung sebulan dihitung dari uang yang cair di bulan itu dan
               modal barang yang sampai di bulan itu. Barang yang sampai di 30–31 tapi uangnya cair 1–2 hari kemudian bisa
@@ -516,7 +527,7 @@ function NotaCard({
         <ChapterTitle n={2} kicker="Hitungannya">
           Dari mana angkanya
         </ChapterTitle>
-        <div className="space-y-5 rounded-3xl bg-paper p-5 shadow-sheet sm:p-7">
+        <div className="space-y-5 rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-7">
           <div className="print-in">
             <NotaLine
               op="+"
@@ -540,7 +551,7 @@ function NotaCard({
                   {singleMonth && !readOnly && (
                     <>
                       {' · '}
-                      <button type="button" className="font-semibold text-stamp underline-offset-2 hover:underline" onClick={() => onRecalc(singleMonth)}>
+                      <button type="button" className={linkClass} onClick={() => onRecalc(singleMonth)}>
                         Hitung ulang HPP
                       </button>
                     </>
@@ -560,7 +571,7 @@ function NotaCard({
                       {' · '}
                       <button
                         type="button"
-                        className="font-semibold text-stamp underline-offset-2 hover:underline"
+                        className={linkClass}
                         onClick={() => navigate('biaya', { bulan: biayaMonth })}
                       >
                         {unfilledExpenses.length > 0 ? 'Isi biaya' : 'Ubah biaya'}
@@ -571,17 +582,17 @@ function NotaCard({
               }
               amount={
                 unfilledExpenses.length > 0 && t.expenses === 0 ? (
-                  <span className="font-sans text-base font-semibold text-warn">belum diisi</span>
+                  <span className="inline-flex items-center gap-1.5 font-sans text-base font-semibold text-warn">
+                    <IconAlertCircle size={18} />
+                    belum diisi
+                  </span>
                 ) : (
                   formatRupiah(t.expenses)
                 )
               }
             />
           </div>
-          <div className="print-last flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-2xl bg-stamp-tint px-4 py-3">
-            <span className="font-display text-lg font-bold">= Untung bersih</span>
-            <span className={`num font-display text-2xl font-bold ${loss ? 'text-loss' : 'text-ink'}`}>{formatRupiah(t.profit)}</span>
-          </div>
+          <NotaTotal className="print-last" label="= Untung bersih" amount={formatRupiah(t.profit)} tone={loss ? 'loss' : 'gain'} />
           {flow && flow[0].value !== t.qty && (
             <Why label={`Kenapa ${formatNumber(t.qty)} barang, bukan ${formatNumber(flow[0].value)}?`}>
               <p>
@@ -596,14 +607,14 @@ function NotaCard({
   )
 }
 
-/** Judul bab di atas bidang biru: nomor bab + kata kunci kecil, lalu judul besar. */
+/** Judul bab: nomor bab + kata kunci kecil (indigo), lalu judul besar. */
 function ChapterTitle({ n, kicker, children }: { n: number; kicker: string; children: ReactNode }) {
   return (
-    <div className="on-field text-on-field">
-      <p className="font-display text-lg font-bold text-lime">
+    <div>
+      <Kicker>
         Bab {n} · {kicker}
-      </p>
-      <h2 className="mt-1 font-display text-3xl font-bold tracking-tight sm:text-4xl">{children}</h2>
+      </Kicker>
+      <h2 className="mt-1 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{children}</h2>
     </div>
   )
 }
@@ -629,7 +640,7 @@ function MoneySplit({ income, modal, expenses, profit }: { income: number; modal
   const desktop = useIsDesktop()
   if (income <= 0 || profit < 0) {
     return (
-      <div className="on-field rounded-3xl bg-white/8 p-5 text-on-field-muted">
+      <div className="self-start rounded-3xl bg-tint p-5 text-ink-2 ring-1 ring-line">
         Modal dan biaya bulan ini lebih besar dari uang yang masuk, jadi tidak ada sisa untung.
       </div>
     )
@@ -638,20 +649,20 @@ function MoneySplit({ income, modal, expenses, profit }: { income: number; modal
   const biayaPer100 = Math.round((expenses / income) * 100)
   const untungPer100 = 100 - modalPer100 - biayaPer100
   const segs = [
-    { key: 'modal', label: 'modal barang', per100: modalPer100, share: modal / income, cls: 'bg-white/15 text-on-field' },
-    { key: 'biaya', label: 'biaya', per100: biayaPer100, share: expenses / income, cls: 'bg-white/35 text-on-field' },
-    { key: 'untung', label: 'untung', per100: untungPer100, share: profit / income, cls: 'bg-lime text-field-deep' },
+    { key: 'modal', label: 'modal barang', per100: modalPer100, share: modal / income, cls: 'bg-line text-ink' },
+    { key: 'biaya', label: 'biaya', per100: biayaPer100, share: expenses / income, cls: 'bg-rule text-ink' },
+    { key: 'untung', label: 'untung', per100: untungPer100, share: profit / income, cls: 'bg-gain text-white' },
   ]
   // Batang mendatar di HP hanya selebar layar, jadi segmen harus lebih besar supaya labelnya tidak terpotong.
   // Segmen kecil tetap tertulis di kalimat di bawah batang.
   const big = (share: number) => share >= (desktop ? 0.12 : 0.22)
   return (
-    <figure className="on-field min-w-0 text-on-field">
-      <figcaption className="font-display text-2xl font-bold leading-tight tracking-tight">Dari setiap Rp100 yang masuk</figcaption>
+    <figure className="flex min-w-0 flex-col rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-6">
+      <figcaption className="font-display text-xl font-bold leading-tight tracking-tight">Dari setiap Rp100 yang masuk</figcaption>
       <div
         role="img"
         aria-label={`Rp${modalPer100} untuk modal barang, Rp${biayaPer100} untuk biaya, Rp${untungPer100} jadi untung`}
-        className="mt-4 flex h-24 gap-[3px] lg:h-[22rem] lg:flex-col"
+        className="mt-4 flex h-24 gap-[3px] lg:h-auto lg:min-h-[16rem] lg:flex-1 lg:flex-col"
       >
         {segs.map((sg, i) => (
           <div
@@ -665,13 +676,13 @@ function MoneySplit({ income, modal, expenses, profit }: { income: number; modal
             {big(sg.share) && (
               <>
                 <span className="max-w-full truncate text-sm lg:text-base">{sg.label}</span>
-                <span className="num font-display text-xl font-bold lg:text-3xl">Rp{sg.per100}</span>
+                <span className="num font-display text-xl font-extrabold lg:text-3xl">Rp{sg.per100}</span>
               </>
             )}
           </div>
         ))}
       </div>
-      <p className="mt-3 text-sm text-on-field-muted">
+      <p className="mt-3 text-sm text-ink-2">
         {segs
           .filter((sg) => !big(sg.share))
           .map((sg) => `${sg.label} Rp${sg.per100}`)
@@ -728,51 +739,61 @@ function AdsChapter({ storeId, month }: { storeId: number; month: string }) {
     }
   }, [storeId, month])
 
-  // Merah (coral) berarti iklan RUGI. Belum ada data, gagal dihitung, atau iklan untung tampil netral,
-  // supaya bab ini tidak terbaca sebagai peringatan padahal tidak ada yang salah.
+  // Merah hanya untuk rugi: angka rugi dan stiker Takedown. Belum ada data, gagal dihitung, atau iklan untung
+  // tampil di lembar putih biasa, supaya bab ini tidak terbaca sebagai peringatan padahal tidak ada yang salah.
   const loss = state.kind === 'ok' && state.profitAfterAds < 0
-  const tone = loss
-    ? { box: 'bg-coral text-white shadow-sheet', kicker: 'text-on-coral-muted', text: 'text-white', button: 'text-coral' }
-    : { box: 'bg-white/10 text-on-field', kicker: 'text-lime', text: 'text-on-field', button: 'text-field' }
 
   return (
-    <section className={`on-field rounded-[2rem] p-6 sm:p-9 ${tone.box}`}>
-      <p className={`font-display text-lg font-bold ${tone.kicker}`}>Bab 3 · Iklan {formatMonth(month)}</p>
-      {state.kind === 'loading' && <p className={`mt-3 ${tone.text}`}>Menghitung iklan…</p>}
+    <section className="rounded-3xl bg-paper p-6 shadow-sheet ring-1 ring-line sm:p-8">
+      <Kicker>Bab 3 · Iklan {formatMonth(month)}</Kicker>
+      {state.kind === 'loading' && <p className="mt-3 text-ink-3">Menghitung iklan…</p>}
       {(state.kind === 'none' || state.kind === 'error') && (
         <>
-          <h2 className="mt-2 font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+          <h2 className="mt-2 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
             {state.kind === 'none' ? `Belum ada data iklan ${formatMonth(month)}.` : 'Data iklan belum bisa dihitung di sini.'}
           </h2>
-          <p className={`mt-2 max-w-2xl text-lg ${tone.text}`}>
+          <p className="mt-2 max-w-2xl text-lg leading-relaxed text-ink-2">
             {state.kind === 'none'
-              ? 'Upload file iklan Shopee 1 bulan penuh untuk melihat iklan mana yang untung dan mana yang bikin rugi.'
+              ? 'Upload data iklan Shopee 1 bulan penuh untuk melihat iklan mana yang untung dan mana yang bikin rugi.'
               : 'Buka halaman Iklan untuk melihat rinciannya.'}
           </p>
         </>
       )}
       {state.kind === 'ok' && (
         <>
-          <h2 className="mt-2 font-display text-3xl font-bold leading-tight tracking-tight sm:text-5xl">
-            Iklan {state.profitAfterAds < 0 ? 'rugi' : 'untung'} {formatRupiahShort(Math.abs(state.profitAfterAds))}.{' '}
-            {state.takedownCount > 0 ? `${formatNumber(state.takedownCount)} iklan sebaiknya dimatikan.` : 'Tidak ada iklan yang perlu dimatikan.'}
+          <h2 className="mt-2 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+            Iklan{' '}
+            <span className={loss ? 'text-loss' : 'text-gain'}>
+              {loss ? 'rugi' : 'untung'} {formatRupiahShort(Math.abs(state.profitAfterAds))}
+            </span>
+            .{' '}
+            {state.takedownCount > 0
+              ? `${formatNumber(state.takedownCount)} iklan sebaiknya dimatikan.`
+              : 'Tidak ada iklan yang perlu dimatikan.'}
           </h2>
-          <p className={`mt-2 text-lg ${tone.text}`}>
+          <p className="mt-2 text-lg leading-relaxed text-ink-2">
             Setelah biaya iklan <span className="num">{formatRupiah(state.spend)}</span>, untungnya{' '}
-            <b className={`num ${loss ? 'text-white' : 'text-lime'}`}>{formatRupiah(state.profitAfterAds)}</b>.
+            <b className={`num ${loss ? 'text-loss' : 'text-ink'}`}>{formatRupiah(state.profitAfterAds)}</b>.
           </p>
           {state.takedown.length > 0 && (
-            <ul className="mt-5 grid gap-2 sm:grid-cols-3">
-              {state.takedown.map((p) => (
-                <li key={p.name} className="min-w-0 rounded-2xl bg-white/14 px-4 py-3">
-                  <span className="line-clamp-2 font-semibold">{p.name}</span>
-                  <span
-                    className={`num mt-1 block font-display text-xl font-bold ${
-                      !loss && p.profit !== null && p.profit < 0 ? 'text-coral-soft' : ''
-                    }`}
-                  >
-                    {p.profit === null ? 'HPP belum lengkap' : formatRupiah(p.profit)}
+            <ul className="mt-5 divide-y divide-line border-y border-line">
+              {state.takedown.map((p, i) => (
+                <li key={p.name} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3.5">
+                  <span className="min-w-0 flex-1">
+                    <span className="line-clamp-2 font-semibold">{p.name}</span>
+                    <span className="num block text-sm text-ink-2">
+                      {p.profit === null ? (
+                        'HPP belum lengkap'
+                      ) : (
+                        <>
+                          Setelah iklan <span className="whitespace-nowrap">{formatRupiah(p.profit)}</span>
+                        </>
+                      )}
+                    </span>
                   </span>
+                  <Stamp tone="loss" tilt={i % 2 ? 3 : -3} delay={i * 60}>
+                    Takedown
+                  </Stamp>
                 </li>
               ))}
             </ul>
@@ -780,11 +801,9 @@ function AdsChapter({ storeId, month }: { storeId: number; month: string }) {
         </>
       )}
       {!readOnly && (
-        <a
-          href="#/iklan"
-          className={`mt-6 inline-flex min-h-11 items-center rounded-full bg-white px-5 font-semibold transition active:scale-[0.97] ${tone.button}`}
-        >
-          Buka halaman Iklan →
+        <a href="#/iklan" className={`${linkClass} mt-5 inline-flex min-h-11 items-center gap-2`}>
+          Buka halaman Iklan
+          <IconArrowRight size={18} />
         </a>
       )}
     </section>
@@ -818,10 +837,10 @@ function FlowList({ steps }: { steps: FlowStep[] }) {
           key={i}
           className={`grid grid-cols-[1fr_auto] gap-3 rounded-lg px-3 ${
             s.kind === 'start'
-              ? 'bg-counter py-2'
+              ? 'bg-paper py-2 text-ink'
               : s.kind === 'result'
-                ? 'bg-stamp-tint py-2 font-bold text-stamp-strong'
-                : 'py-0.5 text-ink-soft'
+                ? 'bg-ink py-2 font-bold text-paper'
+                : 'py-0.5 text-ink-2'
           }`}
         >
           <span>
@@ -837,11 +856,11 @@ function FlowList({ steps }: { steps: FlowStep[] }) {
 
 export function NotaLine({ op, label, detail, amount }: { op: string; label: string; detail: ReactNode; amount: ReactNode }) {
   return (
-    <div className="grid grid-cols-[1.5rem_1fr] items-baseline gap-x-2 border-line/70 py-3 sm:grid-cols-[1.5rem_1fr_auto] [&+&]:border-t">
-      <span className="num text-center font-bold text-ink-muted">{op}</span>
+    <div className="grid grid-cols-[1.5rem_1fr] items-baseline gap-x-2 border-line py-3 sm:grid-cols-[1.5rem_1fr_auto] [&+&]:border-t">
+      <span className="num text-center font-bold text-ink-3">{op}</span>
       <span className="min-w-0">
         <span className="block font-semibold">{label}</span>
-        <span className="block text-sm text-ink-muted">{detail}</span>
+        <span className="block text-sm text-ink-2">{detail}</span>
       </span>
       {/* HP: angka turun ke bawah labelnya supaya label tidak terjepit. */}
       <span className="num col-start-2 mt-1 whitespace-nowrap text-lg font-semibold sm:col-start-auto sm:mt-0 sm:text-right">
@@ -898,11 +917,11 @@ function Checklist({
         )}
       </CheckRow>
       {s.shifted.days.length > 0 && (
-        <p className="flex gap-2 pl-8 text-sm text-ink-soft">
-          <IconInfo size={16} className="mt-0.5 shrink-0 text-info" />
+        <p className="flex gap-2 pl-8 text-sm text-ink-2">
+          <IconInfo size={16} className="mt-0.5 shrink-0 text-accent" />
           <span>
             {formatRupiah(s.shifted.amount)} cair 1–2 hari setelah tanggal pesanan selesai di export (
-            {dayList(s.shifted.days)}). Normal: datanya sudah cocok.
+            {dayList(s.shifted.days)}). Ini normal, datanya sudah cocok.
           </span>
         </p>
       )}
@@ -932,7 +951,7 @@ function Checklist({
             {!readOnly && (
               <>
                 {' '}Kalau memang tidak ada, simpan Rp0.{' '}
-                <button type="button" className="font-semibold underline" onClick={() => navigate('biaya', { bulan: month })}>
+                <button type="button" className={linkClass} onClick={() => navigate('biaya', { bulan: month })}>
                   Isi biaya
                 </button>
               </>
@@ -987,10 +1006,10 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
   const pct = (n: number) => (total.qty > 0 ? `${(n / total.qty) * 100}%` : '0%')
 
   return (
-    <section className="space-y-5 rounded-3xl bg-paper p-5 shadow-sheet sm:p-6">
+    <section className="space-y-5 rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-7">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">Semua pesanan yang masuk di {period}</h2>
-        <p className="mt-1 text-ink-soft">
+        <h2 className="font-display text-xl font-bold tracking-tight">Semua pesanan yang masuk di {period}</h2>
+        <p className="mt-1 text-ink-2">
           <strong className="text-2xl text-ink num">{formatNumber(total.orders)}</strong> pesanan ·{' '}
           <strong className="text-2xl text-ink num">{formatNumber(total.qty)}</strong> barang
         </p>
@@ -1004,26 +1023,26 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
         <>
           <div>
             <div
-              className="flex h-3 overflow-hidden rounded-sm bg-line"
+              className="flex h-3 gap-[2px] overflow-hidden rounded-full bg-line"
               role="img"
               aria-label={`${done.qty} barang selesai, ${proses.qty} diproses, ${batal.qty} batal`}
             >
-              <div className="bg-stamp" style={{ width: pct(done.qty) }} />
-              <div className="bg-warn-line" style={{ width: pct(proses.qty) }} />
+              <div className="bg-ink" style={{ width: pct(done.qty) }} />
+              <div className="bg-control" style={{ width: pct(proses.qty) }} />
             </div>
-            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink-soft">
-              <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-stamp" />Selesai {formatNumber(done.qty)} barang</span>
+            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink-2">
+              <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-ink" />Selesai {formatNumber(done.qty)} barang</span>
               {proses.qty > 0 && (
-                <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-warn-line" />Masih diproses {formatNumber(proses.qty)} barang</span>
+                <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-control" />Masih diproses {formatNumber(proses.qty)} barang</span>
               )}
-              <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-line" />Batal {formatNumber(batal.qty)} barang</span>
+              <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-line ring-1 ring-rule" />Batal {formatNumber(batal.qty)} barang</span>
             </div>
           </div>
 
           {est && done.qty > 0 && (
-            <div className="space-y-3 rounded-md border border-line p-4 sm:p-5">
+            <div className="space-y-3 rounded-2xl bg-tint p-4 sm:p-5">
               <p className="font-semibold">Perkiraan untung dari pesanan {period} yang selesai</p>
-              <div className="border-y-2 border-dashed border-rule">
+              <div className="tear">
                 <NotaLine
                   op="+"
                   label="Nilai penjualan"
@@ -1043,25 +1062,18 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
                   amount={formatRupiah(est.modal)}
                 />
               </div>
-              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 rounded-2xl bg-stamp-tint px-4 py-3">
-                <span>
-                  <span className="block font-display text-lg font-bold">≈ Perkiraan untung</span>
-                  <span className="block text-sm font-semibold text-warn">Belum dikurangi biaya (iklan, packaging, dll.)</span>
-                </span>
-                <span className="sm:text-right">
-                  <span className={`block font-display text-2xl font-bold tracking-tight num ${est.profit < 0 ? 'text-loss' : ''}`}>
-                    {formatRupiah(est.profit)}
-                  </span>
-                  <span className="block text-sm font-semibold text-ink-muted">
-                    {formatPercent((est.profit / est.sales) * 100)} dari nilai penjualan
-                  </span>
-                </span>
-              </div>
+              <NotaTotal
+                label="≈ Perkiraan untung"
+                sub={<span className="text-warn">Belum dikurangi biaya (iklan, packaging, dll.)</span>}
+                amount={formatRupiah(est.profit)}
+                amountSub={<span className="text-ink-3">{formatPercent((est.profit / est.sales) * 100)} dari nilai penjualan</span>}
+                tone={est.profit < 0 ? 'loss' : undefined}
+              />
               {est.missingHpp > 0 && (
                 <Alert tone="warning">
                   {formatNumber(est.missingHpp)} barang belum punya HPP, jadi modal di perkiraan ini belum lengkap.{' '}
                   {!readOnly && (
-                    <button type="button" className="underline" onClick={() => navigate('hpp', { kosong: '1' })}>Isi HPP</button>
+                    <button type="button" className={linkClass} onClick={() => navigate('hpp', { kosong: '1' })}>Isi HPP</button>
                   )}
                 </Alert>
               )}
@@ -1089,7 +1101,7 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
 
           <ScrollX>
             <table className="w-full min-w-[32rem] text-left">
-              <thead className="border-b border-rule text-sm font-medium text-ink-muted">
+              <thead className="border-b border-rule text-sm font-semibold text-ink-3">
                 <tr>
                   <th className="py-2 pr-3">Status</th>
                   <th className="py-2 pr-3 text-right">Pesanan</th>
@@ -1102,29 +1114,29 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
                 {groups
                   .filter((g) => g.group !== 'proses' || g.qty > 0)
                   .map((g) => (
-                    <tr key={g.group} className="border-b border-line/70 align-top">
+                    <tr key={g.group} className="border-b border-line align-top">
                       <td className="py-3 pr-3 font-medium">
                         {GROUP_LABEL[g.group]}
                         {g.returned > 0 && (
-                          <span className="block text-xs font-normal text-ink-muted">{formatNumber(g.returned)} barang diretur</span>
+                          <span className="block text-xs font-normal text-ink-3">{formatNumber(g.returned)} barang diretur</span>
                         )}
                         {g.group === 'batal' && (
-                          <span className="block text-xs font-normal text-ink-muted">tidak ada uang masuk</span>
+                          <span className="block text-xs font-normal text-ink-3">tidak ada uang masuk</span>
                         )}
                       </td>
                       <td className="num py-3 pr-3 text-right">{formatNumber(g.orders)}</td>
                       <td className="num py-3 pr-3 text-right">{formatNumber(g.qty)}</td>
-                      <td className={`num py-3 pr-3 text-right ${g.group === 'batal' ? 'text-ink-muted' : ''}`}>
+                      <td className={`num py-3 pr-3 text-right ${g.group === 'batal' ? 'text-ink-3' : ''}`}>
                         {formatRupiah(g.subtotal)}
                       </td>
                       <td className="num py-3 pr-3 text-right">
-                        {g.group === 'batal' ? <span className="text-ink-muted">-</span> : formatRupiah(g.modal)}
+                        {g.group === 'batal' ? <span className="text-ink-3">tidak ada</span> : formatRupiah(g.modal)}
                       </td>
                     </tr>
                   ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-rule font-bold">
+                <tr className="border-t-2 border-ink font-bold">
                   <td className="py-3 pr-3">Total</td>
                   <td className="num py-3 pr-3 text-right">{formatNumber(total.orders)}</td>
                   <td className="num py-3 pr-3 text-right">{formatNumber(total.qty)}</td>
@@ -1134,7 +1146,7 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
               </tfoot>
             </table>
           </ScrollX>
-          <p className="text-sm text-ink-muted">
+          <p className="text-sm text-ink-2">
             Dihitung dari <strong>tanggal pesanan dibuat</strong>, untuk melihat penjualan. Angka ini sama dengan
             hitungan dari file export. Modal di tabel ini termasuk barang retur; pesanan yang masih diproses memakai HPP
             saat ini.
@@ -1173,31 +1185,38 @@ function ProductsTab({ products, returned, period }: { products: ProductRecap[];
   const totalModal = rows.reduce((n, r) => n + r.modal, 0)
 
   return (
-    <section className="space-y-4 rounded-3xl bg-paper p-5 shadow-sheet sm:p-6">
+    <section className="space-y-4 rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-7">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">Barang terjual per produk</h2>
-        <p className="mt-1 text-sm text-ink-muted">
+        <h2 className="font-display text-xl font-bold tracking-tight">Barang terjual per produk</h2>
+        <p className="mt-1 text-sm text-ink-2">
           Barang yang sampai & uangnya cair di {period}. Paket grosir dihitung per paket, sama seperti di Shopee.
         </p>
       </div>
       {rows.length === 0 ? (
-        <p className="text-ink-muted">Belum ada barang terjual di {period}.</p>
+        <p className="text-ink-2">Belum ada barang terjual di {period}.</p>
       ) : (
         <div>
           {rows.map((r) => (
-            <div key={r.sku} className="space-y-1.5 border-b border-line/70 py-3">
+            <div key={r.sku} className="space-y-1.5 border-b border-line py-3">
               <div className="grid grid-cols-[1fr_auto] items-baseline gap-3">
                 <span className="min-w-0">
                   <span className="line-clamp-2 font-semibold">{r.name}</span>
-                  {r.variant && <span className="block text-sm text-ink-muted">{r.variant}</span>}
+                  {r.variant && <span className="block text-sm text-ink-2">{r.variant}</span>}
                 </span>
                 <span className="whitespace-nowrap font-bold num">{formatNumber(r.qty)} barang</span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-sm bg-counter">
-                <div className="h-full rounded-sm bg-stamp/70" style={{ width: `${(r.qty / max) * 100}%` }} />
+              <div className="h-1.5 overflow-hidden rounded-full bg-tint">
+                <div className="h-full rounded-full bg-ink-2" style={{ width: `${(r.qty / max) * 100}%` }} />
               </div>
-              <p className="text-sm num text-ink-muted">
-                {r.missing ? <span className="font-semibold text-loss">HPP belum diisi</span> : `Modal ${formatRupiah(r.modal)}`}
+              <p className="text-sm num text-ink-2">
+                {r.missing ? (
+                  <span className="inline-flex items-center gap-1 font-semibold text-warn">
+                    <IconAlertCircle size={15} />
+                    HPP belum diisi
+                  </span>
+                ) : (
+                  `Modal ${formatRupiah(r.modal)}`
+                )}
                 {r.returned > 0 && ` · ${formatNumber(r.returned)} diretur`}
               </p>
             </div>
@@ -1212,8 +1231,11 @@ function ProductsTab({ products, returned, period }: { products: ProductRecap[];
       )}
 
       {returned.length > 0 && (
-        <details className="rounded-md bg-counter/60 p-4">
-          <summary className="cursor-pointer font-semibold">Barang retur ({formatNumber(returned.length)})</summary>
+        <details className="rounded-2xl bg-tint p-4">
+          <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-semibold">
+            Barang retur ({formatNumber(returned.length)})
+            <IconChevronDown size={16} className="chev" />
+          </summary>
           <ul className="mt-2 list-disc space-y-1 pl-6 text-sm">
             {returned.map((r) => (
               <li key={r.order_no + r.sku}>
@@ -1222,7 +1244,7 @@ function ProductsTab({ products, returned, period }: { products: ProductRecap[];
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-sm text-ink-muted">Barang retur tidak dihitung sebagai modal.</p>
+          <p className="mt-2 text-sm text-ink-2">Barang retur tidak dihitung sebagai modal.</p>
         </details>
       )}
     </section>
@@ -1242,10 +1264,10 @@ function MonthsTab({
 }) {
   const readOnly = useContext(ReadOnlyContext)
   return (
-    <section className="rounded-3xl bg-paper p-5 shadow-sheet sm:p-6">
+    <section className="rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-7">
       <ScrollX>
         <table className="w-full min-w-[40rem] text-left">
-          <thead className="border-b border-rule text-sm font-medium text-ink-muted">
+          <thead className="border-b border-rule text-sm font-semibold text-ink-3">
             <tr>
               <th className="py-2 pr-3">Bulan</th>
               <th className="py-2 pr-3 text-right">Uang masuk</th>
@@ -1260,10 +1282,10 @@ function MonthsTab({
             {months.map((m) => {
               const final = monthStatus(m, reconciliation).final
               return (
-                <tr key={m.month} className="border-b border-line/70">
+                <tr key={m.month} className="border-b border-line">
                   <td className="py-3 pr-3 font-semibold">
                     {formatMonth(m.month)}
-                    <Stamp tone={final ? 'final' : 'warn'} tilt={false} className="ml-2 !text-xs">
+                    <Stamp tone={final ? 'final' : 'warn'} tilt={false} size="xs" className="ml-2">
                       {final ? 'Final' : 'Belum lengkap'}
                     </Stamp>
                   </td>
@@ -1271,7 +1293,7 @@ function MonthsTab({
                   <td className="num py-3 pr-3 text-right">{formatRupiah(Number(m.total_modal))}</td>
                   <td className="num py-3 pr-3 text-right">
                     {Number(m.expense_entries) === 0 ? (
-                      <span className="font-sans font-medium text-warn">belum diisi</span>
+                      <span className="font-sans font-semibold text-warn">belum diisi</span>
                     ) : (
                       formatRupiah(Number(m.total_expenses))
                     )}
@@ -1285,7 +1307,7 @@ function MonthsTab({
                       <button
                         type="button"
                         onClick={() => onRecalc(m.month)}
-                        className="min-h-11 whitespace-nowrap px-2 text-sm font-medium text-stamp underline"
+                        className={`${linkClass} min-h-11 whitespace-nowrap px-2 text-sm`}
                       >
                         Hitung ulang HPP
                       </button>
@@ -1327,14 +1349,16 @@ function RecalcDialog({
   }
   return (
     <Modal labelledBy={titleId} onClose={onCancel} dismissible={!busy}>
-      <h2 id={titleId} className="text-xl font-semibold tracking-tight">Hitung ulang HPP: {formatMonth(month)}</h2>
-      <p className="mt-3 text-ink-soft">
+      <h2 id={titleId} className="font-display text-2xl font-extrabold tracking-tight">
+        Hitung ulang HPP {formatMonth(month)}?
+      </h2>
+      <p className="mt-3 text-ink-2">
         Modal bulan ini memakai HPP yang terkunci saat pesanan selesai. Pilih cara menghitung ulang:
       </p>
       {error ? <div className="mt-4"><ErrorBox error={error} /></div> : null}
       <div className="mt-5 flex flex-col gap-3">
         <Button onClick={() => run(true)} disabled={busy}>
-          Isi yang HPP-nya kosong saja (disarankan)
+          {busy ? 'Menghitung…' : 'Isi yang HPP-nya kosong saja (disarankan)'}
         </Button>
         <Button variant="secondary" onClick={() => run(false)} disabled={busy}>
           Semua barang pakai HPP saat ini
@@ -1343,7 +1367,7 @@ function RecalcDialog({
           Batal
         </Button>
       </div>
-      <p className="mt-4 text-sm text-ink-muted">
+      <p className="mt-4 text-sm text-ink-2">
         "Semua barang" mengganti HPP lama dengan HPP yang sekarang tercatat di halaman HPP, sehingga untung{' '}
         {formatMonth(month)} bisa berubah.
       </p>

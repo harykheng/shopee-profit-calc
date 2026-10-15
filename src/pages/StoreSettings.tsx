@@ -130,7 +130,7 @@ export function StoreSettingsCard({
             </Field>
           </div>
 
-          <p className="mt-4 text-sm text-ink-muted">
+          <p className="mt-4 text-sm text-ink-3">
             Pengaturan retur berlaku untuk <strong>semua bulan</strong> (angka Rekap bulan-bulan lama ikut berubah).
             Harga jual dan HPP yang tersimpan tidak berubah.
           </p>

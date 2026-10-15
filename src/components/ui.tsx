@@ -1,32 +1,32 @@
 import { useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
-import { APP_NAME, hasSupportWhatsApp, supportUrl } from '../lib/brand'
+import { APP_NAME, hasSupportWhatsApp, isHitungCuan, supportUrl } from '../lib/brand'
 import { adminHint, errorText, friendlyError } from '../lib/errors'
 import { ParseError } from '../lib/parsers/common'
 import { reportError } from '../lib/reportError'
-import { IconAlertCircle, IconCheckCircle, IconError, IconInfo } from './icons'
+import { IconAlertCircle, IconArrowRight, IconCheck, IconCheckCircle, IconError, IconInfo, IconMinus, IconWarning, IconWhatsApp, IconX } from './icons'
 
 type Variant = 'primary' | 'secondary' | 'danger'
 
+/*
+ * Tombol utama: pil indigo dengan teks putih (9,54:1), seperti tombol WhatsApp di landing. Satu per layar kalau bisa.
+ * Tombol kedua: pil bergaris control (3,8:1, syarat 3:1) di atas paper. Semua punya garis 2px supaya tingginya sama.
+ */
 const VARIANTS: Record<Variant, string> = {
-  primary:
-    'bg-stamp text-white hover:bg-stamp-strong active:bg-stamp-strong disabled:bg-stamp/40 disabled:text-white/90',
-  secondary:
-    'bg-stamp-tint text-stamp-strong hover:bg-stamp-tint-hover active:bg-stamp-tint-press disabled:bg-counter disabled:text-ink-muted',
-  danger: 'bg-loss text-white hover:bg-loss/90 active:bg-loss/80 disabled:bg-loss/40',
+  primary: 'border-transparent bg-accent text-white hover:bg-accent-hover disabled:bg-accent/45',
+  secondary: 'border-control bg-paper text-ink hover:border-ink disabled:border-line disabled:text-ink-3',
+  danger: 'border-transparent bg-loss text-white hover:bg-loss/90 disabled:bg-loss/45',
 }
+
+/** Kelas tombol, juga untuk <a> yang tampil sebagai tombol (mis. "Upload laporan" ke halaman lain). */
+export const buttonClass = (variant: Variant = 'primary') =>
+  `inline-flex min-h-11 items-center justify-center gap-2 rounded-full border-2 px-5 text-base font-semibold transition-[background-color,border-color,transform] duration-150 active:translate-y-px disabled:cursor-not-allowed disabled:active:translate-y-0 ${VARIANTS[variant]}`
 
 export function Button({
   variant = 'primary',
   className = '',
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
-  return (
-    <button
-      type="button"
-      {...props}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-base font-semibold transition duration-150 enabled:active:scale-[0.97] disabled:cursor-not-allowed ${VARIANTS[variant]} ${className}`}
-    />
-  )
+  return <button type="button" {...props} className={`${buttonClass(variant)} ${className}`} />
 }
 
 /** Tautan (#/halaman) yang tampil seperti Button. */
@@ -42,10 +42,7 @@ export function ButtonLink({
   children: ReactNode
 }) {
   return (
-    <a
-      href={href}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-base font-semibold transition duration-150 active:scale-[0.97] ${VARIANTS[variant]} ${className}`}
-    >
+    <a href={href} className={`${buttonClass(variant)} ${className}`}>
       {children}
     </a>
   )
@@ -90,16 +87,39 @@ export function ScrollX({ children, className = '' }: { children: ReactNode; cla
         />
       )}
       {more && !scrolled && (
-        <p className="mt-1 text-right text-sm font-semibold text-stamp-strong">Geser ke samping untuk kolom lainnya →</p>
+        <p className="mt-1 flex items-center justify-end gap-1 text-sm font-semibold text-accent">
+          Geser ke samping untuk kolom lainnya
+          <IconArrowRight size={16} />
+        </p>
       )}
     </div>
   )
 }
 
-/** Lembar kertas (nota) di atas meja. */
+/** Tautan teks: indigo, bergaris bawah tebal. Untuk aksi kedua yang bukan tombol. */
+export const linkClass =
+  'font-semibold text-accent underline decoration-accent/35 decoration-2 underline-offset-4 transition-colors hover:decoration-accent'
+
+/** Nama aplikasi di bar atas: logo HitungCuan untuk deploy HitungCuan, nama teks untuk deploy lain. */
+export function Brand({ className = '' }: { className?: string }) {
+  if (isHitungCuan) {
+    return (
+      <img
+        src="/logo/logo-horizontal.svg"
+        alt={APP_NAME}
+        width={165}
+        height={28}
+        className={`h-6 w-auto max-w-full object-contain object-left sm:h-7 ${className}`}
+      />
+    )
+  }
+  return <span className={`font-display text-xl font-extrabold tracking-tight text-ink ${className}`}>{APP_NAME}</span>
+}
+
+/** Lembar putih di atas halaman krem. Tanpa lembar di dalam lembar: isi bertingkat memakai sumur bg-tint. */
 export function Card({ title, children, className = '' }: { title?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-3xl bg-paper p-5 shadow-sheet sm:p-7 ${className}`}>
+    <section className={`rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-7 ${className}`}>
       {title && <h2 className="mb-4 font-display text-xl font-bold tracking-tight">{title}</h2>}
       {children}
     </section>
@@ -108,11 +128,11 @@ export function Card({ title, children, className = '' }: { title?: ReactNode; c
 
 type Tone = 'info' | 'warning' | 'error' | 'success'
 
-const TONES: Record<Tone, string> = {
-  info: 'border-info/25 bg-info-tint text-info',
-  warning: 'border-warn-line bg-warn-tint text-warn',
-  error: 'border-loss/30 bg-loss-tint text-loss',
-  success: 'border-gain/30 bg-gain-tint text-gain',
+const TONES: Record<Tone, { box: string; icon: string }> = {
+  info: { box: 'border-line bg-tint', icon: 'text-accent' },
+  warning: { box: 'border-sun bg-sun-tint', icon: 'text-warn' },
+  error: { box: 'border-loss/35 bg-loss-tint', icon: 'text-loss' },
+  success: { box: 'border-gain/35 bg-mintbg', icon: 'text-gain' },
 }
 
 const ICONS: Record<Tone, typeof IconInfo> = {
@@ -125,12 +145,12 @@ const ICONS: Record<Tone, typeof IconInfo> = {
 export function Alert({ tone = 'info', title, children }: { tone?: Tone; title?: ReactNode; children?: ReactNode }) {
   const Icon = ICONS[tone]
   return (
-    <div className={`rounded-2xl border px-4 py-3 ${TONES[tone]}`} role={tone === 'error' ? 'alert' : undefined}>
+    <div className={`rounded-2xl border px-4 py-3 ${TONES[tone].box}`} role={tone === 'error' ? 'alert' : undefined}>
       <div className="flex gap-3">
-        <Icon className="mt-0.5 shrink-0" />
+        <Icon className={`mt-0.5 shrink-0 ${TONES[tone].icon}`} />
         <div className="min-w-0 flex-1 text-ink [overflow-wrap:anywhere]">
           {title && <p className="font-semibold">{title}</p>}
-          {children && <div className={`text-ink-soft ${title ? 'mt-1' : ''}`}>{children}</div>}
+          {children && <div className={`text-ink-2 ${title ? 'mt-1' : ''}`}>{children}</div>}
         </div>
       </div>
     </div>
@@ -153,13 +173,29 @@ export function SupportLink({
   const href = supportUrl(message)
   if (!href) return null
   return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={`${linkClass} ${className}`}>
+      {children}
+    </a>
+  )
+}
+
+/**
+ * Tombol utama ke WhatsApp pengelola (pil indigo + logo WhatsApp, seperti tombol WhatsApp di landing), untuk layar yang
+ * satu-satunya jalan keluarnya adalah chat pengelola. Tidak tampil kalau nomor belum diisi.
+ */
+export function WhatsAppButton({ message, children, className = '' }: { message: string; children: ReactNode; className?: string }) {
+  const href = supportUrl(message)
+  if (!href) return null
+  return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`font-semibold underline underline-offset-2 ${className}`}
+      className={`inline-flex min-h-12 items-center justify-center gap-2.5 rounded-full bg-accent px-6 text-center font-display font-bold text-white transition-[background-color,transform] duration-150 hover:bg-accent-hover active:translate-y-px ${className}`}
     >
+      <IconWhatsApp size={20} className="shrink-0" />
       {children}
+      <span className="sr-only"> lewat WhatsApp</span>
     </a>
   )
 }
@@ -205,7 +241,7 @@ export function ErrorBox({
       )}
       {detail && detail !== friendly && (
         <details className="mt-1 text-sm">
-          <summary className="cursor-pointer">Detail teknis</summary>
+          <summary className="cursor-pointer underline decoration-dotted underline-offset-4">Detail teknis</summary>
           <p className="num mt-1 break-words">{detail}</p>
         </details>
       )}
@@ -215,8 +251,8 @@ export function ErrorBox({
 
 export function Spinner({ label = 'Memuat…' }: { label?: string }) {
   return (
-    <p className="flex items-center gap-3 py-6 text-on-field-muted">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/25 border-t-lime" />
+    <p className="flex items-center gap-3 py-6 text-ink-3" role="status">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent motion-reduce:animate-none" />
       {label}
     </p>
   )
@@ -282,7 +318,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-ink/40 p-4"
+      className="fixed inset-0 z-30 flex items-center justify-center bg-ink/45 p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && latest.current.dismissible) latest.current.onClose()
       }}
@@ -293,7 +329,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={labelledBy}
         tabIndex={-1}
-        className="w-full max-w-lg rounded-3xl bg-paper p-6 shadow-xl"
+        className="reveal w-full max-w-lg rounded-3xl bg-paper p-6 shadow-sheet ring-1 ring-line outline-none sm:p-7"
       >
         {children}
       </div>
@@ -301,58 +337,118 @@ export function Modal({
   )
 }
 
-export function PageTitle({ children, subtitle }: { children: ReactNode; subtitle?: ReactNode }) {
+/** Kata kunci kecil di atas judul (nama toko, "Bab 2 · Hitungannya"). */
+export function Kicker({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <p className={`font-semibold tracking-wide text-accent ${className}`}>{children}</p>
+}
+
+export function PageTitle({ children, kicker, subtitle }: { children: ReactNode; kicker?: ReactNode; subtitle?: ReactNode }) {
   return (
-    <div className="on-field mb-8 text-on-field">
-      <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">{children}</h1>
-      {subtitle && <p className="mt-3 max-w-[62ch] text-lg text-on-field-muted">{subtitle}</p>}
+    <div className="mb-8">
+      {kicker && <Kicker>{kicker}</Kicker>}
+      <h1 className={`font-display text-3xl font-extrabold leading-[1.08] tracking-tight sm:text-4xl lg:text-[2.75rem] ${kicker ? 'mt-2' : ''}`}>
+        {children}
+      </h1>
+      {subtitle && <p className="mt-3 max-w-[62ch] text-lg leading-relaxed text-ink-2">{subtitle}</p>}
+    </div>
+  )
+}
+
+/**
+ * Baris total di nota: garis tinta tebal di atasnya, label dan angka di huruf tampilan (seperti nota di landing).
+ * `tone` mewarnai angkanya kalau angka itu memang untung atau rugi.
+ */
+export function NotaTotal({
+  label,
+  sub,
+  amount,
+  amountSub,
+  tone,
+  className = '',
+}: {
+  label: ReactNode
+  sub?: ReactNode
+  amount: ReactNode
+  amountSub?: ReactNode
+  tone?: 'gain' | 'loss'
+  className?: string
+}) {
+  const color = tone === 'gain' ? 'text-gain' : tone === 'loss' ? 'text-loss' : 'text-ink'
+  return (
+    <div className={`flex flex-wrap items-end justify-between gap-x-4 gap-y-1 border-t-2 border-ink pt-3 ${className}`}>
+      <span>
+        <span className="block font-display text-lg font-extrabold">{label}</span>
+        {sub && <span className="block text-sm font-semibold text-ink-3">{sub}</span>}
+      </span>
+      <span className={`sm:text-right ${color}`}>
+        <span className="num block whitespace-nowrap font-display text-2xl font-extrabold tracking-tight sm:text-3xl">{amount}</span>
+        {amountSub && <span className="num block text-sm font-semibold">{amountSub}</span>}
+      </span>
     </div>
   )
 }
 
 export type StampTone = 'final' | 'warn' | 'loss' | 'gain' | 'neutral'
 
+/*
+ * Stiker vonis, sama dengan landing: huruf tampilan 800, kapital, miring, garis 2px, selalu kata + ikon.
+ * Positif = mint dengan teks gain (5,55:1). Rugi = loss dengan teks putih (5,39:1). Perhatian = sun dengan sun-ink.
+ * Netral (belum ada vonis) = tint dengan ink-2.
+ */
 const STAMP_TONES: Record<StampTone, string> = {
-  final: 'bg-lime text-field-deep',
-  gain: 'bg-lime text-field-deep',
-  warn: 'bg-amber text-amber-ink',
-  loss: 'bg-coral text-white',
-  neutral: 'bg-counter text-ink-soft',
+  final: 'border-gain bg-mintbg text-gain',
+  gain: 'border-gain bg-mintbg text-gain',
+  warn: 'border-sun-ink bg-sun text-sun-ink',
+  loss: 'border-loss bg-loss text-white',
+  neutral: 'border-control bg-tint text-ink-2',
 }
 
-/**
- * Stiker vonis (ANGKA FINAL, TAKEDOWN, HERO, IKLAN RUGI, …): label berwarna penuh yang
- * "ditempel" sedikit miring. Teks biasa (bisa dibaca screen reader).
- */
+const STAMP_ICONS: Record<StampTone, typeof IconCheck> = {
+  final: IconCheck,
+  gain: IconCheck,
+  warn: IconWarning,
+  loss: IconX,
+  neutral: IconMinus,
+}
+
+const STAMP_SIZES = {
+  xs: { box: 'gap-1 px-2 py-0.5 text-xs', icon: 12 },
+  sm: { box: 'gap-1.5 px-2.5 py-1 text-sm', icon: 14 },
+  md: { box: 'gap-1.5 px-3 py-1.5 text-base', icon: 16 },
+} as const
+
 export function Stamp({
   tone,
   children,
   className = '',
   tilt = true,
+  size = 'sm',
   delay = 0,
 }: {
   tone: StampTone
   children: ReactNode
   className?: string
-  tilt?: boolean
+  /** true = −3°, angka = derajat sendiri (mis. 3 untuk miring ke kanan), false = lurus. */
+  tilt?: boolean | number
+  size?: keyof typeof STAMP_SIZES
   /** Jeda sebelum dicapkan (ms), untuk cap berurutan di daftar. */
   delay?: number
 }) {
+  const Icon = STAMP_ICONS[tone]
+  const deg = tilt === true ? -3 : tilt === false ? 0 : tilt
+  const style: CSSProperties & Record<string, string> = { rotate: `${deg}deg` }
+  if (delay) style['--stamp-delay'] = `${delay}ms`
   return (
     <span
-      style={delay ? ({ '--stamp-delay': `${delay}ms` } as CSSProperties) : undefined}
-      className={`stamp-in inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-display text-sm font-bold tracking-tight shadow-[0_2px_0_rgb(16_18_70/0.18)] ${
-        tilt ? '-rotate-3' : ''
-      } ${STAMP_TONES[tone]} ${className}`}
+      style={style}
+      className={`stamp-in inline-flex items-center rounded-md border-2 font-display font-extrabold uppercase leading-tight tracking-wide ${STAMP_SIZES[size].box} ${STAMP_TONES[tone]} ${className}`}
     >
-      {children}
+      <Icon size={STAMP_SIZES[size].icon} strokeWidth={3} className="shrink-0" />
+      <span>{children}</span>
     </span>
   )
 }
 
-export const selectClass =
-  'min-h-11 rounded-xl border border-edge bg-paper px-3 text-base text-ink transition-colors hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'
-
 /** Kotak isian teks biasa (email, catatan, cari). */
 export const inputClass =
-  'min-h-11 w-full rounded-xl border border-edge bg-paper px-3 text-base text-ink transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25'
+  'min-h-11 w-full rounded-xl border border-control bg-paper px-3 text-base text-ink transition-colors placeholder:text-ink-3 hover:border-ink focus:border-accent focus:outline-none focus:ring-[3px] focus:ring-accent/25'

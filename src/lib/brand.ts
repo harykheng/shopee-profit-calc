@@ -6,6 +6,9 @@
 /** VITE_APP_NAME, default "Profit Shopee". */
 export const APP_NAME = ((import.meta.env.VITE_APP_NAME as string | undefined) ?? '').trim() || 'Profit Shopee'
 
+/** Deploy HitungCuan memakai logo dan favicon landing (public/logo/); deploy lain memakai nama teks. */
+export const isHitungCuan = APP_NAME.replace(/\s+/g, '').toLowerCase() === 'hitungcuan'
+
 /** VITE_SUPPORT_WA: nomor WhatsApp pengelola, format 62... (tanda baca diabaikan). */
 const SUPPORT_NUMBER = ((import.meta.env.VITE_SUPPORT_WA as string | undefined) ?? '').replace(/\D/g, '')
 

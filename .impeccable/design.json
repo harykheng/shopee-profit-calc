@@ -1,76 +1,72 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-06T15:39:27+00:00",
-  "title": "Design System: Profit Shopee",
+  "generatedAt": "2026-10-15T00:00:00+00:00",
+  "title": "Design System: Profit Shopee / HitungCuan",
   "extensions": {
     "colorMeta": {
-      "field": {
-        "role": "primary",
-        "displayName": "Field",
-        "tonalRamp": [
-          "#14165a",
-          "#1d2079",
-          "#2b2fa6",
-          "#3b3fb4",
-          "#5357c6",
-          "#8a8ddb",
-          "#c3c5f2",
-          "#f6f4ff"
-        ]
-      },
-      "lime": {
-        "role": "accent",
-        "displayName": "Lime"
-      },
-      "coral": {
-        "role": "error",
-        "displayName": "Coral (chapter & loss sticker)"
-      },
-      "coral-soft": {
-        "role": "error",
-        "displayName": "Coral Soft (loss text on field)"
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Canvas (page)"
       },
       "paper": {
         "role": "neutral",
-        "displayName": "Paper"
+        "displayName": "Paper (sheets)"
+      },
+      "tint": {
+        "role": "neutral",
+        "displayName": "Tint (wells, tab track, info)"
       },
       "ink": {
         "role": "neutral",
-        "displayName": "Ink"
+        "displayName": "Ink",
+        "tonalRamp": [
+          "#1c1917",
+          "#57534e",
+          "#6f6860",
+          "#8a8178",
+          "#d6cab9",
+          "#ece2d4",
+          "#f7f1e8",
+          "#fffbf6"
+        ]
       },
-      "stamp": {
-        "role": "secondary",
-        "displayName": "Stamp (actions on sheets)"
+      "accent": {
+        "role": "primary",
+        "displayName": "Accent (indigo, shared with the landing)"
+      },
+      "accent-tint": {
+        "role": "accent",
+        "displayName": "Accent Tint (.hl band only)"
       },
       "loss": {
         "role": "error",
-        "displayName": "Loss"
+        "displayName": "Loss (rugi)"
       },
       "gain": {
         "role": "success",
-        "displayName": "Gain"
+        "displayName": "Gain (untung)"
+      },
+      "sun": {
+        "role": "warning",
+        "displayName": "Sun (perlu perhatian)"
       },
       "warn": {
         "role": "warning",
-        "displayName": "Warn"
-      },
-      "info": {
-        "role": "info",
-        "displayName": "Info"
+        "displayName": "Warn (warning text on light surfaces)"
       }
     },
     "typographyMeta": {
       "hero-figure": {
         "displayName": "Hero Figure",
-        "purpose": "The one answer figure (Rekap Bab 1), short form with the exact amount beside it."
+        "purpose": "The one answer figure (Rekap Bab 1), short form, gain or loss."
       },
       "story": {
         "displayName": "Story",
-        "purpose": "Answer sentences on the field."
+        "purpose": "Answer sentences."
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Page titles."
+        "purpose": "Page titles, landing H2 scale."
       },
       "chapter": {
         "displayName": "Chapter",
@@ -78,7 +74,7 @@
       },
       "kicker": {
         "displayName": "Kicker",
-        "purpose": "Lime 'Bab N · …' line above a chapter."
+        "purpose": "Indigo store name or 'Bab N · …' line above a title."
       },
       "figure": {
         "displayName": "Figure",
@@ -88,25 +84,25 @@
     "shadows": [
       {
         "name": "sheet",
-        "value": "0 2px 4px rgb(16 18 70 / 0.12), 0 14px 34px rgb(16 18 70 / 0.18)",
-        "purpose": "Every sheet and card on the field."
+        "value": "0 1px 2px rgba(28,25,23,.06), 0 14px 34px -14px rgba(28,25,23,.28)",
+        "purpose": "Every sheet, with a 1px line ring."
       }
     ],
     "motion": [
-      {
-        "name": "words-rise",
-        "value": "520ms cubic-bezier(.2,.8,.25,1), 55ms per word",
-        "purpose": "Answer sentences arriving."
-      },
       {
         "name": "count-up",
         "value": "700ms ease-out cubic",
         "purpose": "Hero figure rolling to its value."
       },
       {
-        "name": "sticker-pop",
-        "value": "460ms cubic-bezier(.2,.8,.3,1)",
+        "name": "sticker-stamp",
+        "value": "460ms cubic-bezier(.22,1,.36,1)",
         "purpose": "Verdict stickers landing; staggered 60ms in lists."
+      },
+      {
+        "name": "print",
+        "value": "300ms ease-out, 120ms per line",
+        "purpose": "Nota lines printing, total last."
       },
       {
         "name": "bar-grow",
@@ -117,11 +113,6 @@
         "name": "nav-marker",
         "value": "260ms cubic-bezier(.3,.7,.2,1)",
         "purpose": "Sliding active-page marker."
-      },
-      {
-        "name": "confetti",
-        "value": "1100ms, once",
-        "purpose": "Saved upload; first ANGKA FINAL per month."
       }
     ],
     "breakpoints": [
@@ -140,78 +131,70 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Main action on a sheet (Simpan, Pilih file, Masuk).",
+      "description": "Main action (Simpan, Masuk, Upload laporan).",
       "html": "<button class=\"ds-btn-primary\">Simpan biaya</button>",
-      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border:0;border-radius:9999px;background:#3a3fb8;color:#fff;font:600 1rem/1 'Public Sans',system-ui,sans-serif;cursor:pointer;transition:background .15s,transform .15s} .ds-btn-primary:hover{background:#2c309b} .ds-btn-primary:active{transform:scale(.97)} .ds-btn-primary:focus-visible{outline:2px solid #3a3fb8;outline-offset:2px}"
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border:2px solid transparent;border-radius:9999px;background:#2b3a9e;color:#fff;font:600 1rem/1 'Plus Jakarta Sans',system-ui,sans-serif;cursor:pointer;transition:background .15s,transform .15s} .ds-btn-primary:hover{background:#3546b5} .ds-btn-primary:active{transform:translateY(1px)} .ds-btn-primary:focus-visible{outline:3px solid #2b3a9e;outline-offset:3px}"
     },
     {
-      "name": "Field Select",
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Second action, outlined.",
+      "html": "<button class=\"ds-btn-secondary\">Batal</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border:2px solid #8a8178;border-radius:9999px;background:#fff;color:#1c1917;font:600 1rem/1 'Plus Jakarta Sans',system-ui,sans-serif;cursor:pointer} .ds-btn-secondary:hover{border-color:#1c1917}"
+    },
+    {
+      "name": "Pill Select",
       "kind": "input",
-      "refersTo": "field-select",
-      "description": "Pill select used directly on the field (Bulan, Periode iklan, Toko).",
-      "html": "<div class=\"ds-field\"><select class=\"ds-field-select\"><option>Agustus 2026</option></select></div>",
-      "css": ".ds-field{background:#2b2fa6;padding:16px} .ds-field-select{min-height:44px;padding:0 40px 0 16px;border:1px solid rgb(246 244 255 / .35);border-radius:9999px;background:rgb(255 255 255 / .1);color:#f6f4ff;font:600 1rem 'Public Sans',system-ui,sans-serif} .ds-field-select:focus-visible{outline:2px solid #d7f45a;outline-offset:2px}"
+      "refersTo": "pill-select",
+      "description": "Filter select (Bulan, Periode iklan, Toko).",
+      "html": "<select class=\"ds-pill-select\"><option>September 2026</option></select>",
+      "css": ".ds-pill-select{min-height:44px;padding:0 40px 0 16px;border:1px solid #8a8178;border-radius:9999px;background:#fff;color:#1c1917;font:600 1rem 'Plus Jakarta Sans',system-ui,sans-serif}"
     },
     {
       "name": "Answer Sentence",
       "kind": "text",
       "refersTo": "story",
-      "description": "Rekap Bab 1: the answer as a sentence with the figure in lime.",
-      "html": "<div class=\"ds-field\"><p class=\"ds-kicker\">Bab 1 · Untung</p><h1 class=\"ds-story\">Agustus 2026, Harel Beauty untung</h1><p class=\"ds-hero\">Rp2,78 juta</p></div>",
-      "css": ".ds-field{background:#2b2fa6;padding:24px;color:#f6f4ff} .ds-kicker{font:700 1.125rem 'Bricolage Grotesque',sans-serif;color:#d7f45a;margin:0} .ds-story{font:700 3.75rem/1.04 'Bricolage Grotesque',sans-serif;letter-spacing:-.025em;margin:12px 0 0} .ds-hero{font:800 8.5rem/.9 'Bricolage Grotesque',sans-serif;letter-spacing:-.05em;color:#d7f45a;margin:12px 0 0;font-variant-numeric:tabular-nums}"
+      "description": "Rekap Bab 1: the answer as a sentence, the key word on the .hl band, the figure in gain.",
+      "html": "<div class=\"ds-page\"><p class=\"ds-kicker\">Bab 1 · Untung bersih</p><h1 class=\"ds-story\">September 2026, Harel Beauty <span class=\"ds-hl\">untung bersih</span></h1><p class=\"ds-hero\">Rp3,42 juta</p></div>",
+      "css": ".ds-page{background:#fffbf6;padding:24px;color:#1c1917} .ds-kicker{font:600 1rem 'Plus Jakarta Sans',system-ui,sans-serif;letter-spacing:.025em;color:#2b3a9e;margin:0} .ds-story{font:800 3.75rem/1.05 'Parkinsans','Plus Jakarta Sans',sans-serif;letter-spacing:-.025em;margin:12px 0 0} .ds-hl{background:linear-gradient(#dde2fa,#dde2fa) no-repeat 0 85%/100% .52em} .ds-hero{font:800 7.5rem/.95 'Parkinsans','Plus Jakarta Sans',sans-serif;letter-spacing:-.05em;color:#146c43;margin:12px 0 0}"
     },
     {
       "name": "Sticker",
       "kind": "badge",
-      "refersTo": "sticker-final",
-      "description": "Verdict label that pops on (Angka final, Takedown, Hero, Iklan rugi).",
+      "refersTo": "sticker-positive",
+      "description": "Verdict stamp, always word + icon (Angka final, Takedown, Hero, ROAS terlalu kecil).",
       "html": "<span class=\"ds-sticker\">Angka final</span> <span class=\"ds-sticker ds-sticker-loss\">Takedown</span>",
-      "css": ".ds-sticker{display:inline-flex;padding:4px 12px;border-radius:9999px;background:#d7f45a;color:#1d2079;font:700 .875rem 'Bricolage Grotesque',sans-serif;transform:rotate(-3deg);box-shadow:0 2px 0 rgb(16 18 70 / .18)} .ds-sticker-loss{background:#c4361e;color:#fff}"
+      "css": ".ds-sticker{display:inline-flex;gap:6px;padding:4px 10px;border:2px solid #146c43;border-radius:6px;background:#ddf3e9;color:#146c43;font:800 .875rem 'Parkinsans','Plus Jakarta Sans',sans-serif;letter-spacing:.025em;text-transform:uppercase;rotate:-3deg} .ds-sticker-loss{background:#c4361e;border-color:#c4361e;color:#fff}"
     },
     {
-      "name": "Total Pill",
-      "kind": "card",
+      "name": "Sheet",
+      "kind": "container",
       "refersTo": "sheet",
-      "description": "Closing total of an arithmetic block on a sheet.",
-      "html": "<div class=\"ds-total\"><span>= Untung bersih</span><b>Rp2.785.162</b></div>",
-      "css": ".ds-total{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:12px 16px;border-radius:16px;background:#ecedfb;color:#16173d;font:700 1.125rem 'Bricolage Grotesque',sans-serif} .ds-total b{font-size:1.5rem;font-variant-numeric:tabular-nums}"
-    },
-    {
-      "name": "Iklan Chapter",
-      "kind": "card",
-      "refersTo": "ads-chapter",
-      "description": "Coral chapter card in Rekap summarising the month's ads.",
-      "html": "<section class=\"ds-ads\"><p>Bab 3 · Iklan Juli 2026</p><h2>Iklan rugi Rp283 ribu. 4 iklan sebaiknya dimatikan.</h2></section>",
-      "css": ".ds-ads{background:#c4361e;color:#fff;border-radius:32px;padding:36px} .ds-ads p{margin:0;color:#ffe4dc;font:700 1.125rem 'Bricolage Grotesque',sans-serif} .ds-ads h2{margin:8px 0 0;font:700 3rem/1.1 'Bricolage Grotesque',sans-serif;letter-spacing:-.025em}"
-    },
-    {
-      "name": "Bottom Bar",
-      "kind": "nav",
-      "refersTo": "bottom-bar-marker",
-      "description": "Phone/iPad navigation: six cells on Field Deep with a lime marker.",
-      "html": "<nav class=\"ds-bar\"><a class=\"is-active\"><i></i>Rekap</a><a><i></i>Iklan</a><a><i></i>Simulasi</a></nav>",
-      "css": ".ds-bar{display:grid;grid-template-columns:repeat(3,1fr);background:#1d2079} .ds-bar a{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:56px;justify-content:center;color:#c3c5f2;font:600 .75rem 'Public Sans',sans-serif} .ds-bar i{width:48px;height:28px;border-radius:9999px} .ds-bar a.is-active{color:#f6f4ff} .ds-bar a.is-active i{background:#d7f45a}"
+      "description": "White sheet on the cream page.",
+      "html": "<section class=\"ds-sheet\"><h2>Biaya September 2026</h2></section>",
+      "css": ".ds-sheet{background:#fff;border-radius:24px;padding:28px;box-shadow:0 0 0 1px #ece2d4,0 1px 2px rgba(28,25,23,.06),0 14px 34px -14px rgba(28,25,23,.28)} .ds-sheet h2{font:700 1.25rem 'Parkinsans','Plus Jakarta Sans',sans-serif;margin:0}"
     }
   ],
   "narrative": {
-    "northStar": "Cerita Bulan Ini (this month's story)",
+    "northStar": "Cerita Bulan Ini, in the HitungCuan landing's \"Dapur Terang\" skin",
     "keyCharacteristics": [
-      "One committed ink-blue field for the whole page; white sheets for the work.",
-      "Every page answers first in a sentence; the figure the reader came for is lime (coral-soft for a loss).",
-      "Rekap is told in chapters: Untung, Dari mana angkanya, Iklan, Pesanan & produk.",
-      "Verdicts are colour stickers that pop on; real results get a small paper-confetti burst.",
-      "Standard, pill-shaped controls at 44px; all motion off under reduced motion."
+      "Warm cream page, white sheets with one soft shadow and a line ring.",
+      "Every page answers first in a sentence; the key word sits on the indigo-tint band, the figure is gain or loss.",
+      "Rekap is told in chapters: Untung bersih, Dari mana angkanya, Iklan, Pesanan & produk.",
+      "One indigo accent for the primary action, links, kickers and focus; selected states are filled ink.",
+      "Verdicts are stamp stickers (word + icon); no confetti, no word-by-word headlines."
     ],
     "rules": [
       {
-        "name": "The Field-and-Sheet Rule",
+        "name": "The Shared-Token Rule",
         "section": "colors",
-        "body": "On the field use On Field colours inside an `on-field` wrapper; on sheets use the ink scale. Never mix."
+        "body": "Palette values are identical to the landing (hitung-cuan src/index.css); change both or neither."
       },
       {
         "name": "The Answer-First Rule",
         "section": "layout",
-        "body": "Every page states its answer as a sentence on the field before any table; a rounded figure is always followed by the exact one."
+        "body": "Every page states its answer as a sentence before any table; a rounded figure is always followed by the exact one."
       },
       {
         "name": "The One-Answer Rule",
@@ -219,9 +202,9 @@
         "body": "One answer per chapter. No grids of metric tiles."
       },
       {
-        "name": "The Loss-Contrast Rule",
+        "name": "The Accent-Is-Not-Status Rule",
         "section": "colors",
-        "body": "Losses on the field use Coral Soft (5:1); deep Coral is only a background with white text (5.4:1)."
+        "body": "Indigo never means untung, rugi or perlu perhatian; status colours never decorate."
       },
       {
         "name": "The Earned-Motion Rule",
