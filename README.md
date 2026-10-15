@@ -201,6 +201,9 @@ npm run build                # build production ke dist/
 ```
 
 - Fixture test (data **dummy**) ada di `tests/fixtures/`, dibuat ulang dengan `npm run fixtures`.
+- Data sample toko testing (palsu, 2 bulan: pesanan, penghasilan, iklan, SQL isi HPP):
+  `npm run sample -- "Nama Toko"` → folder `sample-store/` (di-gitignore). Urutan upload dan hasil
+  yang seharusnya muncul ada di `sample-store/BACA-DULU.txt`.
 - Untuk menguji dengan file Shopee asli, taruh file di folder `sample-data/` (sudah di-gitignore,
   **jangan pernah di-commit**). `tests/sampleData.local.test.ts` otomatis berjalan kalau folder itu
   ada, dan dilewati kalau tidak ada.
