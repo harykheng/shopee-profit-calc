@@ -410,6 +410,42 @@ Selama `multi-tenant` belum digabung ke `main`, deploy HitungCuan membangun bran
 - Perbaikan di `main` (mis. parser Shopee) dibawa ke HitungCuan dengan `git merge main` di branch
   `multi-tenant`.
 
+### Header keamanan (`dist/_headers`)
+
+`npm run build` menulis `dist/_headers`, yang dibaca Cloudflare (Workers maupun Pages) untuk setiap
+respons. Isinya dibuat di `vite.config.ts` (`headersFile`):
+
+- **Content-Security-Policy**: browser hanya menjalankan skrip dari domain aplikasi sendiri (tanpa
+  `eval`, tanpa skrip luar), dan hanya boleh mengirim data ke origin `VITE_SUPABASE_URL` build ini.
+  Kalau suatu saat ada celah yang menyisipkan skrip, skrip itu tidak bisa mengirim data pelanggan ke
+  server lain.
+- **frame-ancestors 'none' / X-Frame-Options DENY**: aplikasi tidak bisa dipasang di dalam iframe situs
+  lain (mencegah halaman palsu yang menipu pelanggan menekan tombol).
+- `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (kamera, mikrofon, lokasi,
+  pembayaran dimatikan), `Cross-Origin-Opener-Policy`, dan HSTS 1 tahun (tanpa subdomain lain).
+- File ber-hash di `/assets/*` disimpan browser selamanya; `index.html` tetap selalu dicek ulang,
+  jadi deploy baru langsung terpakai.
+
+Yang perlu diingat:
+
+- **Mengganti project Supabase = build ulang.** CSP mengunci origin dari `VITE_SUPABASE_URL` saat
+  build. Variabel ini memang sudah harus diisi di Build variables; kalau kosong, CSP memakai
+  `*.supabase.co` (domain kustom Supabase akan diblokir).
+- **Menambah layanan luar** (analytics, font CDN, gambar dari domain lain, Sentry) akan **diblokir**
+  sampai domainnya ditambahkan di `headersFile`. Gejalanya: error "Refused to connect/load … Content
+  Security Policy" di console browser.
+- Vercel tidak membaca `_headers`. Deploy di Vercel tetap jalan, hanya tanpa header ini.
+
+Cek setelah deploy (dari komputermu, bukan dari aplikasi):
+
+```bash
+curl -sI https://app.studioharel.id/ | grep -i 'content-security-policy\|x-frame-options\|strict-transport'
+```
+
+Ketiga baris harus muncul, dan `connect-src` harus berisi URL project Supabase HitungCuan (bukan
+`*.supabase.co`). Lalu buka aplikasi, login, buka Rekap, dan upload satu PDF penghasilan: console
+browser (F12) tidak boleh menampilkan error "Content Security Policy".
+
 ### Project keluarga
 
 Cukup jalankan `20261012000000_multi_tenant.sql` sekali di project lama (cadangkan database
@@ -441,6 +477,7 @@ aman: seed tidak menambah apa pun.
       upload dan perubahan data ditolak.
 - [ ] **File asli calon pelanggan sudah diuji** (lihat bagian di bawah).
 - [ ] Signup publik mati, dan tidak ada `service_role` key di variabel hosting atau di git.
+- [ ] **Header keamanan aktif** di domain produksi (perintah `curl` di bagian "Header keamanan").
 - [ ] Sudah berlatih `admin_add_customer` dan memperpanjang lewat SQL.
 
 ### Uji pemisahan data antar-toko
