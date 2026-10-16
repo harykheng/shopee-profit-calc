@@ -197,4 +197,4 @@ bertanya, dan jangan memulihkan cadangan lama tanpa memeriksa apakah ada toko ya
 | Awal bulan | Lihat siapa yang belum mengunggah data bulan lalu (kartu pengingat di aplikasi menolong pelanggan; kamu bisa mengingatkan lewat WhatsApp) |
 | Sebelum langganan habis | Hubungi pelanggan; banner pengingat di aplikasi muncul 7 hari sebelumnya |
 | Sebulan sekali | `select public.admin_purge_client_errors(90);` dan tinjau akun yatim |
-| Setiap migration baru | Jalankan berurutan, lalu cek `client_error_summary` beberapa jam kemudian |
+| Setiap migration baru | Jalankan berurutan, lalu jalankan `supabase/uji-pemisahan-toko.sql` di SQL Editor (harus `0 gagal, 0 perlu dicek`; tidak mengubah data). Cek `client_error_summary` beberapa jam kemudian |
