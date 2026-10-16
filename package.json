@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b",
     "fixtures": "node scripts/make-fixtures.mjs",
-    "sample": "node scripts/make-sample-store.mjs"
+    "sample": "node scripts/make-sample-store.mjs",
+    "check:tenants": "node --env-file-if-exists=.env.local scripts/check-tenant-isolation.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

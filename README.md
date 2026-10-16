@@ -435,12 +435,68 @@ aman: seed tidak menambah apa pun.
       "Minta hapus data & akun" disembunyikan (pelanggan tidak punya jalur kontak). Cek:
       buka halaman login, klik "Lupa password?", harus membuka WhatsApp ke nomormu. Build produksi
       juga menulis peringatan di console browser kalau variabel ini kosong.
-- [ ] Dua akun uji dengan dua toko: masing-masing hanya melihat tokonya sendiri.
+- [ ] **Uji pemisahan data antar-toko lulus** (`npm run check:tenants`, lihat bagian di bawah).
+      Ulangi setiap kali ada migration baru.
 - [ ] Toko dengan `active_until` kemarin menampilkan Rekap baca-saja dengan banner "Langganan habis";
       upload dan perubahan data ditolak.
 - [ ] **File asli calon pelanggan sudah diuji** (lihat bagian di bawah).
 - [ ] Signup publik mati, dan tidak ada `service_role` key di variabel hosting atau di git.
 - [ ] Sudah berlatih `admin_add_customer` dan memperpanjang lewat SQL.
+
+### Uji pemisahan data antar-toko
+
+Semua pelanggan memakai satu database. Yang memisahkan data toko A dari toko B hanyalah aturan
+RLS di database. Membaca SQL migration tidak membuktikan aturan itu benar-benar aktif di project
+yang sedang jalan (misalnya kalau satu migration terlewat, atau ada view yang dibuat ulang tanpa
+`security_invoker`). Skrip `scripts/check-tenant-isolation.mjs` mengujinya langsung: login sebagai
+akun A lalu mencoba membobol toko B.
+
+1. Buat **dua akun tes** dengan cara yang sama seperti pelanggan (bagian d), mis.
+   `tes-a@domainmu.id` → "Toko Tes A" dan `tes-b@domainmu.id` → "Toko Tes B". Jangan pakai akun
+   pelanggan sungguhan, dan jangan jadikan kedua akun anggota toko yang sama.
+2. Isi toko B dengan data supaya ada yang bisa "dicuri": `npm run sample -- "Toko Tes B"`, login
+   sebagai akun B, lalu upload isi folder `sample-store/` (urutannya ada di `BACA-DULU.txt`). Toko
+   yang kosong tetap diuji, tapi cek baca per tabel jadi DILEWATI.
+3. Isi `.env.local` (atau variabel shell) lalu jalankan:
+
+   ```bash
+   # .env.local sudah berisi VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY project HitungCuan
+   TEST_A_EMAIL=tes-a@domainmu.id TEST_A_PASSWORD=... \
+   TEST_B_EMAIL=tes-b@domainmu.id TEST_B_PASSWORD=... \
+   npm run check:tenants
+   ```
+
+   Butuh Node 22.9 atau lebih baru. Hanya anon key yang dipakai, sama seperti di browser
+   pelanggan; jangan pernah isi `service_role` key di sini.
+
+Yang dicoba sebagai akun A: membaca semua tabel dan view toko B, mengubah dan menghapus satu baris
+penanda di toko B, menulis biaya, kategori, penghasilan, dan pesanan ke toko B (langsung maupun
+lewat fungsi upload), menambahkan dirinya sebagai anggota toko B, memperpanjang langganannya sendiri,
+membaca laporan error, dan memanggil fungsi `admin_*`. Juga membaca tanpa login sama sekali.
+
+Cara membaca hasilnya:
+
+| Status | Artinya | Yang dilakukan |
+|---|---|---|
+| **LULUS** | Percobaan ditolak atau hasilnya kosong | Tidak ada |
+| **GAGAL** | Percobaan berhasil: ada celah | Jangan terima pelanggan dulu. Cek migration yang terlewat untuk tabel itu |
+| **CEK** | Ditolak dengan error lain, jadi belum terbukti aman | Baca pesannya. Biasanya koneksi, atau migration belum dijalankan |
+| **DILEWATI** | Tidak ada data toko B untuk dicoba | Isi toko B (langkah 2) lalu ulangi |
+
+Kode keluar 0 hanya kalau tidak ada GAGAL dan CEK. Skrip menulis satu baris biaya bulan
+**Januari 1999** di toko B (lewat akun B sendiri) sebagai penanda, lalu menghapusnya di akhir. Setiap
+tulisan percobaan yang ternyata tembus juga dihapus, dan `active_until` toko A dikembalikan kalau
+sempat berubah. Fungsi admin hanya dipanggil dengan argumen yang tidak bisa merusak (hapus toko
+dalam mode hitung saja, dengan nama toko yang sengaja salah). Kalau skrip terputus di tengah jalan,
+hapus sisa penanda lewat SQL Editor (ganti angka dengan `store_id` kedua toko tes):
+
+```sql
+delete from public.expenses where store_id in (11, 12) and month = '1999-01-01';
+delete from public.income where store_id in (11, 12) and released_date = '1999-01-01';
+delete from public.order_items where store_id in (11, 12) and order_no = 'uji-pemisahan-toko';
+delete from public.products where store_id in (11, 12) and sku = 'uji-pemisahan-toko';
+delete from public.fee_categories where store_id in (11, 12) and name = 'uji-pemisahan-toko';
+```
 
 ### Menguji file asli calon pelanggan
 
