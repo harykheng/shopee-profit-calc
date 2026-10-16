@@ -212,13 +212,25 @@ npm run build                # build production ke dist/
 
 ### SheetJS
 
-SheetJS saat ini memakai `xlsx@0.18.5` dari npm. Versi resmi terbaru hanya tersedia dari CDN
-SheetJS; untuk pindah ke versi resmi jalankan:
+`xlsx` (SheetJS) membaca export pesanan (.xlsx) di halaman Upload, dan dipakai
+`scripts/make-fixtures.mjs` serta `scripts/make-sample-store.mjs` untuk membuat file contoh.
+
+Registry npm berhenti di `xlsx@0.18.5`, yang punya celah keamanan (prototype pollution dan ReDoS).
+Versi resmi terbaru hanya ada di CDN SheetJS, jadi paketnya **disimpan di repo**:
+`vendor/xlsx-0.20.3.tgz` (dari `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`), dengan
+`"xlsx": "file:vendor/xlsx-0.20.3.tgz"` di `package.json`. Build di Cloudflare tidak bergantung pada
+CDN SheetJS.
+
+Upgrade ke versi berikutnya: unduh `https://cdn.sheetjs.com/xlsx-X.Y.Z/xlsx-X.Y.Z.tgz`, taruh di
+`vendor/`, hapus tgz lama, lalu:
 
 ```bash
-npm install https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+npm install ./vendor/xlsx-X.Y.Z.tgz
 npm test
 ```
+
+Jangan menjalankan `npm install xlsx` atau `npm update xlsx` tanpa path: perintah itu mengembalikan
+paket ke 0.18.5 dari registry npm.
 
 ## 6. Privasi data
 
