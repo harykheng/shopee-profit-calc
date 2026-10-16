@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
-import { Alert, ErrorBox, Spinner } from './components/ui'
+import type { Session, User } from '@supabase/supabase-js'
+import { Alert, Brand, Card, ErrorBox, Spinner, Stamp, SupportLink, WhatsAppButton } from './components/ui'
+import { MonthlyReminderCard } from './components/MonthlyReminder'
+import { SupportButton } from './components/SupportButton'
+import { APP_NAME, hasSupportWhatsApp, isHitungCuan } from './lib/brand'
+import { formatDate } from './lib/format'
+import { expiryNotice, subscriptionStatus } from './lib/subscription'
+import { needsPasswordChange } from './lib/password'
+import { setErrorContext } from './lib/reportError'
 import { fetchStores } from './lib/api'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import type { Store } from './lib/types'
@@ -10,10 +17,11 @@ import { HppPage } from './pages/HppPage'
 import { ExpensesPage } from './pages/ExpensesPage'
 import { RecapPage } from './pages/RecapPage'
 import { AdsPage } from './pages/AdsPage'
+import { AccountPage } from './pages/AccountPage'
 import { PriceSimPage } from './pages/PriceSimPage'
 import { ROUTES, readHash, type Route } from './lib/router'
 import { useActiveIndicator } from './components/motion'
-import { IconCalculator, IconChevronDown, IconLogout, IconMegaphone, IconReceipt, IconStore, IconTag, IconUpload, IconWallet } from './components/icons'
+import { IconCalculator, IconChevronDown, IconLogout, IconMegaphone, IconReceipt, IconStore, IconTag, IconUpload, IconUser, IconWallet } from './components/icons'
 
 // Hasil dulu (Rekap, Iklan, Simulasi), lalu input bulanan (Upload, HPP, Biaya).
 const NAV_ORDER: Route[] = ['rekap', 'iklan', 'simulasi', 'upload', 'hpp', 'biaya']
@@ -22,6 +30,7 @@ const NAV_ICONS: Record<Route, typeof IconUpload> = {
   rekap: IconReceipt,
   iklan: IconMegaphone,
   simulasi: IconCalculator,
+  akun: IconUser,
   upload: IconUpload,
   hpp: IconTag,
   biaya: IconWallet,
@@ -37,13 +46,13 @@ function NavLink({ route, current, variant }: { route: Route; current: boolean; 
         href={`#/${route}`}
         aria-current={current ? 'page' : undefined}
         className={`relative flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-semibold transition duration-[260ms] active:scale-95 ${
-          current ? 'text-on-field' : 'text-on-field-muted hover:text-on-field'
+          current ? 'text-ink' : 'text-ink-3 hover:text-ink'
         }`}
       >
         <span
           data-pill
           className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-[260ms] ${
-            current ? 'text-field-deep' : ''
+            current ? 'text-paper' : ''
           }`}
         >
           <Icon size={18} />
@@ -56,8 +65,8 @@ function NavLink({ route, current, variant }: { route: Route; current: boolean; 
     <a
       href={`#/${route}`}
       aria-current={current ? 'page' : undefined}
-      className={`relative flex min-h-10 items-center gap-2 whitespace-nowrap rounded-full px-4 font-semibold transition-colors duration-[260ms] ${
-        current ? 'text-field' : 'text-on-field-muted hover:text-on-field'
+      className={`relative flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-3 font-semibold transition-colors duration-[260ms] ${
+        current ? 'text-paper' : 'text-ink-2 hover:text-ink'
       }`}
     >
       <Icon size={17} />
@@ -110,10 +119,12 @@ export default function App() {
   }
   if (!authReady) return <Spinner />
   if (!session) return <LoginPage />
-  return <MainApp email={session.user.email ?? ''} />
+  return <MainApp user={session.user} />
 }
 
-function MainApp({ email }: { email: string }) {
+function MainApp({ user }: { user: User }) {
+  const email = user.email ?? ''
+  const mustChangePassword = needsPasswordChange(user)
   const [{ route, params }, setLocation] = useState(readHash)
   const topRef = useRef<HTMLElement>(null)
   const barRef = useRef<HTMLElement>(null)
@@ -152,16 +163,27 @@ function MainApp({ email }: { email: string }) {
     saveStoreId(id)
   }
 
+  const selectedStore = stores?.find((s) => s.id === storeId) ?? null
+  // Laporan error hanya membawa toko yang terbukti milik akun ini (id dari localStorage bisa basi).
+  useEffect(() => setErrorContext({ storeId: selectedStore ? selectedStore.id : null }), [selectedStore])
+  const subscription = subscriptionStatus(selectedStore?.active_until)
+  // Layar penuh menggantikan semua halaman: belum punya toko, atau langganan toko terpilih habis.
+  const expired = subscription.state === 'expired' && selectedStore !== null
+  // Menu disembunyikan kalau belum punya toko, atau langganan habis (saat itu hanya Rekap, baca saja).
+  const blocked = stores !== null && (stores.length === 0 || expired)
+  const notice = expiryNotice(subscription)
+
+  // Pemilih toko hanya muncul kalau user punya lebih dari satu toko.
   const storeSelect =
-    stores && stores.length > 0 ? (
-      <label className="min-w-0">
+    stores && stores.length > 1 ? (
+      <label className="min-w-[9.5rem] shrink">
         <span className="sr-only">Toko</span>
         <span className="relative block">
-          <IconStore size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-field-muted" />
+          <IconStore size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-accent" />
           <select
             value={storeId ?? ''}
             onChange={(e) => setStoreId(Number(e.target.value))}
-            className="min-h-10 w-full max-w-[12rem] cursor-pointer appearance-none truncate rounded-full border border-on-field/35 bg-transparent pl-9 pr-8 font-semibold text-on-field transition-colors hover:border-on-field/70 [&>option]:text-ink"
+            className="min-h-11 w-full max-w-[13rem] cursor-pointer appearance-none truncate rounded-full border border-control bg-paper pl-9 pr-8 font-semibold text-ink transition-colors hover:border-ink"
           >
             {stores.map((s) => (
               <option key={s.id} value={s.id}>
@@ -169,22 +191,54 @@ function MainApp({ email }: { email: string }) {
               </option>
             ))}
           </select>
-          <IconChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-field-muted" />
+          <IconChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-3" />
         </span>
       </label>
     ) : null
 
   return (
     <div className="min-h-screen pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
-      <header className="on-field sticky top-0 z-10 bg-field/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <a href="#/rekap" className="shrink-0 font-display text-xl font-bold tracking-tight text-on-field max-sm:sr-only">
-            Profit Shopee
+      <SupportButton
+        context={{
+          email,
+          storeName: selectedStore?.name,
+          page: ROUTES.find((r) => r.route === route)?.label,
+        }}
+      />
+      <header className="sticky top-0 z-10 border-b border-line bg-canvas/95 backdrop-blur-md">
+        {/* Selalu tampil (ikut menempel di atas) sampai pelanggan mengganti password dari pengelola. */}
+        {mustChangePassword && route !== 'akun' && (
+          <div role="region" aria-label="Pengingat ganti password" className="bg-sun text-ink">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
+              <p className="min-w-0 flex-1 font-semibold">
+                Kamu masih memakai password dari pengelola. Ganti sekarang supaya akunmu aman.
+              </p>
+              <a
+                href="#/akun"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-ink px-5 font-semibold text-paper transition-transform active:translate-y-px"
+              >
+                Ganti password
+              </a>
+            </div>
+          </div>
+        )}
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
+          <a href="#/rekap" aria-label={`${APP_NAME}, ke Rekap`} className="inline-flex min-h-11 shrink-0 items-center rounded-md">
+            {/* Logo HitungCuan menyusut jadi tandanya saja di HP dan di 1024-1279px (menu ikut di bar atas), supaya
+                nama toko tetap terbaca. */}
+            {isHitungCuan ? (
+              <>
+                <img src="/logo/mark.svg" alt="" width={28} height={28} className="size-7 sm:hidden lg:block xl:hidden" />
+                <Brand className="max-sm:hidden lg:max-xl:hidden" />
+              </>
+            ) : (
+              <Brand className="max-sm:sr-only" />
+            )}
           </a>
           {storeSelect}
-          <nav ref={topRef} aria-label="Menu utama" className="relative ml-auto hidden lg:block">
+          <nav ref={topRef} aria-label="Menu utama" className={`relative ml-auto hidden ${blocked ? '' : 'lg:block'}`}>
             {topIndicator && (
-              <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-on-field" style={topIndicator} />
+              <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-ink" style={topIndicator} />
             )}
             <ul className="flex gap-1">
               {NAV_ORDER.map((r) => (
@@ -194,15 +248,28 @@ function MainApp({ email }: { email: string }) {
               ))}
             </ul>
           </nav>
-          <button
-            type="button"
-            onClick={() => supabase.auth.signOut()}
-            title={`Keluar (${email})`}
-            className="ml-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-field-muted transition-colors hover:bg-white/10 hover:text-on-field lg:ml-1"
-          >
-            <IconLogout size={19} />
-            <span className="sr-only">Keluar</span>
-          </button>
+          <div className={`ml-auto flex shrink-0 items-center gap-1 ${blocked ? '' : 'lg:ml-1'}`}>
+            <a
+              href="#/akun"
+              aria-current={route === 'akun' ? 'page' : undefined}
+              title={`Akun (${email})`}
+              className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
+                route === 'akun' ? 'bg-ink text-paper' : 'text-ink-2 hover:bg-tint hover:text-ink'
+              }`}
+            >
+              <IconUser size={19} />
+              <span className="sr-only">Akun</span>
+            </a>
+            <button
+              type="button"
+              onClick={() => supabase.auth.signOut()}
+              title={`Keluar (${email})`}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors hover:bg-tint hover:text-ink"
+            >
+              <IconLogout size={19} />
+              <span className="sr-only">Keluar</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -210,10 +277,11 @@ function MainApp({ email }: { email: string }) {
       <nav
         ref={barRef}
         aria-label="Menu utama"
-        className="on-field fixed inset-x-0 bottom-0 z-10 bg-field-deep pb-[env(safe-area-inset-bottom)] lg:hidden"
+        hidden={blocked}
+        className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
       >
         {barIndicator && (
-          <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-lime" style={barIndicator} />
+          <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-ink" style={barIndicator} />
         )}
         <ul className="mx-auto grid max-w-2xl grid-cols-6 px-1">
           {NAV_ORDER.map((r) => (
@@ -225,12 +293,31 @@ function MainApp({ email }: { email: string }) {
       </nav>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-        {storesError ? (
+        {route === 'akun' ? (
+          <div className="page-in">
+            <AccountPage email={email} mustChange={mustChangePassword} stores={stores} storeId={storeId} readOnly={expired} />
+          </div>
+        ) : storesError ? (
           <ErrorBox error={storesError} />
         ) : !stores ? (
           <Spinner />
+        ) : stores.length === 0 ? (
+          <NoStoreScreen />
+        ) : expired && selectedStore ? (
+          <div className="page-in space-y-6">
+            <ExpiredBanner storeName={selectedStore.name} activeUntil={subscription.activeUntil} />
+            <RecapPage stores={stores} storeId={storeId} readOnly />
+          </div>
         ) : (
+          <>
+            {/* Di luar pembungkus per-halaman supaya tidak berkedip tiap pindah halaman. */}
+            {storeId !== null && <MonthlyReminderCard storeId={storeId} route={route} />}
           <div key={route} className="page-in">
+            {notice && selectedStore && (
+              <div className="mb-6">
+                <ExpiryReminder storeName={selectedStore.name} showStore={stores.length > 1} notice={notice} activeUntil={subscription.activeUntil} />
+              </div>
+            )}
             {route === 'upload' && <UploadPage stores={stores} storeId={storeId} />}
             {route === 'hpp' && (
               <HppPage
@@ -252,8 +339,74 @@ function MainApp({ email }: { email: string }) {
             {route === 'iklan' && <AdsPage key={storeId} stores={stores} storeId={storeId} />}
             {route === 'simulasi' && <PriceSimPage stores={stores} storeId={storeId} />}
           </div>
+          </>
         )}
       </main>
     </div>
+  )
+}
+
+/** Belum bisa memakai aplikasi: jawabannya dulu, lalu satu jalan keluar (chat pengelola). */
+function NoStoreScreen() {
+  return (
+    <div className="mx-auto max-w-xl py-4 sm:py-10">
+      <Card>
+        <Stamp tone="warn">Belum ada toko</Stamp>
+        <h1 className="mt-5 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+          Akunmu belum terhubung ke toko.
+        </h1>
+        <p className="mt-3 text-lg leading-relaxed text-ink-2">
+          Pengelola perlu menghubungkan akunmu ke tokomu dulu. Setelah itu, muat ulang halaman ini.
+        </p>
+        <WhatsAppButton className="mt-6" message={`Halo, akun ${APP_NAME} saya belum terhubung ke toko.`}>
+          Chat pengelola
+        </WhatsAppButton>
+      </Card>
+    </div>
+  )
+}
+
+function renewMessage(storeName: string) {
+  return `Halo, saya ingin memperpanjang langganan ${APP_NAME} untuk toko ${storeName}.`
+}
+
+/** Pengingat beberapa hari sebelum langganan habis. */
+function ExpiryReminder({
+  storeName,
+  showStore,
+  notice,
+  activeUntil,
+}: {
+  storeName: string
+  showStore: boolean
+  notice: string
+  activeUntil: string | null
+}) {
+  return (
+    <Alert tone="warning" title={`Langganan ${showStore ? `toko ${storeName} ` : ''}${notice} (${formatDate(activeUntil)}).`}>
+      <p>Setelah habis, data tetap aman dan bisa dilihat di Rekap, tapi upload dan perubahan data dimatikan.</p>
+      {hasSupportWhatsApp && (
+        <p className="mt-2">
+          <SupportLink message={renewMessage(storeName)}>Perpanjang lewat WhatsApp</SupportLink>
+        </p>
+      )}
+    </Alert>
+  )
+}
+
+/** Langganan habis: data tetap bisa dilihat (Rekap, baca saja), mengubah data tidak. */
+function ExpiredBanner({ storeName, activeUntil }: { storeName: string; activeUntil: string | null }) {
+  return (
+    <Alert tone="warning" title={`Langganan ${APP_NAME} toko ${storeName} habis pada ${formatDate(activeUntil)}.`}>
+      <p>
+        Data kamu aman dan tetap bisa dilihat di Rekap di bawah. Upload, HPP, biaya, iklan, dan simulasi aktif lagi
+        setelah langganan diperpanjang.
+      </p>
+      {hasSupportWhatsApp && (
+        <p className="mt-2">
+          <SupportLink message={renewMessage(storeName)}>Perpanjang lewat WhatsApp</SupportLink>
+        </p>
+      )}
+    </Alert>
   )
 }

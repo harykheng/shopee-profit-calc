@@ -1,14 +1,14 @@
 // Simulasi grup iklan: beberapa produk dengan SATU target ROAS (Iklan Grup Shopee).
 // Semua dihitung di browser; grup tidak disimpan.
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Button, Card, ErrorBox } from '../components/ui'
-import { IconSearch } from '../components/icons'
+import { Alert, Button, Card, ErrorBox, inputClass } from '../components/ui'
+import { IconAlertCircle, IconPlus, IconSearch } from '../components/icons'
 import { RupiahInput } from '../components/pickers'
-import { WordsRise } from '../components/motion'
-import { XTRA_FEE_RATE, profitAtRoas, simulateAdGroup } from '../lib/adsMath'
+import { XTRA_FEE_RATE, profitAtRoas, simulateAdGroup, type Targets } from '../lib/adsMath'
 import { fetchItemsCreatedBetween, fetchLastSalePrice, fetchLatestOrderDate } from '../lib/api'
 import { formatMonth, formatNumber, formatPercent, formatRupiah, monthEnd, wibDay } from '../lib/format'
-import type { Product } from '../lib/types'
+import { effectiveAdminPct } from '../lib/feeCategories'
+import type { FeeCategory, Product } from '../lib/types'
 import { DEFAULTS, DecimalInput, Field, Result, TOO_THIN, decimal, formatRoas, roundUp2 } from './simShared'
 
 interface GroupRow {
@@ -52,7 +52,18 @@ async function loadSales(storeId: number): Promise<Sales | null> {
 
 let nextKey = 0
 
-export function AdGroupSim({ storeId, products }: { storeId: number | null; products: Product[] | null }) {
+export function AdGroupSim({
+  storeId,
+  products,
+  categories,
+  targets,
+}: {
+  storeId: number | null
+  products: Product[] | null
+  categories: FeeCategory[]
+  targets: Targets
+}) {
+  const adsPct = formatPercent(targets.adsProfit * 100)
   const [rows, setRows] = useState<GroupRow[]>([])
   const [processFee, setProcessFee] = useState<number | null>(DEFAULTS.processFee)
   const [packaging, setPackaging] = useState<number | null>(DEFAULTS.packaging)
@@ -102,7 +113,7 @@ export function AdGroupSim({ storeId, products }: { storeId: number | null; prod
       const known = variants.map((v) => v.hpp).filter((h): h is number => h !== null).map(Number)
       if (known.length > 0) hpp = known.reduce((s, h) => s + h, 0) / known.length
     }
-    const withFees = variants.find((v) => v.admin_pct !== null && v.admin_pct !== undefined)
+    const withFees = variants.find((v) => effectiveAdminPct(v, categories) !== null)
     const key = `p${nextKey++}`
     setRows((r) => [
       ...r,
@@ -112,7 +123,7 @@ export function AdGroupSim({ storeId, products }: { storeId: number | null; prod
         manual: false,
         price: sold ? Math.round(sold.gmv / sold.qty) : null,
         hpp: hpp === null ? null : Math.round(hpp),
-        adminPct: withFees ? Number(withFees.admin_pct) : DEFAULTS.adminPct,
+        adminPct: withFees ? (effectiveAdminPct(withFees, categories) ?? DEFAULTS.adminPct) : DEFAULTS.adminPct,
         xtra: withFees?.xtra ?? DEFAULTS.xtra,
         qty: sold ? sold.qty : null,
         note: sold
@@ -159,6 +170,7 @@ export function AdGroupSim({ storeId, products }: { storeId: number | null; prod
           })),
           processFee: processFee ?? 0,
           packaging: packaging ?? 0,
+          targets,
         })
       : null
   const target = group && group.recommendedRoas !== null ? roundUp2(group.recommendedRoas) : null
@@ -184,47 +196,48 @@ export function AdGroupSim({ storeId, products }: { storeId: number | null; prod
   return (
     <>
       {/* Jawabannya dulu. */}
-      <div className="on-field mb-8 text-on-field" aria-live="polite">
+      <div className="mb-8" aria-live="polite">
         {!group ? (
-          <p className="font-display text-2xl font-bold text-on-field-muted">
-            Pilih produk yang mau dijadikan satu grup iklan, nanti target ROAS grupnya muncul di sini.
+          <p className="max-w-3xl font-display text-2xl font-bold leading-snug text-ink-2 sm:text-3xl">
+            Pilih produk yang mau dijadikan satu grup iklan. Target ROAS grupnya muncul di sini.
           </p>
         ) : target === null ? (
           <>
-            <h2 className="font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
-              Grup ini <span className="text-coral-soft">tidak bisa untung 5%</span> setelah iklan.
+            <h2 className="font-display text-3xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">
+              Grup ini <span className="text-loss">tidak bisa untung {adsPct}</span> setelah iklan.
             </h2>
-            <p className="mt-3 text-lg text-on-field-muted">
+            <p className="mt-3 text-lg leading-relaxed text-ink-2">
               Untung per barangnya terlalu tipis. Naikkan harga, atau keluarkan produk yang ditandai merah dari grup.
             </p>
           </>
         ) : (
           <>
-            <h2 className="font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
-              <WordsRise text="Isi target ROAS grup:" /> <span className="num text-lime">{formatRoas(target)}</span>
+            <h2 className="font-display text-3xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">
+              Isi target ROAS grup: <span className="num hl">{formatRoas(target)}</span>
             </h2>
-            <p className="mt-3 max-w-3xl text-lg text-on-field-muted">
+            <p className="mt-3 max-w-3xl text-lg leading-relaxed text-ink-2">
               {group.recommended === 'safe'
-                ? `Target aman: setiap produk di grup tetap untung 5% setelah iklan, berapa pun porsi penjualannya. Dipakai karena ${
+                ? `Target aman: setiap produk di grup tetap untung ${adsPct} setelah iklan, berapa pun porsi penjualannya. Dipakai karena ${
                     group.hasUnknownQty ? 'ada produk yang porsi penjualannya belum diketahui' : 'porsi penjualan belum diisi'
                   }.`
-                : `Sesuai porsi penjualan${monthLabel ? ` ${monthLabel}` : ''}: grup secara keseluruhan untung 5% setelah iklan.`}
+                : `Sesuai porsi penjualan${monthLabel ? ` ${monthLabel}` : ''}: grup secara keseluruhan untung ${adsPct} setelah iklan.`}
               {group.recommended === 'mix' && group.safeTargetRoas !== null && (
                 <>
                   {' '}
-                  Kalau mau setiap produk aman: <b className="num text-on-field">{formatRoas(roundUp2(group.safeTargetRoas))}</b>.
+                  Kalau mau setiap produk aman: <b className="num text-ink">{formatRoas(roundUp2(group.safeTargetRoas))}</b>.
                 </>
               )}
             </p>
             {bottleneck && roundUp2(bottleneck.without) < roundUp2(group.safeTargetRoas as number) && (
-              <p className="mt-2 max-w-3xl text-on-field-muted">
-                Target aman ditentukan oleh <b className="text-on-field">{bottleneck.name}</b> (untungnya paling tipis). Kalau
-                produk ini dipisah ke grup/iklan sendiri, target aman grup jadi{' '}
-                <b className="num text-on-field">{formatRoas(roundUp2(bottleneck.without))}</b>.
+              <p className="mt-2 max-w-3xl leading-relaxed text-ink-2">
+                Target aman ditentukan oleh <b className="text-ink">{bottleneck.name}</b> (untungnya paling tipis). Kalau
+                produk ini dipisah ke grup atau iklan sendiri, target aman grup jadi{' '}
+                <b className="num text-ink">{formatRoas(roundUp2(bottleneck.without))}</b>.
               </p>
             )}
             {losers.length > 0 && (
-              <p className="mt-2 text-lg font-semibold text-coral-soft">
+              <p className="mt-2 flex items-center gap-2 text-lg font-semibold text-loss">
+                <IconAlertCircle size={20} className="shrink-0" />
                 {formatNumber(losers.length)} produk rugi di ROAS ini (ditandai di bawah).
               </p>
             )}
@@ -243,12 +256,13 @@ export function AdGroupSim({ storeId, products }: { storeId: number | null; prod
           />
           <div className="mt-3">
             <Button variant="secondary" onClick={addManual}>
-              + Produk baru (belum ada di data)
+              <IconPlus size={18} />
+              Produk baru (belum ada di data)
             </Button>
           </div>
 
           {rows.length === 0 ? (
-            <p className="mt-5 text-ink-muted">Belum ada produk. Cari di atas, atau tambah produk baru.</p>
+            <p className="mt-5 text-ink-2">Belum ada produk. Cari di atas, atau tambah produk baru.</p>
           ) : (
             <ul className="mt-5 space-y-4">
               {rows.map((r) => (
@@ -282,7 +296,7 @@ export function AdGroupSim({ storeId, products }: { storeId: number | null; prod
 
           {group && (
             <Card title="Target ROAS grup">
-              <dl className="divide-y divide-line/70">
+              <dl className="divide-y divide-line">
                 <Result
                   label="Sesuai porsi penjualan"
                   value={group.mixTargetRoas !== null ? formatRoas(roundUp2(group.mixTargetRoas)) : TOO_THIN}
@@ -291,7 +305,7 @@ export function AdGroupSim({ storeId, products }: { storeId: number | null; prod
                   hint={
                     group.hasUnknownQty
                       ? 'Produk yang porsinya belum diketahui dianggap laku rata-rata produk lain.'
-                      : 'Grup untung 5% setelah iklan kalau porsi penjualannya seperti ini.'
+                      : `Grup untung ${adsPct} setelah iklan kalau porsi penjualannya seperti ini.`
                   }
                 />
                 <Result
@@ -299,7 +313,7 @@ export function AdGroupSim({ storeId, products }: { storeId: number | null; prod
                   value={group.safeTargetRoas !== null ? formatRoas(roundUp2(group.safeTargetRoas)) : TOO_THIN}
                   bad={group.safeTargetRoas === null}
                   strong={group.recommended === 'safe'}
-                  hint="Setiap produk tetap untung 5% setelah iklan, berapa pun porsinya."
+                  hint={`Setiap produk tetap untung ${adsPct} setelah iklan, berapa pun porsinya.`}
                 />
                 <Result
                   label="Balik modal grup"
@@ -316,7 +330,7 @@ export function AdGroupSim({ storeId, products }: { storeId: number | null; prod
                   </Alert>
                 </div>
               )}
-              <p className="mt-3 text-sm text-ink-muted">
+              <p className="mt-3 text-sm text-ink-3">
                 Target dibulatkan ke atas. Belum termasuk cadangan pesanan batal (sama seperti Simulasi satu produk).
               </p>
             </Card>
@@ -343,7 +357,7 @@ function GroupRowCard({
   const after = result && target !== null ? profitAtRoas({ price: result.price, profit: result.row.profit }, target) : null
   const loses = after !== null && after < 0
   return (
-    <li className={`reveal rounded-2xl border p-4 ${loses ? 'border-loss/40 bg-loss-tint/60' : 'border-line bg-paper'}`}>
+    <li className={`reveal rounded-2xl p-4 ring-1 ${loses ? 'bg-loss-tint ring-loss/40' : 'bg-tint ring-line'}`}>
       <div className="flex items-start justify-between gap-3">
         {row.manual ? (
           <input
@@ -351,7 +365,7 @@ function GroupRowCard({
             onChange={(e) => onChange({ name: e.target.value })}
             placeholder="Nama produk baru"
             aria-label="Nama produk baru"
-            className="min-h-11 w-full rounded-xl border border-line bg-paper px-3 font-semibold text-ink placeholder:font-normal placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25"
+            className={`${inputClass} font-semibold placeholder:font-normal`}
           />
         ) : (
           <p className="line-clamp-2 font-semibold">{row.name}</p>
@@ -359,33 +373,33 @@ function GroupRowCard({
         <button
           type="button"
           onClick={onRemove}
-          className="min-h-11 shrink-0 rounded-full px-3 text-sm font-semibold text-ink-muted transition-colors hover:bg-counter hover:text-ink"
+          className="min-h-11 shrink-0 rounded-full px-3 text-sm font-semibold text-ink-2 underline decoration-ink-3/50 underline-offset-4 transition-colors hover:text-loss hover:decoration-loss"
         >
           Hapus
         </button>
       </div>
-      <p className="mt-1 text-sm text-ink-muted">{row.note}</p>
+      <p className="mt-1 text-sm text-ink-2">{row.note}</p>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <label className="block text-sm font-medium text-ink-soft">
+        <label className="block text-sm font-semibold text-ink-2">
           Harga jual
           <span className="mt-1 block">
             <RupiahInput value={row.price} onCommit={(v) => onChange({ price: v })} ariaLabel={`Harga jual ${row.name}`} />
           </span>
         </label>
-        <label className="block text-sm font-medium text-ink-soft">
+        <label className="block text-sm font-semibold text-ink-2">
           HPP
           <span className="mt-1 block">
             <RupiahInput value={row.hpp} onCommit={(v) => onChange({ hpp: v })} ariaLabel={`HPP ${row.name}`} />
           </span>
         </label>
-        <label className="block text-sm font-medium text-ink-soft">
+        <label className="block text-sm font-semibold text-ink-2">
           Biaya admin
           <span className="mt-1 block">
             <DecimalInput value={row.adminPct} onCommit={(v) => onChange({ adminPct: v })} ariaLabel={`Biaya admin ${row.name}`} suffix="%" />
           </span>
         </label>
-        <label className="block text-sm font-medium text-ink-soft">
+        <label className="block text-sm font-semibold text-ink-2">
           Terjual / bulan
           <span className="mt-1 block">
             <DecimalInput value={row.qty} onCommit={(v) => onChange({ qty: v })} ariaLabel={`Terjual per bulan ${row.name}`} optional placeholder="belum tahu" />
@@ -398,11 +412,11 @@ function GroupRowCard({
       </label>
 
       {result ? (
-        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 border-t border-line pt-3 text-sm">
+        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 border-t border-rule pt-3 text-sm">
           <span>
             Untung sebelum iklan{' '}
             <b className={`num ${result.row.profit > 0 ? 'text-gain' : 'text-loss'}`}>{formatRupiah(result.row.profit)}</b>
-            <span className="num text-ink-muted"> ({formatPercent(result.row.margin * 100)})</span>
+            <span className="num text-ink-3"> ({formatPercent(result.row.margin * 100)})</span>
           </span>
           <span>
             Target sendiri{' '}
@@ -414,10 +428,13 @@ function GroupRowCard({
               <b className="num">{formatRupiah(Math.abs(after))}</b> per order
             </span>
           )}
-          {result.row.weightEstimated && <span className="text-warn">Porsi belum diketahui, dianggap rata-rata.</span>}
+          {result.row.weightEstimated && <span className="font-semibold text-warn">Porsi belum diketahui, dianggap rata-rata.</span>}
         </div>
       ) : (
-        <p className="mt-2 border-t border-line pt-3 text-sm text-warn">Isi harga jual dan HPP supaya ikut dihitung.</p>
+        <p className="mt-2 flex items-center gap-1.5 border-t border-rule pt-3 text-sm font-semibold text-warn">
+          <IconAlertCircle size={16} className="shrink-0" />
+          Isi harga jual dan HPP supaya ikut dihitung.
+        </p>
       )}
     </li>
   )
@@ -448,7 +465,7 @@ function GroupPicker({
   return (
     <div>
       <div className="relative">
-        <IconSearch size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+        <IconSearch size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
         <input
           type="search"
           value={query}
@@ -456,12 +473,12 @@ function GroupPicker({
           placeholder={products && !disabled ? 'Ketik nama produk, mis. bedak' : 'Memuat produk…'}
           aria-label="Cari produk untuk grup"
           disabled={!products || disabled}
-          className="min-h-11 w-full rounded-xl border border-line bg-paper pl-10 pr-3 transition-colors placeholder:text-ink-muted hover:border-ink-muted focus:border-stamp focus:outline-none focus:ring-2 focus:ring-stamp/25"
+          className={`${inputClass} pl-10`}
         />
       </div>
       {query.trim() !== '' && (
-        <ul className="mt-3 max-h-80 divide-y divide-line/70 overflow-y-auto rounded-xl border border-line">
-          {results.length === 0 && <li className="p-3 text-ink-muted">Tidak ada produk yang cocok.</li>}
+        <ul className="mt-3 max-h-80 divide-y divide-line overflow-y-auto rounded-xl border border-control">
+          {results.length === 0 && <li className="p-3 text-ink-2">Tidak ada produk yang cocok.</li>}
           {results.slice(0, MAX_RESULTS).map((n) => (
             <li key={n}>
               <button
@@ -471,7 +488,7 @@ function GroupPicker({
                   setQuery('')
                   onPick(n)
                 }}
-                className="block min-h-11 w-full px-3 py-2 text-left hover:bg-stamp-tint disabled:cursor-default disabled:text-ink-muted disabled:hover:bg-transparent"
+                className="block min-h-11 w-full px-3 py-2 text-left hover:bg-tint disabled:cursor-default disabled:text-ink-3 disabled:hover:bg-transparent"
               >
                 <span className="line-clamp-2 font-medium">{n}</span>
                 {added.has(n) && <span className="text-sm">Sudah di grup</span>}
@@ -479,7 +496,7 @@ function GroupPicker({
             </li>
           ))}
           {results.length > MAX_RESULTS && (
-            <li className="p-3 text-sm text-ink-muted">{results.length - MAX_RESULTS} produk lain, ketik lebih spesifik.</li>
+            <li className="p-3 text-sm text-ink-2">{results.length - MAX_RESULTS} produk lain. Ketik lebih spesifik.</li>
           )}
         </ul>
       )}

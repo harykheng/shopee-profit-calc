@@ -80,7 +80,12 @@ export interface ProfitEstimate {
  * Kalau hari itu belum ada di laporan, dipakai rata-rata semua hari yang ada.
  * Mengembalikan null kalau belum ada laporan penghasilan sama sekali.
  */
-export function estimateProfit(items: EstimateItem[], days: DayIncome[]): ProfitEstimate | null {
+export function estimateProfit(
+  items: EstimateItem[],
+  days: DayIncome[],
+  /** Porsi barang retur yang bisa dijual lagi (0–1). 1 = semua kembali ke stok (modalnya tidak hilang). */
+  returnRecovery = 1,
+): ProfitEstimate | null {
   const ratio = new Map<string, number>()
   let sumInc = 0
   let sumSub = 0
@@ -111,9 +116,11 @@ export function estimateProfit(items: EstimateItem[], days: DayIncome[]): Profit
     // Uang barang retur dikembalikan ke pembeli, jadi hanya bagian yang tidak diretur yang jadi uang masuk.
     income += i.qty > 0 ? i.subtotal * (netQty / i.qty) * r : 0
     if (i.hpp === null) {
-      if (netQty > 0) missingHpp++
+      // Barang yang seluruhnya diretur juga butuh HPP kalau retur ikut jadi kerugian (returnRecovery < 1).
+      if (netQty > 0 || (i.returned_qty > 0 && returnRecovery < 1)) missingHpp++
     } else {
-      modal += netQty * i.hpp
+      // Barang retur yang tidak bisa dijual lagi menjadi kerugian modal (sama dengan hitungan di database).
+      modal += netQty * i.hpp + i.returned_qty * i.hpp * (1 - returnRecovery)
     }
   }
   income = Math.round(income)

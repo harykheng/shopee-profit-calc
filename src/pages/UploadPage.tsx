@@ -1,8 +1,8 @@
-import { useRef, useState, type ChangeEvent } from 'react'
-import { Alert, Button, Card, ErrorBox, PageTitle, Spinner, Stamp } from '../components/ui'
-import { IconStore, IconUpload } from '../components/icons'
-import { Confetti } from '../components/motion'
+import { useState, type ChangeEvent } from 'react'
+import { Alert, Button, Card, ErrorBox, PageTitle, ScrollX, Spinner, Stamp, buttonClass, linkClass } from '../components/ui'
+import { IconArrowRight, IconMegaphone, IconStore, IconUpload } from '../components/icons'
 import { fetchProducts, saveAdjustments, saveIncome, saveOrderItems } from '../lib/api'
+import { notifyDataChanged } from '../lib/events'
 import { navigate } from '../lib/router'
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from '../lib/format'
 import { ParseError, type ParseWarning } from '../lib/parsers/common'
@@ -36,6 +36,8 @@ export function UploadPage({
   const [inputKey, setInputKey] = useState(0)
 
   const store = stores.find((s) => s.id === storeId) ?? null
+  // Nama toko hanya ditampilkan kalau akun punya lebih dari satu toko (pemilih toko juga hanya ada saat itu).
+  const multiStore = stores.length > 1
 
   const onOrdersFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -114,6 +116,7 @@ export function UploadPage({
         }
       }
       setSummary(out)
+      notifyDataChanged()
       setOrders(null)
       setIncome(null)
       setInputKey((k) => k + 1)
@@ -126,38 +129,70 @@ export function UploadPage({
 
   return (
     <>
-      <PageTitle subtitle="Upload export pesanan dan/atau laporan penghasilan dari Shopee.">Upload</PageTitle>
+      <PageTitle
+        kicker={multiStore ? store?.name : undefined}
+        subtitle="Laporan dari Seller Centre Shopee. Upload file yang sama dua kali aman, datanya tidak akan dobel."
+      >
+        Upload laporan
+      </PageTitle>
 
-      <div className="on-field mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-3xl bg-white/10 px-5 py-4 text-on-field">
-        <IconStore size={22} className="text-lime" />
-        <span className="text-on-field-muted">Upload ke toko</span>
-        <strong className="font-display text-2xl font-bold">{store?.name ?? '-'}</strong>
-        <span className="text-sm text-on-field-muted">(ganti toko di pilihan Toko pada menu)</span>
-      </div>
+      {multiStore && (
+        <div className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-tint px-5 py-4 ring-1 ring-line">
+          <IconStore size={22} className="shrink-0 text-accent" />
+          <span className="text-ink-2">Disimpan ke toko</span>
+          <strong className="font-display text-xl font-extrabold">{store?.name ?? '-'}</strong>
+          <span className="text-sm text-ink-2">(ganti toko di bar atas)</span>
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
-        <Card title="1. Export pesanan (Excel)">
-          <p className="mb-3 text-ink-soft">Seller Centre → Pesanan Saya → Export, status <strong>Semua</strong>. File .xlsx</p>
+        <Card title="1. Export pesanan (.xlsx)">
+          <p className="mb-3 text-ink-2">
+            Seller Centre → Pesanan Saya → Export, status <strong className="text-ink">Semua</strong>.
+          </p>
           <FileInput key={`o${inputKey}`} accept=".xlsx,.xls" onChange={onOrdersFile} />
           <OrdersPreview parsed={orders} />
         </Card>
-        <Card title="2. Laporan penghasilan (PDF)">
-          <p className="mb-3 text-ink-soft">Keuangan → Penghasilan Saya → laporan bulanan. File .pdf</p>
+        <Card title="2. Laporan penghasilan (.pdf)">
+          <p className="mb-3 text-ink-2">Seller Centre → Keuangan → Penghasilan Saya → laporan bulanan.</p>
           <FileInput key={`i${inputKey}`} accept=".pdf,application/pdf" onChange={onIncomeFile} />
-          <IncomePreview parsed={income} store={store} />
+          <IncomePreview parsed={income} store={store} multiStore={multiStore} />
         </Card>
       </div>
 
+      {/* Data iklan bisa beberapa file per periode, jadi upload-nya tetap di halaman Iklan. */}
+      <section className="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:px-7">
+        <div className="flex min-w-0 items-start gap-3">
+          <IconMegaphone size={22} className="mt-1 shrink-0 text-accent" />
+          <div>
+            <h2 className="font-display text-xl font-bold tracking-tight">3. Data iklan (.csv)</h2>
+            <p className="mt-1 text-ink-2">
+              Kalau tokomu beriklan. Upload di halaman Iklan, karena tiap periode iklan terdiri dari beberapa file.
+            </p>
+          </div>
+        </div>
+        <a href="#/iklan" className={buttonClass('secondary')}>
+          Upload di halaman Iklan
+          <IconArrowRight size={18} />
+        </a>
+      </section>
+
       {(orders?.result || income?.result) && (
-        <Card title="3. Simpan" className="mb-6">
-          <p className="mb-4 text-ink-soft">
-            Data akan disimpan ke toko <strong>{store?.name ?? '(belum dipilih)'}</strong>. Upload file yang sama dua
-            kali aman — data tidak akan dobel.
+        <Card title="Simpan laporan" className="mb-6">
+          <p className="mb-4 text-ink-2">
+            {multiStore ? (
+              <>
+                Datanya disimpan ke toko <strong className="text-ink">{store?.name ?? '(belum dipilih)'}</strong>.
+              </>
+            ) : (
+              'Datanya disimpan ke akunmu.'
+            )}{' '}
+            File yang sama boleh di-upload lagi, datanya tidak akan dobel.
           </p>
           {saveError ? <div className="mb-4"><ErrorBox error={saveError} /></div> : null}
           <div className="flex flex-wrap gap-3">
             <Button onClick={save} disabled={!canSave}>
-              {saving ? 'Menyimpan…' : `Simpan ke ${store?.name ?? 'toko'}`}
+              {saving ? 'Menyimpan…' : multiStore ? `Simpan ke ${store?.name ?? 'toko'}` : 'Simpan'}
             </Button>
             <Button variant="secondary" onClick={reset} disabled={saving}>
               Batal
@@ -166,7 +201,7 @@ export function UploadPage({
         </Card>
       )}
 
-      {summary && <SaveSummaryCard summary={summary} onAgain={reset} />}
+      {summary && <SaveSummaryCard summary={summary} multiStore={multiStore} onAgain={reset} />}
     </>
   )
 }
@@ -174,12 +209,12 @@ export function UploadPage({
 function FileInput({ accept, onChange }: { accept: string; onChange: (e: ChangeEvent<HTMLInputElement>) => void }) {
   const [name, setName] = useState('')
   return (
-    <label className="flex cursor-pointer flex-wrap items-center gap-4 rounded-md border-2 border-dashed border-rule bg-counter/40 p-4 transition-colors hover:border-stamp hover:bg-stamp-tint/40">
-      <span className="inline-flex min-h-11 items-center gap-2 rounded-md bg-stamp px-4 font-semibold text-white">
+    <label className="flex cursor-pointer flex-wrap items-center gap-4 rounded-2xl border-2 border-dashed border-control/70 bg-tint p-4 transition-colors hover:border-accent focus-within:border-accent">
+      <span className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-ink px-4 font-semibold text-paper">
         <IconUpload size={18} />
         Pilih file
       </span>
-      <span className="min-w-0 flex-1 truncate text-ink-soft">{name || 'Belum ada file dipilih'}</span>
+      <span className="min-w-0 flex-1 truncate text-ink-2">{name || 'Belum ada file dipilih'}</span>
       <input
         type="file"
         accept={accept}
@@ -213,7 +248,7 @@ function OrdersPreview({ parsed }: { parsed: Parsed<OrdersParseResult> | null })
   const [showAll, setShowAll] = useState(false)
   if (!parsed) return null
   if (parsed.loading) return <Spinner label="Membaca file…" />
-  if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} /></div>
+  if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} reportFile={{ kind: 'export pesanan', fileName: parsed.fileName }} /></div>
   const r = parsed.result!
   const statusEntries = Object.entries(r.byStatus).sort((a, b) => b[1] - a[1])
   const notDone = r.items.filter((i) => i.status_group !== 'selesai').length
@@ -224,27 +259,27 @@ function OrdersPreview({ parsed }: { parsed: Parsed<OrdersParseResult> | null })
         {formatNumber(r.items.length)} item dari {formatNumber(r.orderCount)} pesanan siap disimpan
         {' '}({statusEntries.map(([s, n]) => `${s}: ${formatNumber(n)}`).join(', ')}).
         {notDone > 0 && (
-          <> Yang belum selesai / batal hanya masuk tabel "Pesanan masuk", tidak dihitung profit.</>
+          <> Yang belum selesai atau batal hanya masuk tabel "Semua pesanan" di Rekap, tidak dihitung untung.</>
         )}
       </Alert>
       <Warnings warnings={r.warnings} />
-      <div className="mt-4 overflow-x-auto">
+      <ScrollX className="mt-4">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-rule text-ink-muted">
+          <thead className="border-b border-rule text-ink-3">
             <tr>
-              <th className="py-2 pr-3 font-medium">No. pesanan</th>
-              <th className="py-2 pr-3 font-medium">Produk</th>
-              <th className="py-2 pr-3 text-right font-medium">Qty</th>
-              <th className="py-2 pr-3 font-medium">Selesai</th>
+              <th className="py-2 pr-3 font-semibold">No. pesanan</th>
+              <th className="py-2 pr-3 font-semibold">Produk</th>
+              <th className="py-2 pr-3 text-right font-semibold">Qty</th>
+              <th className="py-2 pr-3 font-semibold">Selesai</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((i) => (
-              <tr key={i.order_no + i.sku} className="border-b border-line/70 align-top">
+              <tr key={i.order_no + i.sku} className="border-b border-line align-top">
                 <td className="num py-2 pr-3 text-xs">{i.order_no}</td>
                 <td className="py-2 pr-3">
                   {i.product_name}
-                  {i.variant_name && <span className="text-ink-muted"> — {i.variant_name}</span>}
+                  {i.variant_name && <span className="text-ink-2"> ({i.variant_name})</span>}
                 </td>
                 <td className="py-2 pr-3 text-right num">
                   {i.qty}
@@ -255,9 +290,9 @@ function OrdersPreview({ parsed }: { parsed: Parsed<OrdersParseResult> | null })
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollX>
       {r.items.length > PREVIEW_ROWS && (
-        <button type="button" className="mt-2 min-h-11 font-medium text-stamp underline" onClick={() => setShowAll((v) => !v)}>
+        <button type="button" className={`${linkClass} mt-2 min-h-11`} onClick={() => setShowAll((v) => !v)}>
           {showAll ? 'Tampilkan lebih sedikit' : `Tampilkan semua (${r.items.length})`}
         </button>
       )}
@@ -269,10 +304,18 @@ function normalizeName(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
-function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | null; store: Store | null }) {
+function IncomePreview({
+  parsed,
+  store,
+  multiStore,
+}: {
+  parsed: Parsed<IncomeParseResult> | null
+  store: Store | null
+  multiStore: boolean
+}) {
   if (!parsed) return null
   if (parsed.loading) return <Spinner label="Membaca file…" />
-  if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} /></div>
+  if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} reportFile={{ kind: 'laporan penghasilan', fileName: parsed.fileName }} /></div>
   const r = parsed.result!
   const adjustmentsTotal = r.adjustments.reduce((s, a) => s + a.amount, 0)
   const shopMismatch =
@@ -290,8 +333,11 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
       {shopMismatch && (
         <div className="mt-4">
           <Alert tone="warning" title="Nama toko berbeda">
-            Nama toko di PDF: <strong>{r.shopName}</strong>. Toko yang dipilih: <strong>{store!.name}</strong>. Pastikan
-            toko yang dipilih sudah benar sebelum menyimpan.
+            Nama toko di PDF: <strong>{r.shopName}</strong>. {multiStore ? 'Toko yang dipilih' : 'Nama toko di akunmu'}:{' '}
+            <strong>{store!.name}</strong>.{' '}
+            {multiStore
+              ? 'Pastikan toko yang dipilih sudah benar sebelum menyimpan.'
+              : 'Kalau ini memang PDF tokomu (hanya beda penulisan nama), lanjutkan simpan; kalau bukan, jangan disimpan.'}
           </Alert>
         </div>
       )}
@@ -317,16 +363,16 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
       <Warnings warnings={r.warnings} />
       <div className="mt-4 max-h-96 overflow-auto">
         <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 border-b border-rule bg-paper text-ink-muted">
+          <thead className="sticky top-0 border-b border-rule bg-paper text-ink-3">
             <tr>
-              <th className="py-2 pr-3 font-medium">Tanggal dana dilepas</th>
-              <th className="py-2 pr-3 text-right font-medium">Subtotal pesanan</th>
-              <th className="py-2 pr-3 text-right font-medium">Penghasilan</th>
+              <th className="py-2 pr-3 font-semibold">Tanggal dana dilepas</th>
+              <th className="py-2 pr-3 text-right font-semibold">Subtotal pesanan</th>
+              <th className="py-2 pr-3 text-right font-semibold">Penghasilan</th>
             </tr>
           </thead>
           <tbody>
             {r.days.map((d) => (
-              <tr key={d.released_date} className="border-b border-line/70">
+              <tr key={d.released_date} className="border-b border-line">
                 <td className="num py-2 pr-3">{formatDate(d.released_date)}</td>
                 <td className="py-2 pr-3 text-right num">{formatRupiah(d.subtotal_pesanan)}</td>
                 <td className="py-2 pr-3 text-right num">{formatRupiah(d.total_income)}</td>
@@ -334,7 +380,7 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
             ))}
           </tbody>
           <tfoot>
-            <tr className="font-semibold">
+            <tr className="border-t-2 border-ink font-bold">
               <td className="py-2 pr-3">Total</td>
               <td className="py-2 pr-3 text-right num">
                 {formatRupiah(r.days.reduce((s, d) => s + d.subtotal_pesanan, 0))}
@@ -348,27 +394,29 @@ function IncomePreview({ parsed, store }: { parsed: Parsed<IncomeParseResult> | 
   )
 }
 
-function SaveSummaryCard({ summary, onAgain }: { summary: SaveSummary; onAgain: () => void }) {
+function SaveSummaryCard({
+  summary,
+  multiStore,
+  onAgain,
+}: {
+  summary: SaveSummary
+  multiStore: boolean
+  onAgain: () => void
+}) {
   const { orders, income, missingHpp } = summary
-  // Perayaan kecil setiap kali upload berhasil disimpan: konfeti dari cap TERSIMPAN.
-  const stampRef = useRef<HTMLSpanElement>(null)
-  const [savedAt] = useState(() => Date.now())
   return (
     <Card
       title={
         <span className="flex flex-wrap items-center justify-between gap-3">
-          Berhasil disimpan ke {summary.storeName}
-          <span ref={stampRef}>
-            <Stamp tone="gain" delay={150}>Tersimpan</Stamp>
-          </span>
-          <Confetti anchor={stampRef} fireKey={savedAt} delay={380} />
+          {multiStore ? `Tersimpan ke ${summary.storeName}` : 'Laporan tersimpan'}
+          <Stamp tone="gain" delay={150}>Tersimpan</Stamp>
         </span>
       }
       className="mb-6"
     >
       <div className="grid gap-4 md:grid-cols-2">
         {orders && (
-          <div className="rounded-md bg-counter/60 p-4">
+          <div className="rounded-2xl bg-tint p-4">
             <p className="font-semibold">Item pesanan</p>
             <ul className="mt-2 space-y-1">
               <li>Baru: <strong className="num">{formatNumber(orders.inserted)}</strong></li>
@@ -381,7 +429,7 @@ function SaveSummaryCard({ summary, onAgain }: { summary: SaveSummary; onAgain: 
           </div>
         )}
         {income && (
-          <div className="rounded-md bg-counter/60 p-4">
+          <div className="rounded-2xl bg-tint p-4">
             <p className="font-semibold">Penghasilan per hari</p>
             <ul className="mt-2 space-y-1">
               <li>Baru: <strong className="num">{formatNumber(income.inserted)}</strong></li>
@@ -401,18 +449,18 @@ function SaveSummaryCard({ summary, onAgain }: { summary: SaveSummary; onAgain: 
 
       {orders && missingHpp.length > 0 && (
         <div className="mt-4">
-          <Alert tone="error" title={`${missingHpp.length} produk belum punya HPP`}>
-            <p>Modal untuk produk ini belum bisa dihitung. Isi HPP-nya supaya profit akurat.</p>
+          <Alert tone="warning" title={`${missingHpp.length} produk belum punya HPP`}>
+            <p>Modal produk ini belum bisa dihitung. Isi HPP-nya supaya untung bersihnya akurat.</p>
             <ul className="mt-2 list-disc pl-6">
               {missingHpp.slice(0, 15).map((p) => (
                 <li key={p.id}>
                   {p.product_name}
-                  {p.variant_name && ` — ${p.variant_name}`}
+                  {p.variant_name && ` (${p.variant_name})`}
                 </li>
               ))}
               {missingHpp.length > 15 && <li>…dan {missingHpp.length - 15} lainnya</li>}
             </ul>
-            <Button className="mt-3" variant="danger" onClick={() => navigate('hpp', { kosong: '1' })}>
+            <Button className="mt-3" onClick={() => navigate('hpp', { kosong: '1' })}>
               Isi HPP sekarang
             </Button>
           </Alert>
@@ -420,8 +468,10 @@ function SaveSummaryCard({ summary, onAgain }: { summary: SaveSummary; onAgain: 
       )}
 
       <div className="mt-4 flex flex-wrap gap-3">
+        <Button variant={orders && missingHpp.length > 0 ? 'secondary' : 'primary'} onClick={() => navigate('rekap')}>
+          Lihat Rekap
+        </Button>
         <Button variant="secondary" onClick={onAgain}>Upload file lain</Button>
-        <Button variant="secondary" onClick={() => navigate('rekap')}>Lihat rekap</Button>
       </div>
     </Card>
   )

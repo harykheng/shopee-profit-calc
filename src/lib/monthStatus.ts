@@ -101,3 +101,21 @@ export function monthStatus(recap: MonthlyRecap, days: DailyReconciliation[]): M
 
   return { final, ...status }
 }
+
+/** Hal-hal yang masih menghalangi sebuah bulan jadi final, urut dari yang pertama dikerjakan. */
+export interface MonthTodo {
+  key: string
+  /** Alasan singkat untuk baris "Belum final: …". */
+  short: string
+}
+
+export function monthTodos(s: MonthStatus): MonthTodo[] {
+  const out: MonthTodo[] = []
+  if (!s.hasIncome) out.push({ key: 'income', short: 'laporan penghasilan belum di-upload' })
+  if (s.missingOrders.days.length > 0) out.push({ key: 'orders', short: 'ada uang cair yang pesanannya belum di-upload' })
+  if (s.hasIncome && s.ordersWithoutIncome.days.length > 0)
+    out.push({ key: 'noincome', short: 'ada pesanan yang tidak ada di laporan penghasilan' })
+  if (s.missingHpp > 0) out.push({ key: 'hpp', short: 'ada barang yang HPP-nya kosong' })
+  if (!s.expensesFilled) out.push({ key: 'expenses', short: 'biaya belum diisi' })
+  return out
+}

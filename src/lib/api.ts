@@ -1,5 +1,6 @@
 // Semua akses ke Supabase ada di sini.
 import type { AdRow, AdsParseResult } from './parsers/ads'
+import type { SettingsPercent, StoreSettingsRow } from './storeSettings'
 import type { IncomeAdjustment, IncomeDayRow } from './parsers/income'
 import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
@@ -12,6 +13,7 @@ import type {
   OrdersByCreated,
   Expense,
   ExpenseCategory,
+  FeeCategory,
   MonthlyRecap,
   Product,
   ProductRecap,
@@ -35,7 +37,31 @@ function chunks<T>(items: T[], size = CHUNK): T[][] {
 }
 
 export async function fetchStores(): Promise<Store[]> {
-  return check(await supabase.from('stores').select('id, name').order('id'))
+  return check(await supabase.from('stores').select('id, name, active_until').order('id'))
+}
+
+/** Sudah sampai mana toko ini mengisi data. Dipakai untuk panduan awal di halaman Rekap. */
+export interface SetupProgress {
+  hasOrders: boolean
+  hasIncome: boolean
+  hasProducts: boolean
+  /** Ada produk yang HPP-nya masih kosong. */
+  hasMissingHpp: boolean
+}
+
+export async function fetchSetupProgress(storeId: number): Promise<SetupProgress> {
+  const any = async (table: 'order_items' | 'income' | 'products', missingHpp = false) => {
+    let q = supabase.from(table).select('id').eq('store_id', storeId)
+    if (missingHpp) q = q.is('hpp', null)
+    return check(await q.limit(1)).length > 0
+  }
+  const [hasOrders, hasIncome, hasProducts, hasMissingHpp] = await Promise.all([
+    any('order_items'),
+    any('income'),
+    any('products'),
+    any('products', true),
+  ])
+  return { hasOrders, hasIncome, hasProducts, hasMissingHpp }
 }
 
 // --- Upload -----------------------------------------------------------------
@@ -130,12 +156,100 @@ export async function fetchLatestOrderDate(storeId: number): Promise<string | nu
   return rows[0]?.created_at ?? null
 }
 
-/** Simpan % admin & XTRA untuk semua variasi dengan nama produk ini (Simulasi Harga). */
-export async function saveProductFees(storeId: number, productName: string, adminPct: number, xtra: boolean) {
+/**
+ * Simpan % admin & XTRA untuk semua variasi dengan nama produk ini (Simulasi Harga).
+ * `categoryId` ikut disimpan kalau diberikan (null = isian manual); undefined = jangan sentuh kolom itu.
+ * admin_pct selalu diisi persen yang berlaku, sebagai cadangan kalau kategorinya nanti dihapus.
+ */
+export async function saveProductFees(
+  storeId: number,
+  productName: string,
+  adminPct: number,
+  xtra: boolean,
+  categoryId?: number | null,
+) {
   check(
     await supabase
       .from('products')
-      .update({ admin_pct: adminPct, xtra })
+      .update({ admin_pct: adminPct, xtra, ...(categoryId !== undefined ? { fee_category_id: categoryId } : {}) })
+      .eq('store_id', storeId)
+      .eq('product_name', productName),
+  )
+}
+
+/** Apakah toko ini pernah punya rekap (penghasilan, pesanan, atau biaya) di bulan sebelum `month`. */
+export async function hasRecapBefore(storeId: number, month: string): Promise<boolean> {
+  const rows = check(
+    await supabase.from('monthly_recap').select('month').eq('store_id', storeId).lt('month', month).limit(1),
+  ) as { month: string }[]
+  return rows.length > 0
+}
+
+// --- Pengaturan hitungan per toko -------------------------------------------
+
+/** Baris pengaturan toko; null kalau toko belum pernah menyimpan (artinya semua nilai bawaan). */
+export async function fetchStoreSettings(storeId: number): Promise<StoreSettingsRow | null> {
+  return check(
+    await supabase.from('store_settings').select('*').eq('store_id', storeId).maybeSingle(),
+  ) as StoreSettingsRow | null
+}
+
+export async function saveStoreSettings(storeId: number, v: SettingsPercent) {
+  check(
+    await supabase.from('store_settings').upsert(
+      {
+        store_id: storeId,
+        ads_target_profit_pct: v.adsTargetProfitPct,
+        price_target_margin_pct: v.priceTargetMarginPct,
+        return_recovery_pct: v.returnRecoveryPct,
+      },
+      { onConflict: 'store_id' },
+    ),
+  )
+}
+
+// --- Kategori biaya admin ---------------------------------------------------
+
+export async function fetchFeeCategories(storeId: number): Promise<FeeCategory[]> {
+  const rows = check(
+    await supabase.from('fee_categories').select('id, store_id, name, admin_pct').eq('store_id', storeId).order('name'),
+  ) as FeeCategory[]
+  return rows.map((r) => ({ ...r, admin_pct: Number(r.admin_pct) }))
+}
+
+/** Tambah kategori baru (tanpa id) atau ubah yang ada (dengan id). */
+export async function saveFeeCategory(
+  storeId: number,
+  input: { id?: number; name: string; adminPct: number },
+): Promise<FeeCategory> {
+  const values = { name: input.name.trim(), admin_pct: input.adminPct }
+  const q =
+    input.id === undefined
+      ? supabase.from('fee_categories').insert({ store_id: storeId, ...values })
+      : supabase.from('fee_categories').update(values).eq('id', input.id).eq('store_id', storeId)
+  const row = check(await q.select('id, store_id, name, admin_pct').single()) as FeeCategory
+  return { ...row, admin_pct: Number(row.admin_pct) }
+}
+
+/** Hapus kategori. Produk yang memakainya otomatis kembali ke isian manual (fee_category_id dikosongkan). */
+export async function deleteFeeCategory(storeId: number, id: number) {
+  check(await supabase.from('fee_categories').delete().eq('id', id).eq('store_id', storeId))
+}
+
+/**
+ * Pasang kategori (atau null = isian manual) ke semua variasi dengan nama produk ini.
+ * `adminPctSnapshot`: persen kategori saat ini, disimpan di admin_pct sebagai cadangan kalau kategori dihapus.
+ */
+export async function saveProductCategory(
+  storeId: number,
+  productName: string,
+  categoryId: number | null,
+  adminPctSnapshot?: number,
+) {
+  check(
+    await supabase
+      .from('products')
+      .update({ fee_category_id: categoryId, ...(adminPctSnapshot !== undefined ? { admin_pct: adminPctSnapshot } : {}) })
       .eq('store_id', storeId)
       .eq('product_name', productName),
   )
@@ -179,16 +293,19 @@ export async function fetchMonthlyRecap(storeId: number, from: string, to: strin
 }
 
 export async function fetchProductRecap(storeId: number, from: string, to: string) {
-  return check(
-    await supabase
+  // Dipaging: Supabase membatasi 1.000 baris per permintaan (mengalahkan .limit), jadi toko dengan
+  // banyak produk × bulan terpotong diam-diam kalau tidak.
+  return fetchAllPages<ProductRecap>((a, b) =>
+    supabase
       .from('product_monthly_recap')
       .select('*')
       .eq('store_id', storeId)
       .gte('month', from)
       .lte('month', to)
-      .order('product_name')
-      .limit(5000),
-  ) as ProductRecap[]
+      .order('month')
+      .order('sku')
+      .range(a, b),
+  )
 }
 
 /** Tambah/kurangi hari: ("2026-08-01", -3) → "2026-07-29". */
@@ -216,17 +333,19 @@ export async function fetchReconciliation(storeId: number, from: string, to: str
 }
 
 export async function fetchReturnedItems(storeId: number, from: string, to: string) {
-  // Batas bulan menurut WIB.
-  return check(
-    await supabase
+  // Batas bulan menurut WIB. Dipaging agar tidak terpotong di 1.000 baris.
+  return fetchAllPages<ReturnedItem>((a, b) =>
+    supabase
       .from('order_items')
       .select('order_no, sku, product_name, variant_name, qty, returned_qty, return_status, completed_at')
       .eq('store_id', storeId)
       .gt('returned_qty', 0)
       .gte('completed_at', `${from}T00:00:00+07:00`)
       .lte('completed_at', `${monthEnd(to)}T23:59:59.999+07:00`)
-      .order('completed_at'),
-  ) as ReturnedItem[]
+      .order('completed_at')
+      .order('id')
+      .range(a, b),
+  )
 }
 
 export async function fetchOrdersByCreated(storeId: number, from: string, to: string) {

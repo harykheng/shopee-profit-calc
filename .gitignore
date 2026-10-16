@@ -1,6 +1,9 @@
 # File export Shopee asli (berisi data pribadi pembeli) — JANGAN pernah di-commit
 /sample-data/
 
+# Data sample PALSU untuk toko testing (dibuat ulang dengan `npm run sample`)
+/sample-store/
+
 # Jaring pengaman: file Excel/CSV di mana pun tidak ikut ter-commit,
 # kecuali fixture dummy untuk test
 *.xlsx

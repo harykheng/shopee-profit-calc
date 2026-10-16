@@ -18,6 +18,7 @@ Untuk setup database dan deploy, lihat [README.md](README.md).
 9. [Halaman Simulasi Harga](#9-halaman-simulasi-harga)
 10. [Pertanyaan yang sering muncul](#10-pertanyaan-yang-sering-muncul)
 11. [Kamus istilah](#11-kamus-istilah)
+12. [Akun dan pengaturan hitungan](#12-akun-dan-pengaturan-hitungan)
 
 ---
 
@@ -65,6 +66,16 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 
 > Upload file yang sama dua kali **aman**. Data tidak akan dobel.
 
+**Butuh bantuan?** Tombol hijau **Bantuan** di pojok kanan bawah (di HP, tepat di atas menu bawah)
+membuka WhatsApp ke pengelola. Pesan awalnya sudah berisi akun, toko, dan halaman yang sedang kamu
+buka, jadi tinggal tulis masalahnya lalu kirim. Tombol ini ada juga di halaman login.
+
+**Pengingat otomatis.** Kalau rekap bulan lalu belum lengkap, kartu pengingat muncul di atas halaman
+("Rekap September 2026 belum lengkap") dengan tombol langsung ke langkah yang tersisa: Upload laporan,
+Upload pesanan, Isi HPP, atau Isi biaya. Kartu ini ikut berubah begitu kamu menyimpan data, dan
+hilang sendiri saat angka sudah final. **Ingatkan besok** menyembunyikannya sampai hari berikutnya.
+Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
+
 ---
 
 ## 3. File apa saja yang perlu di-download dari Shopee
@@ -103,12 +114,16 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 
 ## 4. Halaman Upload
 
-1. Cek kotak **"Upload ke toko: …"**. Kalau salah, ganti toko di pilihan Toko pada menu.
+1. Kalau akunmu punya lebih dari satu toko, cek kotak **"Disimpan ke toko …"**. Kalau salah, ganti toko di pilihan toko
+   pada bar atas.
 2. **Kotak 1:** pilih file Excel export pesanan.
 3. **Kotak 2:** pilih file PDF laporan penghasilan.
 4. Cek **preview**: jumlah pesanan per status, jumlah hari uang cair, total penghasilan, dan biaya
    penyesuaian kalau ada.
 5. Tekan **Simpan ke …**.
+
+Data iklan (CSV) tidak di-upload di sini: kotak **3. Data iklan** membawa ke halaman Iklan, karena
+tiap periode iklan terdiri dari beberapa file.
 
 Setelah disimpan muncul ringkasan:
 - berapa data baru, diperbarui, atau sama seperti sebelumnya;
@@ -123,7 +138,7 @@ Kalau salah memilih file (misalnya PDF di kotak Excel), aplikasi akan memberi ta
 HPP = harga modal per barang.
 
 - Produk baru **otomatis masuk** dari upload export pesanan.
-- Produk yang HPP-nya kosong berwarna **merah**. Isi langsung di kolomnya, lalu angkanya
+- Produk yang HPP-nya kosong berlatar **merah muda** dan bertuliskan **Belum diisi**. Isi langsung di kolomnya, lalu angkanya
   tersimpan. Centang **Hanya yang belum ada HPP** untuk menampilkan yang kosong saja.
 - **Isi per 1 unit yang dijual di Shopee.** Untuk paket grosir (contoh: "Bedak 6PCS"), isi HPP
   **untuk 1 paket**, bukan per pcs.
@@ -166,7 +181,7 @@ Rekap dibaca seperti cerita, dari atas ke bawah:
 
 | Bab | Isi |
 |---|---|
-| **Bab 1 · Untung** | Kalimat besar, mis. "Agustus 2026, Harel Beauty untung **Rp2,78 juta**", lalu angka tepatnya (Rp2.785.162), status bulan, dan batang **"Dari setiap Rp100 yang masuk"** (berapa untuk modal, biaya, dan berapa yang jadi untung). Kalau rugi, kalimatnya bilang "rugi". |
+| **Bab 1 · Untung bersih** | Kalimat besar, mis. "Agustus 2026, Harel Beauty untung bersih", lalu angkanya besar berwarna hijau (**Rp2,78 juta**), angka tepatnya (Rp2.785.162), stiker status bulan, dan lembar **"Dari setiap Rp100 yang masuk"** (berapa untuk modal, biaya, dan berapa yang jadi untung). Kalau rugi, kalimatnya bilang "rugi" dan angkanya merah. |
 | **Bab 2 · Dari mana angkanya** | Hitungannya (lihat di bawah). |
 | **Bab 3 · Iklan** | Ringkasan iklan bulan yang sama (untung/rugi setelah iklan, iklan yang sebaiknya dimatikan). Hanya muncul kalau melihat satu bulan; kalau belum ada data iklan 1 bulan penuh, ada ajakan untuk upload. |
 | **Bab 4 · Pesanan & produk** | Tab-tab rincian (lihat di bawah). |
@@ -186,6 +201,12 @@ Dibaca dari atas ke bawah:
 ```
 
 - **Barang terjual** = jumlah pcs/unit yang selesai dan uangnya cair bulan itu.
+- **Barang retur.** Uang barang yang diretur sudah dikembalikan ke pembeli (sudah terpotong di uang
+  masuk). Secara bawaan, aplikasi menganggap barang retur **kembali ke stok**, jadi modalnya tidak
+  dihitung hilang. Kalau barang retur tokomu biasanya rusak atau tidak bisa dijual lagi, turunkan
+  "Barang retur yang bisa dijual lagi" di **Akun → Pengaturan hitungan**. Modal barang retur yang
+  hilang lalu ikut dihitung di baris Modal ("termasuk Rp… dari barang retur yang tidak bisa dijual
+  lagi").
 - Tombol **ⓘ Kenapa X, bukan Y?** menjelaskan kenapa jumlah barang terjual beda dengan barang yang
   dipesan bulan itu (ada yang batal, masih dikirim, retur, atau selesai bulan berikutnya).
 
@@ -309,7 +330,11 @@ Iklan tidak akan bisa memberi untung 5% (atau ROAS yang dibutuhkan di atas 50). 
 
 - **Potongan Shopee** diambil dari laporan penghasilan periode itu (admin, gratis ongkir XTRA,
   biaya proses, voucher). Kalau belum ada, dipakai 3 bulan sebelumnya; kalau tidak ada juga,
-  dipakai 15%.
+  dipakai 15%. Itu **rata-rata seluruh toko**. Kalau kamu sudah mengisi biaya admin tiap produk
+  (lihat "Kategori biaya admin" di Simulasi Harga), potongan tiap produk digeser sesuai admin-nya:
+  produk berkategori admin tinggi dinilai lebih berat, yang rendah lebih ringan, dan totalnya
+  tetap cocok dengan uang yang benar-benar cair. Produk yang belum diisi memakai rata-rata toko.
+  Kartu produk menulis "disesuaikan admin produk ini" atau "rata-rata toko".
 - **Harga jual** diambil dari export pesanan (rata-rata harga yang benar-benar terjual).
 - **HPP** dari halaman HPP (rata-rata variasi, ditimbang sesuai jumlah terjual).
 - **Target untung 5%** setelah iklan dan **target harga 20%** bisa diubah oleh pengelola aplikasi
@@ -387,8 +412,21 @@ Semua angka tetap **bisa diubah**. Contoh: ubah harga jual untuk melihat efeknya
 dinaikkan. Mengubah angka di sini tidak mengubah data di halaman lain.
 
 **% admin dan XTRA tidak ada di file export Shopee**, jadi diisi sendiri. Isi sekali yang benar,
-lalu tekan **Simpan % admin & XTRA untuk produk ini**. Nilainya tersimpan untuk **semua variasi**
+lalu tekan **Simpan untuk produk ini**. Nilainya tersimpan untuk **semua variasi**
 produk itu dan dipakai lagi di semua perangkat dan semua akun.
+
+**Kategori biaya admin.** Biaya admin Shopee berbeda tiap kategori dan bisa berubah, jadi aplikasi
+tidak punya tabel tarif bawaan. Buka **Kategori biaya admin** di bagian atas halaman Simulasi Harga,
+buat daftar kategori tokomu sekali (mis. "Skincare" 8,25%, "Aksesori" 4,5%; lihat angkanya di
+Seller Centre → Pusat Edukasi Penjual), lalu pilihkan kategori untuk tiap produk di bagian
+"Kategori tiap produk". Setelah itu:
+
+- Di Simulasi, memilih produk langsung mengisi % admin dari kategorinya (kolom % terkunci; pilih
+  "Isi persen sendiri" kalau mau persen khusus).
+- Kalau Shopee mengubah persen sebuah kategori, ubah satu kali di daftar: semua produk di kategori
+  itu ikut, di Simulasi maupun di halaman Iklan.
+- Menghapus kategori tidak menghapus produk: produk kembali ke isian manual dengan persen
+  terakhirnya.
 
 Tekan **Ganti / isi manual** untuk memilih produk lain atau mengisi semuanya sendiri.
 
@@ -425,7 +463,7 @@ harus dinaikkan dulu, belum usah memikirkan iklan.
 
 ### Kalau ROAS aktual diisi
 
-Muncul kotak **"Iklan untung"** (hijau) atau **"Iklan rugi"** (merah) dengan rupiahnya per order:
+Muncul kotak dengan stiker **IKLAN UNTUNG** (hijau) atau **IKLAN RUGI** (merah) dan rupiahnya per order:
 
 - **Biaya iklan per order** = harga jual ÷ ROAS aktual
 - **Untung setelah iklan** = untung per order − biaya iklan per order
@@ -510,8 +548,8 @@ Dua alasan:
    supaya tidak rugi. Lihat baris **Balik modal butuh ROAS** di kartu produk.
 
 **Salah upload ke toko lain?**
-Hubungi pengelola aplikasi untuk menghapus datanya. Untuk mencegahnya, selalu cek nama toko di
-menu sebelum upload. Halaman Iklan juga memberi peringatan kalau tokonya terlihat beda.
+Hubungi pengelola aplikasi untuk menghapus datanya. Untuk mencegahnya, selalu cek nama toko di bar atas
+sebelum upload. Halaman Iklan juga memberi peringatan kalau tokonya terlihat beda.
 
 **Apakah data pembeli tersimpan?**
 Tidak. Nama, alamat, no. HP, username, catatan, dan no. resi pembeli **tidak pernah dibaca maupun
@@ -533,3 +571,43 @@ disimpan**. File dibaca langsung di browser.
 | **Takedown** | Matikan iklan produk itu |
 | **Hero** | Produk yang iklannya paling menghasilkan |
 | **Angka final** | Semua data bulan itu lengkap; untung bersih adalah angka pasti |
+
+---
+
+## 12. Akun dan pengaturan hitungan
+
+Buka lewat ikon orang di pojok kanan atas.
+
+### Pengaturan hitungan (per toko)
+
+Tiga angka yang sebelumnya sama untuk semua toko. Sekarang tiap toko boleh punya sendiri:
+
+| Pengaturan | Artinya | Bawaan |
+|---|---|---|
+| **Target untung setelah iklan** | Untung yang kamu inginkan dari harga jual setelah dikurangi potongan Shopee, modal, dan iklan. Menentukan saran target ROAS (Simulasi Harga) dan label Hero / Aman / ROAS terlalu kecil / Takedown di halaman Iklan | 5% |
+| **Target untung harga jual** | Untung yang kamu inginkan dari harga jual sebelum iklan. Menentukan saran harga; produk yang untungnya di bawah angka ini diberi saran menaikkan harga | 20% |
+| **Barang retur yang bisa dijual lagi** | 100% = barang retur kembali ke stok (modalnya tidak hilang). 0% = seluruh modal barang retur dihitung sebagai kerugian | 100% |
+
+Contoh: kalau margin produkmu memang tipis (mis. 12%), target 5% setelah iklan akan membuat hampir
+semua iklan berlabel "ROAS terlalu kecil". Turunkan targetnya ke 2–3% supaya label mencerminkan
+kenyataan tokomu.
+
+Yang perlu diingat:
+
+- Kolom yang dikosongkan kembali ke angka bawaan. Tombol **Kembalikan ke bawaan** mengisi semuanya.
+- Target hanya mengubah **saran dan label**, bukan uang yang sebenarnya diterima.
+- Pengaturan **retur** mengubah angka Rekap, dan berlaku untuk **semua bulan** (bulan lama ikut
+  dihitung ulang). Harga jual dan HPP yang tersimpan tidak berubah.
+- Kalau langganan habis, pengaturan hanya bisa dilihat.
+
+### Ganti password
+
+Dijelaskan di banner kuning bagian atas selama kamu masih memakai password dari pengelola. Selama
+password itu belum diganti, kartu **Ganti password** tampil paling atas di halaman Akun.
+
+### Data saya
+
+Data tokomu adalah milikmu. Di halaman Akun, **Minta salinan data** dan **Minta hapus data & akun**
+membuka WhatsApp ke pengelola dengan pesan yang sudah berisi akun dan tokomu. Pengelola memprosesnya
+secara manual setelah memastikan permintaan itu benar dari pemilik akun. Penghapusan tidak bisa
+dibatalkan, jadi minta salinan dulu kalau kamu masih membutuhkan datanya.
