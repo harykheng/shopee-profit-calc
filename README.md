@@ -212,13 +212,25 @@ npm run build                # build production ke dist/
 
 ### SheetJS
 
-SheetJS saat ini memakai `xlsx@0.18.5` dari npm. Versi resmi terbaru hanya tersedia dari CDN
-SheetJS; untuk pindah ke versi resmi jalankan:
+`xlsx` (SheetJS) membaca export pesanan (.xlsx) di halaman Upload, dan dipakai
+`scripts/make-fixtures.mjs` serta `scripts/make-sample-store.mjs` untuk membuat file contoh.
+
+Registry npm berhenti di `xlsx@0.18.5`, yang punya celah keamanan (prototype pollution dan ReDoS).
+Versi resmi terbaru hanya ada di CDN SheetJS, jadi paketnya **disimpan di repo**:
+`vendor/xlsx-0.20.3.tgz` (dari `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`), dengan
+`"xlsx": "file:vendor/xlsx-0.20.3.tgz"` di `package.json`. Build di Cloudflare tidak bergantung pada
+CDN SheetJS.
+
+Upgrade ke versi berikutnya: unduh `https://cdn.sheetjs.com/xlsx-X.Y.Z/xlsx-X.Y.Z.tgz`, taruh di
+`vendor/`, hapus tgz lama, lalu:
 
 ```bash
-npm install https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+npm install ./vendor/xlsx-X.Y.Z.tgz
 npm test
 ```
+
+Jangan menjalankan `npm install xlsx` atau `npm update xlsx` tanpa path: perintah itu mengembalikan
+paket ke 0.18.5 dari registry npm.
 
 ## 6. Privasi data
 
@@ -471,7 +483,7 @@ aman: seed tidak menambah apa pun.
       "Minta hapus data & akun" disembunyikan (pelanggan tidak punya jalur kontak). Cek:
       buka halaman login, klik "Lupa password?", harus membuka WhatsApp ke nomormu. Build produksi
       juga menulis peringatan di console browser kalau variabel ini kosong.
-- [ ] **Uji pemisahan data antar-toko lulus** (`npm run check:tenants`, lihat bagian di bawah).
+- [ ] **Uji pemisahan data antar-toko lulus** (`supabase/uji-pemisahan-toko.sql` di SQL Editor, lihat bagian di bawah).
       Ulangi setiap kali ada migration baru.
 - [ ] Toko dengan `active_until` kemarin menampilkan Rekap baca-saja dengan banner "Langganan habis";
       upload dan perubahan data ditolak.
@@ -485,8 +497,34 @@ aman: seed tidak menambah apa pun.
 Semua pelanggan memakai satu database. Yang memisahkan data toko A dari toko B hanyalah aturan
 RLS di database. Membaca SQL migration tidak membuktikan aturan itu benar-benar aktif di project
 yang sedang jalan (misalnya kalau satu migration terlewat, atau ada view yang dibuat ulang tanpa
-`security_invoker`). Skrip `scripts/check-tenant-isolation.mjs` mengujinya langsung: login sebagai
-akun A lalu mencoba membobol toko B.
+`security_invoker`). Ada dua cara mengujinya. Jalankan **cara 1 setiap kali selesai menjalankan
+migration baru**.
+
+#### Cara 1: SQL Editor (tanpa Node, tanpa akun tes)
+
+Buka Supabase project HitungCuan → **SQL Editor → New query**, tempel **seluruh** isi
+[`supabase/uji-pemisahan-toko.sql`](supabase/uji-pemisahan-toko.sql), lalu **Run**. Biarkan pilihan
+role di SQL Editor pada `postgres` (bawaan).
+
+Skrip membuat dua toko uji, mengisi toko B dengan satu baris di setiap tabel, lalu berpura-pura
+menjadi akun yang login (role `authenticated` + identitas akun, cara yang sama dengan API Supabase)
+dan mencoba membaca, mengubah, menghapus, serta menulis data toko B **dan semua toko pelanggan
+lain**, lewat tabel, view, dan fungsi upload. Juga mencoba tanpa login, dan memeriksa bahwa semua
+tabel memakai RLS, semua view memakai `security_invoker`, dan fungsi `admin_*` tertutup.
+
+- **Tidak ada yang tersimpan.** Semua langkah berjalan dalam satu transaksi yang selalu dibatalkan
+  di akhir, termasuk percobaan yang ternyata tembus. Kalau SQL Editor memperingatkan "destructive
+  operation", itu karena skrip memang *mencoba* menghapus data toko lain sebagai pelanggan; lanjutkan.
+- Akun yang dipakai untuk berpura-pura adalah akun paling lama di Authentication → Users.
+  Keanggotaan tokonya tidak diubah. Hasil hanya berisi nama tabel, jumlah baris, dan pesan error.
+- Baris pertama hasil adalah **RINGKASAN**. Lulus kalau `0 gagal, 0 perlu dicek`.
+- Batasannya: yang diuji adalah aturan di database (RLS dan izin), bukan lapisan API-nya. Untuk
+  menguji lewat API dengan akun sungguhan, pakai cara 2.
+
+#### Cara 2: lewat API dengan dua akun tes (`npm run check:tenants`)
+
+Skrip `scripts/check-tenant-isolation.mjs` login sebagai akun A lewat API Supabase (anon key, sama
+seperti browser pelanggan) lalu mencoba membobol toko B.
 
 1. Buat **dua akun tes** dengan cara yang sama seperti pelanggan (bagian d), mis.
    `tes-a@domainmu.id` → "Toko Tes A" dan `tes-b@domainmu.id` → "Toko Tes B". Jangan pakai akun
