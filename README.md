@@ -410,6 +410,42 @@ Selama `multi-tenant` belum digabung ke `main`, deploy HitungCuan membangun bran
 - Perbaikan di `main` (mis. parser Shopee) dibawa ke HitungCuan dengan `git merge main` di branch
   `multi-tenant`.
 
+### Header keamanan (`dist/_headers`)
+
+`npm run build` menulis `dist/_headers`, yang dibaca Cloudflare (Workers maupun Pages) untuk setiap
+respons. Isinya dibuat di `vite.config.ts` (`headersFile`):
+
+- **Content-Security-Policy**: browser hanya menjalankan skrip dari domain aplikasi sendiri (tanpa
+  `eval`, tanpa skrip luar), dan hanya boleh mengirim data ke origin `VITE_SUPABASE_URL` build ini.
+  Kalau suatu saat ada celah yang menyisipkan skrip, skrip itu tidak bisa mengirim data pelanggan ke
+  server lain.
+- **frame-ancestors 'none' / X-Frame-Options DENY**: aplikasi tidak bisa dipasang di dalam iframe situs
+  lain (mencegah halaman palsu yang menipu pelanggan menekan tombol).
+- `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (kamera, mikrofon, lokasi,
+  pembayaran dimatikan), `Cross-Origin-Opener-Policy`, dan HSTS 1 tahun (tanpa subdomain lain).
+- File ber-hash di `/assets/*` disimpan browser selamanya; `index.html` tetap selalu dicek ulang,
+  jadi deploy baru langsung terpakai.
+
+Yang perlu diingat:
+
+- **Mengganti project Supabase = build ulang.** CSP mengunci origin dari `VITE_SUPABASE_URL` saat
+  build. Variabel ini memang sudah harus diisi di Build variables; kalau kosong, CSP memakai
+  `*.supabase.co` (domain kustom Supabase akan diblokir).
+- **Menambah layanan luar** (analytics, font CDN, gambar dari domain lain, Sentry) akan **diblokir**
+  sampai domainnya ditambahkan di `headersFile`. Gejalanya: error "Refused to connect/load … Content
+  Security Policy" di console browser.
+- Vercel tidak membaca `_headers`. Deploy di Vercel tetap jalan, hanya tanpa header ini.
+
+Cek setelah deploy (dari komputermu, bukan dari aplikasi):
+
+```bash
+curl -sI https://app.studioharel.id/ | grep -i 'content-security-policy\|x-frame-options\|strict-transport'
+```
+
+Ketiga baris harus muncul, dan `connect-src` harus berisi URL project Supabase HitungCuan (bukan
+`*.supabase.co`). Lalu buka aplikasi, login, buka Rekap, dan upload satu PDF penghasilan: console
+browser (F12) tidak boleh menampilkan error "Content Security Policy".
+
 ### Project keluarga
 
 Cukup jalankan `20261012000000_multi_tenant.sql` sekali di project lama (cadangkan database
@@ -435,12 +471,69 @@ aman: seed tidak menambah apa pun.
       "Minta hapus data & akun" disembunyikan (pelanggan tidak punya jalur kontak). Cek:
       buka halaman login, klik "Lupa password?", harus membuka WhatsApp ke nomormu. Build produksi
       juga menulis peringatan di console browser kalau variabel ini kosong.
-- [ ] Dua akun uji dengan dua toko: masing-masing hanya melihat tokonya sendiri.
+- [ ] **Uji pemisahan data antar-toko lulus** (`npm run check:tenants`, lihat bagian di bawah).
+      Ulangi setiap kali ada migration baru.
 - [ ] Toko dengan `active_until` kemarin menampilkan Rekap baca-saja dengan banner "Langganan habis";
       upload dan perubahan data ditolak.
 - [ ] **File asli calon pelanggan sudah diuji** (lihat bagian di bawah).
 - [ ] Signup publik mati, dan tidak ada `service_role` key di variabel hosting atau di git.
+- [ ] **Header keamanan aktif** di domain produksi (perintah `curl` di bagian "Header keamanan").
 - [ ] Sudah berlatih `admin_add_customer` dan memperpanjang lewat SQL.
+
+### Uji pemisahan data antar-toko
+
+Semua pelanggan memakai satu database. Yang memisahkan data toko A dari toko B hanyalah aturan
+RLS di database. Membaca SQL migration tidak membuktikan aturan itu benar-benar aktif di project
+yang sedang jalan (misalnya kalau satu migration terlewat, atau ada view yang dibuat ulang tanpa
+`security_invoker`). Skrip `scripts/check-tenant-isolation.mjs` mengujinya langsung: login sebagai
+akun A lalu mencoba membobol toko B.
+
+1. Buat **dua akun tes** dengan cara yang sama seperti pelanggan (bagian d), mis.
+   `tes-a@domainmu.id` → "Toko Tes A" dan `tes-b@domainmu.id` → "Toko Tes B". Jangan pakai akun
+   pelanggan sungguhan, dan jangan jadikan kedua akun anggota toko yang sama.
+2. Isi toko B dengan data supaya ada yang bisa "dicuri": `npm run sample -- "Toko Tes B"`, login
+   sebagai akun B, lalu upload isi folder `sample-store/` (urutannya ada di `BACA-DULU.txt`). Toko
+   yang kosong tetap diuji, tapi cek baca per tabel jadi DILEWATI.
+3. Isi `.env.local` (atau variabel shell) lalu jalankan:
+
+   ```bash
+   # .env.local sudah berisi VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY project HitungCuan
+   TEST_A_EMAIL=tes-a@domainmu.id TEST_A_PASSWORD=... \
+   TEST_B_EMAIL=tes-b@domainmu.id TEST_B_PASSWORD=... \
+   npm run check:tenants
+   ```
+
+   Butuh Node 22.9 atau lebih baru. Hanya anon key yang dipakai, sama seperti di browser
+   pelanggan; jangan pernah isi `service_role` key di sini.
+
+Yang dicoba sebagai akun A: membaca semua tabel dan view toko B, mengubah dan menghapus satu baris
+penanda di toko B, menulis biaya, kategori, penghasilan, dan pesanan ke toko B (langsung maupun
+lewat fungsi upload), menambahkan dirinya sebagai anggota toko B, memperpanjang langganannya sendiri,
+membaca laporan error, dan memanggil fungsi `admin_*`. Juga membaca tanpa login sama sekali.
+
+Cara membaca hasilnya:
+
+| Status | Artinya | Yang dilakukan |
+|---|---|---|
+| **LULUS** | Percobaan ditolak atau hasilnya kosong | Tidak ada |
+| **GAGAL** | Percobaan berhasil: ada celah | Jangan terima pelanggan dulu. Cek migration yang terlewat untuk tabel itu |
+| **CEK** | Ditolak dengan error lain, jadi belum terbukti aman | Baca pesannya. Biasanya koneksi, atau migration belum dijalankan |
+| **DILEWATI** | Tidak ada data toko B untuk dicoba | Isi toko B (langkah 2) lalu ulangi |
+
+Kode keluar 0 hanya kalau tidak ada GAGAL dan CEK. Skrip menulis satu baris biaya bulan
+**Januari 1999** di toko B (lewat akun B sendiri) sebagai penanda, lalu menghapusnya di akhir. Setiap
+tulisan percobaan yang ternyata tembus juga dihapus, dan `active_until` toko A dikembalikan kalau
+sempat berubah. Fungsi admin hanya dipanggil dengan argumen yang tidak bisa merusak (hapus toko
+dalam mode hitung saja, dengan nama toko yang sengaja salah). Kalau skrip terputus di tengah jalan,
+hapus sisa penanda lewat SQL Editor (ganti angka dengan `store_id` kedua toko tes):
+
+```sql
+delete from public.expenses where store_id in (11, 12) and month = '1999-01-01';
+delete from public.income where store_id in (11, 12) and released_date = '1999-01-01';
+delete from public.order_items where store_id in (11, 12) and order_no = 'uji-pemisahan-toko';
+delete from public.products where store_id in (11, 12) and sku = 'uji-pemisahan-toko';
+delete from public.fee_categories where store_id in (11, 12) and name = 'uji-pemisahan-toko';
+```
 
 ### Menguji file asli calon pelanggan
 
