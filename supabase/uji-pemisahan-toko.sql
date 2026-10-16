@@ -70,6 +70,27 @@ begin
   select u.id into other from auth.users u where u.id <> a_user order by u.created_at limit 1;
   other := coalesce(other, gen_random_uuid());
 
+  -- Migration yang belum dijalankan (dicek dari satu objek penanda per file migration).
+  select string_agg(x.berkas, ', ' order by x.berkas) into daftar
+  from (values
+    ('20260930000000_init.sql',                    to_regclass('public.products') is not null),
+    ('20261004000000_income_adjustments.sql',      to_regclass('public.income_adjustments') is not null),
+    ('20261005000000_all_order_statuses.sql',      to_regclass('public.orders_by_created') is not null),
+    ('20261006000000_ads.sql',                     to_regclass('public.ad_reports') is not null),
+    ('20261007000000_product_fee_settings.sql',    exists (select 1 from information_schema.columns
+                                                     where table_schema = 'public' and table_name = 'products' and column_name = 'admin_pct')),
+    ('20261012000000_multi_tenant.sql',            to_regclass('public.store_members') is not null),
+    ('20261013000000_read_only_when_expired.sql',  exists (select 1 from pg_policies
+                                                     where schemaname = 'public' and tablename = 'products' and policyname = 'anggota: baca')),
+    ('20261014000000_fee_categories.sql',          to_regclass('public.fee_categories') is not null),
+    ('20261015000000_store_settings.sql',          to_regclass('public.store_settings') is not null),
+    ('20261016000000_operations.sql',              to_regclass('public.client_errors') is not null)
+  ) as x (berkas, ada)
+  where not x.ada;
+  v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
+  v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261016000000_operations.sql');
+
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
     -- -------------------------------------------------------------------------
@@ -80,24 +101,35 @@ begin
     insert into public.store_members (store_id, user_id, role) values (sa, a_user, 'owner');
     a_stores := array(select m2.store_id from public.store_members m2 where m2.user_id = a_user);
 
-    insert into public.products (store_id, sku, product_name, hpp) values (sb, 'UJI-B', 'Produk uji B', 1000);
-    insert into public.order_items (store_id, order_no, sku, product_name, qty, status, status_group,
-                                    completed_at, created_at, subtotal)
-      values (sb, 'UJI-B', 'UJI-B', 'Produk uji B', 1, 'Selesai', 'selesai', now(), now(), 5000);
-    -- HPP diubah setelah pesanan tersimpan: hpp_snapshot pesanan tetap 1000, jadi recalc_hpp
-    -- punya satu baris untuk diubah kalau RLS-nya bocor.
-    update public.products set hpp = 2000 where store_id = sb;
-    insert into public.income (store_id, released_date, subtotal_pesanan, total_income) values (sb, bulan, 5000, 4000);
-    insert into public.income_adjustments (store_id, released_date, description, amount) values (sb, bulan, 'uji', 100);
-    insert into public.expenses (store_id, month, category, amount, note) values (sb, bulan, 'packaging', 100, 'uji');
-    insert into public.ad_reports (store_id, period_start, period_end, source) values (sb, bulan, bulan + 6, 'keseluruhan')
-      returning id into rb;
-    insert into public.ad_reports (store_id, period_start, period_end, source) values (sa, bulan, bulan + 6, 'keseluruhan')
-      returning id into ra;
-    insert into public.ad_rows (report_id, seq, ad_name, spend) values (rb, 1, 'uji', 100);
-    insert into public.fee_categories (store_id, name, admin_pct) values (sb, 'UJI kategori', 5);
-    insert into public.store_settings (store_id, ads_target_profit_pct) values (sb, 10);
-    insert into public.client_errors (store_id, kind, message, fingerprint) values (sb, 'handled', 'uji', 'uji');
+    -- Tiap tabel dilindungi sendiri: tabel yang belum ada (migration terlewat) tidak menghentikan uji.
+    begin
+      execute 'insert into public.ad_reports (store_id, period_start, period_end, source) values ($1, $2, $2 + 6, ''keseluruhan'') returning id'
+        into rb using sb, bulan;
+      execute 'insert into public.ad_reports (store_id, period_start, period_end, source) values ($1, $2, $2 + 6, ''keseluruhan'') returning id'
+        into ra using sa, bulan;
+    exception when undefined_table or undefined_column then null;
+    end;
+    for r in
+      select x.nama, x.kueri from (values
+        ('products',           'insert into public.products (store_id, sku, product_name, hpp) values ($1, ''UJI-B'', ''Produk uji B'', 1000)'),
+        ('order_items',        'insert into public.order_items (store_id, order_no, sku, product_name, qty, status, status_group, completed_at, created_at, subtotal) values ($1, ''UJI-B'', ''UJI-B'', ''Produk uji B'', 1, ''Selesai'', ''selesai'', now(), now(), 5000)'),
+        -- HPP diubah setelah pesanan tersimpan: hpp_snapshot pesanan tetap 1000, jadi recalc_hpp
+        -- punya satu baris untuk diubah kalau RLS-nya bocor.
+        ('products (HPP baru)', 'update public.products set hpp = 2000 where store_id = $1'),
+        ('income',             'insert into public.income (store_id, released_date, subtotal_pesanan, total_income) values ($1, $2, 5000, 4000)'),
+        ('income_adjustments', 'insert into public.income_adjustments (store_id, released_date, description, amount) values ($1, $2, ''uji'', 100)'),
+        ('expenses',           'insert into public.expenses (store_id, month, category, amount, note) values ($1, $2, ''packaging'', 100, ''uji'')'),
+        ('ad_rows',            'insert into public.ad_rows (report_id, seq, ad_name, spend) values ($3, 1, ''uji'', 100)'),
+        ('fee_categories',     'insert into public.fee_categories (store_id, name, admin_pct) values ($1, ''UJI kategori'', 5)'),
+        ('store_settings',     'insert into public.store_settings (store_id, ads_target_profit_pct) values ($1, 10)'),
+        ('client_errors',      'insert into public.client_errors (store_id, kind, message, fingerprint) values ($1, ''handled'', ''uji'', ''uji'')')
+      ) as x (nama, kueri)
+    loop
+      begin
+        execute r.kueri using sb, bulan, rb;
+      exception when undefined_table or undefined_column or not_null_violation then null;
+      end;
+    end loop;
 
     -- Jumlah baris yang SEHARUSNYA tidak terlihat oleh akun, per tabel/view (dihitung sebagai pemilik).
     for r in
@@ -205,7 +237,7 @@ begin
           v_ket := v_ket || ('ditolak: ' || sqlerrm);
         when others then
           v_status := v_status || 'CEK'::text;
-          v_ket := v_ket || (sqlstate || ' ' || sqlerrm);
+          v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
       end;
       v_uji := v_uji || ('Baca ' || r.relname || ' milik toko lain');
     end loop;
@@ -252,7 +284,7 @@ begin
           v_ket := v_ket || ('ditolak: ' || sqlerrm);
         when others then
           v_status := v_status || 'CEK'::text;
-          v_ket := v_ket || (sqlstate || ' ' || sqlerrm);
+          v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
       end;
       v_uji := v_uji || r.nama;
     end loop;
@@ -309,7 +341,8 @@ begin
         when others then
           ok_kontrol := false;
           v_status := v_status || 'CEK'::text;
-          v_ket := v_ket || ('kontrol ke toko sendiri gagal, jadi uji ini belum bermakna: ' || sqlstate || ' ' || sqlerrm);
+          v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): '
+                                  else 'kontrol ke toko sendiri gagal, jadi uji ini belum bermakna: ' || sqlstate || ' ' end || sqlerrm);
       end;
       if ok_kontrol then
         -- Uji ke toko B: $1 = toko B, $2 = laporan iklan B, $3 = akun sendiri, $4 = akun lain.
@@ -330,7 +363,7 @@ begin
             v_ket := v_ket || ('ditolak: ' || sqlerrm);
           when others then
             v_status := v_status || 'CEK'::text;
-            v_ket := v_ket || (sqlstate || ' ' || sqlerrm);
+            v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
         end;
       end if;
       v_uji := v_uji || r.nama;
@@ -356,7 +389,7 @@ begin
           v_ket := v_ket || ('ditolak: ' || sqlerrm);
         when others then
           v_status := v_status || 'CEK'::text;
-          v_ket := v_ket || (sqlstate || ' ' || sqlerrm);
+          v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
       end;
       v_uji := v_uji || r.nama;
     end loop;
@@ -402,7 +435,7 @@ begin
         v_ket := v_ket || ('ditolak: ' || sqlerrm);
       when others then
         v_status := v_status || 'CEK'::text;
-        v_ket := v_ket || (sqlstate || ' ' || sqlerrm);
+        v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
     end;
     v_uji := v_uji || 'Tanpa login: upload penghasilan'::text;
 
