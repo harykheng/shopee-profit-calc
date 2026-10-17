@@ -1,9 +1,9 @@
-import { useState, type ChangeEvent } from 'react'
-import { Alert, Button, Card, ErrorBox, PageTitle, ScrollX, Spinner, Stamp, buttonClass, linkClass } from '../components/ui'
+import { useEffect, useId, useState, type ChangeEvent } from 'react'
+import { Alert, Button, Card, ErrorBox, Modal, PageTitle, ScrollX, Spinner, Stamp, buttonClass, linkClass } from '../components/ui'
 import { IconArrowRight, IconMegaphone, IconStore, IconUpload } from '../components/icons'
 import { fetchProducts, saveAdjustments, saveIncome, saveOrderItems } from '../lib/api'
 import { notifyDataChanged } from '../lib/events'
-import { navigate } from '../lib/router'
+import { ROUTES, navigate } from '../lib/router'
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from '../lib/format'
 import { ParseError, type ParseWarning } from '../lib/parsers/common'
 import type { IncomeParseResult } from '../lib/parsers/income'
@@ -34,6 +34,8 @@ export function UploadPage({
   const [saveError, setSaveError] = useState<unknown>(null)
   const [summary, setSummary] = useState<SaveSummary | null>(null)
   const [inputKey, setInputKey] = useState(0)
+  /** Alamat yang mau dibuka saat file sudah dipilih tapi belum disimpan (memunculkan dialog "simpan dulu"). */
+  const [leaveTo, setLeaveTo] = useState<string | null>(null)
 
   const store = stores.find((s) => s.id === storeId) ?? null
   // Nama toko hanya ditampilkan kalau akun punya lebih dari satu toko (pemilih toko juga hanya ada saat itu).
@@ -87,10 +89,36 @@ export function UploadPage({
     setInputKey((k) => k + 1)
   }
 
-  const canSave = Boolean(store && (orders?.result || income?.result)) && !saving
+  const unsaved = Boolean(orders?.result || income?.result)
+  const canSave = Boolean(store && unsaved) && !saving
 
-  const save = async () => {
-    if (!store) return
+  // File yang sudah dibaca tapi belum disimpan hilang kalau pindah halaman. Tahan semua tautan di dalam
+  // aplikasi (menu, tombol Iklan, logo) dan tanya dulu; menutup / memuat ulang tab memakai peringatan browser.
+  useEffect(() => {
+    if (!unsaved) return
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const link = e.target instanceof Element ? e.target.closest('a[href^="#/"]') : null
+      const href = link?.getAttribute('href')
+      if (!href || link?.getAttribute('target') === '_blank' || /^#\/upload(\?|$)/.test(href)) return
+      e.preventDefault()
+      setLeaveTo(href)
+    }
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    document.addEventListener('click', onClick, true)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => {
+      document.removeEventListener('click', onClick, true)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+    }
+  }, [unsaved])
+
+  /** Mengembalikan true kalau tersimpan. */
+  const save = async (): Promise<boolean> => {
+    if (!store) return false
     setSaving(true)
     setSaveError(null)
     try {
@@ -120,11 +148,18 @@ export function UploadPage({
       setOrders(null)
       setIncome(null)
       setInputKey((k) => k + 1)
+      return true
     } catch (error) {
       setSaveError(error)
+      return false
     } finally {
       setSaving(false)
     }
+  }
+
+  const leave = (href: string) => {
+    setLeaveTo(null)
+    window.location.hash = href.slice(1)
   }
 
   return (
@@ -202,7 +237,81 @@ export function UploadPage({
       )}
 
       {summary && <SaveSummaryCard summary={summary} multiStore={multiStore} onAgain={reset} />}
+
+      {leaveTo && (
+        <UnsavedDialog
+          target={leaveTo}
+          files={[orders?.result ? orders.fileName : null, income?.result ? income.fileName : null].filter(
+            (f): f is string => f !== null,
+          )}
+          storeName={multiStore ? (store?.name ?? null) : null}
+          saving={saving}
+          canSave={canSave}
+          error={saveError}
+          onSave={async () => {
+            if (await save()) leave(leaveTo)
+          }}
+          onDiscard={() => leave(leaveTo)}
+          onCancel={() => setLeaveTo(null)}
+        />
+      )}
     </>
+  )
+}
+
+/** Dialog saat pindah halaman padahal export pesanan / laporan penghasilan belum disimpan. */
+function UnsavedDialog({
+  target,
+  files,
+  storeName,
+  saving,
+  canSave,
+  error,
+  onSave,
+  onDiscard,
+  onCancel,
+}: {
+  target: string
+  files: string[]
+  storeName: string | null
+  saving: boolean
+  canSave: boolean
+  error: unknown
+  onSave: () => void
+  onDiscard: () => void
+  onCancel: () => void
+}) {
+  const titleId = useId()
+  const path = target.replace(/^#\/?/, '').split('?')[0]
+  const page = ROUTES.find((r) => r.route === path)?.label ?? 'halaman berikutnya'
+  return (
+    <Modal labelledBy={titleId} onClose={onCancel} dismissible={!saving}>
+      <h2 id={titleId} className="font-display text-2xl font-extrabold tracking-tight">
+        Simpan laporan dulu?
+      </h2>
+      <p className="mt-3 text-ink-2">
+        File ini sudah dibaca tapi <strong className="text-ink">belum disimpan</strong>
+        {storeName && <> ke toko <strong className="text-ink">{storeName}</strong></>}. Kalau pindah ke {page} sekarang,
+        kamu harus upload ulang file-nya.
+      </p>
+      <ul className="mt-3 list-disc space-y-1 pl-6 text-sm">
+        {files.map((f) => (
+          <li key={f} className="break-all">{f}</li>
+        ))}
+      </ul>
+      {error ? <div className="mt-4"><ErrorBox error={error} /></div> : null}
+      <div className="mt-5 flex flex-col gap-3">
+        <Button onClick={onSave} disabled={!canSave}>
+          {saving ? 'Menyimpan…' : `Simpan, lalu buka ${page}`}
+        </Button>
+        <Button variant="secondary" onClick={onDiscard} disabled={saving}>
+          Buka {page} tanpa menyimpan
+        </Button>
+        <Button variant="secondary" onClick={onCancel} disabled={saving}>
+          Batal
+        </Button>
+      </div>
+    </Modal>
   )
 }
 
