@@ -68,6 +68,8 @@ export interface AdProductResult {
   realRoas: number | null
   /** Harga jual rata-rata per barang (dari pesanan; kalau tidak ada, dari data iklan). */
   price: number | null
+  /** Asal harga jual: rata-rata subtotal export pesanan, atau perkiraan omzet ÷ terjual dari data iklan. */
+  priceSource: 'pesanan' | 'iklan' | null
   hpp: number | null
   /** Sebagian pesanan belum ada HPP-nya. */
   hppIncomplete: boolean
@@ -291,7 +293,8 @@ export function analyzeAds(input: {
     const netGmv = a.gmv * (1 - batalShare)
 
     const keptSubtotal = kept.reduce((s, l) => s + l.subtotal, 0)
-    const price = keptQty > 0 ? keptSubtotal / keptQty : a.sold > 0 ? a.gmv / a.sold : null
+    const priceSource = keptQty > 0 ? 'pesanan' : a.sold > 0 ? 'iklan' : null
+    const price = priceSource === 'pesanan' ? keptSubtotal / keptQty : priceSource === 'iklan' ? a.gmv / a.sold : null
 
     // HPP rata-rata tertimbang qty (pesanan yang tidak batal; kalau tidak ada, semua pesanan).
     const hppLines = (kept.length > 0 ? kept : lines).filter((l) => l.qty > 0)
@@ -330,6 +333,7 @@ export function analyzeAds(input: {
       netGmv,
       realRoas,
       price,
+      priceSource,
       hpp,
       hppIncomplete,
       feeRate: productFee,

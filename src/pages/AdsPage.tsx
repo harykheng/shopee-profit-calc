@@ -663,6 +663,19 @@ function ProductCard({
         />
       </div>
 
+      {p.price !== null && (
+        <div className="mt-3">
+          <dl>
+            <Row label="Harga jual rata-rata" value={formatRupiah(p.price)} />
+          </dl>
+          <p className="text-sm text-ink-3">
+            {p.priceSource === 'pesanan'
+              ? 'Dari export pesanan (subtotal ÷ qty, tanpa batal).'
+              : 'Perkiraan dari data iklan (omzet ÷ terjual). Upload export pesanan supaya tepat.'}
+          </p>
+        </div>
+      )}
+
       {p.unitProfit !== null && (
         <dl className="mt-3 space-y-1.5">
           <Row label="Balik modal butuh ROAS" value={p.bepRoas !== null ? formatRoas(p.bepRoas) : 'tidak mungkin'} />

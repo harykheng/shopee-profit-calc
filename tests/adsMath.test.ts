@@ -53,6 +53,16 @@ describe('analyzeAds', () => {
   })
   const byCode = Object.fromEntries(a.products.map((p) => [p.code, p]))
 
+  it('harga jual dari export pesanan (tanpa batal); tanpa pesanan pakai omzet ÷ terjual iklan', () => {
+    expect(byCode.D.price).toBe(200_000)
+    expect(byCode.D.priceSource).toBe('pesanan')
+    const noOrders = analyzeAds({ reports, orders: [], feeRate: 0.15 })
+    const bedak = noOrders.products.find((p) => p.code === 'B')!
+    expect(bedak.price).toBe(30_000)
+    expect(bedak.priceSource).toBe('iklan')
+    expect(noOrders.products.find((p) => p.code === 'S')?.priceSource ?? null).toBe(null)
+  })
+
   it('total biaya dari Data Keseluruhan; grup tanpa rincian dilaporkan', () => {
     expect(a.totalSpend).toBe(325_000)
     expect(a.spendFrom).toBe('keseluruhan')
