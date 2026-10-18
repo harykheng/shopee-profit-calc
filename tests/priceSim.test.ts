@@ -8,6 +8,7 @@ import {
   targetRoasFromMargin,
   type PriceSimInput,
 } from '../src/lib/adsMath'
+import { extraFeeTotals } from '../src/lib/extraFees'
 
 // Admin 8,25%, XTRA ON, proses 1.250, packaging 0, ROAS realistis 5,5.
 const base: Omit<PriceSimInput, 'hpp' | 'price'> = {
@@ -169,5 +170,34 @@ describe('priceLadder (saran harga dari modal)', () => {
     const l = priceLadder({ ...fees, realisticRoas: 1.2, hpp: 5000 })
     expect(l.recommended).toBeNull()
     expect(l.rows.some((r) => r.tags.includes('untung_20'))).toBe(true)
+  })
+})
+
+describe('biaya tambahan di simulasi', () => {
+  it('menjumlahkan persen dan rupiah terpisah, yang kosong dilewati', () => {
+    expect(
+      extraFeeTotals([
+        { id: 'a', name: 'Affiliate', value: 5, unit: 'pct' },
+        { id: 'b', name: 'Layanan', value: 1000, unit: 'rp' },
+        { id: 'c', name: 'Cashback', value: 1.5, unit: 'pct' },
+        { id: 'd', name: '', value: null, unit: 'rp' },
+      ]),
+    ).toEqual({ pct: 6.5, rp: 1000 })
+  })
+
+  it('persen ikut % admin, rupiah ikut biaya per order', () => {
+    const extra = extraFeeTotals([
+      { id: 'a', name: 'Affiliate', value: 5, unit: 'pct' },
+      { id: 'b', name: 'Layanan', value: 1000, unit: 'rp' },
+    ])
+    const r = simulatePrice({
+      ...base,
+      hpp: 30000,
+      price: 100000,
+      adminRate: base.adminRate + extra.pct / 100,
+      processFee: base.processFee + extra.rp,
+    })
+    // 100.000 − admin 8.250 − affiliate 5.000 − XTRA 4.000 − proses 1.250 − layanan 1.000 − HPP 30.000
+    expect(r.profit).toBeCloseTo(50500, 6)
   })
 })

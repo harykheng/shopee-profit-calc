@@ -32,7 +32,20 @@ import type { FeeCategory, Product, Store } from '../lib/types'
 import { NotaLine } from './RecapPage'
 import { AdGroupSim } from './AdGroupSim'
 import { FeeCategoriesPanel } from './FeeCategories'
-import { DEFAULTS, DecimalInput, Field, Result, TOO_THIN, decimal, formatRoas, roundUp2 } from './simShared'
+import {
+  DEFAULTS,
+  DecimalInput,
+  ExtraFeesEditor,
+  Field,
+  Result,
+  TOO_THIN,
+  decimal,
+  extraFeeLabel,
+  extraFeeTotals,
+  formatRoas,
+  roundUp2,
+  useExtraFees,
+} from './simShared'
 
 // Semua dihitung di browser. Yang disimpan hanya % admin & XTRA per produk (tombol Simpan).
 
@@ -46,6 +59,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
   const [packaging, setPackaging] = useState<number | null>(DEFAULTS.packaging)
   const [realisticRoas, setRealisticRoas] = useState<number | null>(DEFAULTS.realisticRoas)
   const [actualRoas, setActualRoas] = useState<number | null>(null)
+  const [extraFees, setExtraFees] = useExtraFees(storeId)
   const [mode, setMode] = useState<'satu' | 'grup'>('satu')
 
   // Pilih produk yang sudah di-upload (opsional).
@@ -171,14 +185,16 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
     }
   }
 
+  // Biaya tambahan ikut dihitung: yang persen ditambahkan ke % admin, yang rupiah ke biaya per order.
+  const extra = extraFeeTotals(extraFees)
   const ready = hpp !== null && price !== null && price > 0 && realisticRoas !== null && realisticRoas > 0
   const r = ready
     ? simulatePrice({
         hpp,
         price,
-        adminRate: (adminPct ?? 0) / 100,
+        adminRate: ((adminPct ?? 0) + extra.pct) / 100,
         xtra,
-        processFee: processFee ?? 0,
+        processFee: (processFee ?? 0) + extra.rp,
         packaging: packaging ?? 0,
         realisticRoas,
         actualRoas,
@@ -191,9 +207,9 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
     hpp !== null && hpp > 0 && (price === null || price === 0) && realisticRoas !== null && realisticRoas > 0
       ? priceLadder({
           hpp,
-          adminRate: (adminPct ?? 0) / 100,
+          adminRate: ((adminPct ?? 0) + extra.pct) / 100,
           xtra,
-          processFee: processFee ?? 0,
+          processFee: (processFee ?? 0) + extra.rp,
           packaging: packaging ?? 0,
           realisticRoas,
           targets,
@@ -426,6 +442,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                     ) : null}
                   </div>
                 )}
+                <ExtraFeesEditor fees={extraFees} onChange={setExtraFees} />
                 <Field label="Biaya proses pesanan" hint="Per order (tetap, bukan persen).">
                   <RupiahInput value={processFee} onCommit={setProcessFee} ariaLabel="Biaya proses pesanan" />
                 </Field>
@@ -464,15 +481,26 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                         op="−"
                         label="Biaya admin"
                         detail={`${decimal(adminPct ?? 0)}% × harga jual`}
-                        amount={formatRupiah(r.adminFee)}
+                        amount={formatRupiah(((price ?? 0) * (adminPct ?? 0)) / 100)}
                       />
-                      <NotaLine op="−" label="Biaya proses pesanan" detail="per order" amount={formatRupiah(r.processFee)} />
+                      <NotaLine op="−" label="Biaya proses pesanan" detail="per order" amount={formatRupiah(processFee ?? 0)} />
                       <NotaLine
                         op="−"
                         label="Gratis Ongkir XTRA"
                         detail={xtra ? `${formatPercent(XTRA_FEE_RATE * 100)} × harga jual` : 'tidak ikut'}
                         amount={formatRupiah(r.xtraFee)}
                       />
+                      {extraFees
+                        .filter((f) => f.value !== null)
+                        .map((f) => (
+                          <NotaLine
+                            key={f.id}
+                            op="−"
+                            label={extraFeeLabel(f)}
+                            detail={f.unit === 'pct' ? `${decimal(f.value ?? 0)}% × harga jual` : 'per order'}
+                            amount={formatRupiah(f.unit === 'pct' ? ((price ?? 0) * (f.value ?? 0)) / 100 : (f.value ?? 0))}
+                          />
+                        ))}
                       <NotaLine op="−" label="Packaging" detail="per order" amount={formatRupiah(packaging ?? 0)} />
                     </div>
                     <div className="tear mt-1">
@@ -482,7 +510,9 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                         detail={
                           (packaging ?? 0) > 0
                             ? `uang cair dari Shopee ${formatRupiah(r.income)}, dikurangi packaging`
-                            : `uang cair per order (potongan Shopee ${formatRupiah(r.totalFee)})`
+                            : extra.pct > 0 || extra.rp > 0
+                              ? `per order, setelah potongan Shopee & biaya tambahan ${formatRupiah(r.totalFee)}`
+                              : `uang cair per order (potongan Shopee ${formatRupiah(r.totalFee)})`
                         }
                         amount={formatRupiah(r.income - (packaging ?? 0))}
                       />

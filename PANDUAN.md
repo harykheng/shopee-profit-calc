@@ -377,6 +377,7 @@ memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
 | **Harga jual** | Harga jual per unit/paket. **Kosongkan** untuk melihat saran harga dari modal (lihat di bawah). | – |
 | **Biaya admin** | Persen biaya admin kategori produk itu (boleh pakai koma, mis. 8,25) | 8,25% |
 | **Ikut Gratis Ongkir XTRA** | Centang kalau produk ikut program ini (potongan 4%) | dicentang |
+| **Biaya tambahan** | Tombol **+ Tambah biaya lain** untuk biaya di luar daftar ini (mis. komisi affiliate, cashback, biaya layanan). Tiap baris diberi nama dan dipilih **%** (dari harga jual) atau **Rp** (per order). Diingat di browser ini untuk semua produk di toko itu; tidak ikut tombol *Simpan untuk produk ini*. Hanya di simulasi satu produk. | kosong |
 | **Biaya proses pesanan** | Biaya tetap per order dari Shopee | Rp1.250 |
 | **Packaging per order** | Bubble wrap, lakban, kardus, dll. per order | Rp0 |
 | **ROAS realistis** | ROAS yang biasa didapat di iklan (lihat halaman Iklan) | 5,5 |
@@ -444,6 +445,7 @@ Tekan **Ganti / isi manual** untuk memilih produk lain atau mengisi semuanya sen
 − Biaya admin                   Rp…   (admin % × harga jual)
 − Biaya proses pesanan          Rp…   (tetap per order)
 − Gratis Ongkir XTRA            Rp…   (4% × harga jual, kalau ikut)
+− Biaya tambahan (kalau ada)    Rp…   (satu baris per biaya, % × harga jual atau Rp per order)
 − Packaging                     Rp…
 = Penghasilan                   Rp…   (uang cair per order, setelah packaging)
 − HPP                           Rp…
