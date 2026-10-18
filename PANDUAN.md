@@ -118,12 +118,16 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
    pada bar atas.
 2. **Kotak 1:** pilih file Excel export pesanan.
 3. **Kotak 2:** pilih file PDF laporan penghasilan.
-4. Cek **preview**: jumlah pesanan per status, jumlah hari uang cair, total penghasilan, dan biaya
-   penyesuaian kalau ada.
-5. Tekan **Simpan ke …**.
+4. **Kotak 3 (kalau beriklan):** pilih **semua file .csv iklan sekaligus**. Boleh dari beberapa bulan;
+   aplikasi mengelompokkannya per periode sendiri (lihat [Halaman Iklan](#8-halaman-iklan) untuk arti
+   preview-nya).
+5. Cek **preview** tiap kotak: jumlah pesanan per status, jumlah hari uang cair, total penghasilan,
+   biaya penyesuaian, dan ringkasan iklan per periode.
+6. Di kotak **Simpan laporan**, cek daftar yang akan disimpan, lalu tekan **Simpan semua**. Satu tombol
+   untuk semua file; kotak yang tidak diisi dilewati saja.
 
-Data iklan (CSV) tidak di-upload di sini: kotak **3. Data iklan** membawa ke halaman Iklan, karena
-tiap periode iklan terdiri dari beberapa file.
+Kalau ada file yang gagal dibaca, file itu tidak ikut disimpan (yang lain tetap). Kalau penyimpanan
+terputus di tengah, file tetap terpilih: tekan **Simpan semua** lagi, datanya tidak akan dobel.
 
 Setelah disimpan muncul ringkasan:
 - berapa data baru, diperbarui, atau sama seperti sebelumnya;
@@ -162,7 +166,7 @@ Biaya di luar laporan penghasilan Shopee, per toko per bulan:
 
 | Kategori | Keterangan |
 |---|---|
-| **Iklan Shopee** | Terisi **otomatis** dari halaman Iklan (file Data Keseluruhan 1 bulan penuh). Boleh diubah manual, tapi akan tertimpa lagi kalau data iklan bulan itu di-upload ulang. |
+| **Iklan Shopee** | Terisi **otomatis** dari data iklan yang di-upload (file Data Keseluruhan 1 bulan penuh). Boleh diubah manual, tapi akan tertimpa lagi kalau data iklan bulan itu di-upload ulang. |
 | **Meta Ads** | Iklan Facebook/Instagram |
 | **Packaging** | Bubble wrap, lakban, kardus, dll. |
 | **Lain-lain** | Biaya lain |
@@ -245,15 +249,18 @@ ROAS yang sebaiknya diisi di Shopee.
 
 ### Cara upload
 
+File iklan di-upload di **halaman Upload** (kotak **3. Data iklan**), bersama export pesanan dan
+laporan penghasilan, lalu disimpan sekaligus. Halaman Iklan hanya menampilkan hasilnya.
+
 1. Pilih toko di pilihan Toko pada menu.
-2. Tekan **Pilih file**, lalu pilih **semua file .csv iklan sekaligus**. Boleh dari beberapa bulan;
-   aplikasi mengelompokkannya per periode sendiri.
+2. Di kotak **3. Data iklan**, tekan **Pilih file**, lalu pilih **semua file .csv iklan sekaligus**.
+   Boleh dari beberapa bulan; aplikasi mengelompokkannya per periode sendiri.
 3. Cek preview tiap periode:
    - **1 bulan penuh + Data Keseluruhan** → "Biaya Iklan Shopee [bulan] diisi otomatis: Rp…"
    - **7 hari / bukan 1 bulan penuh** → hanya untuk analisis, Biaya tidak diubah.
    - **File berisi beberapa bulan sekaligus** → hanya analisis gabungan; Biaya tidak diisi karena
      tidak bisa dipecah per bulan.
-4. Tekan **Simpan**.
+4. Tekan **Simpan semua**, lalu **Lihat analisis iklan**.
 
 > Supaya hasilnya akurat, **upload export pesanan untuk periode yang sama dulu** (halaman
 > Upload). Laporan iklan Shopee ikut menghitung pesanan yang kemudian **batal**; aplikasi
@@ -549,7 +556,7 @@ Dua alasan:
 
 **Salah upload ke toko lain?**
 Hubungi pengelola aplikasi untuk menghapus datanya. Untuk mencegahnya, selalu cek nama toko di bar atas
-sebelum upload. Halaman Iklan juga memberi peringatan kalau tokonya terlihat beda.
+sebelum upload. Kotak data iklan di halaman Upload juga memberi peringatan kalau tokonya terlihat beda.
 
 **Apakah data pembeli tersimpan?**
 Tidak. Nama, alamat, no. HP, username, catatan, dan no. resi pembeli **tidak pernah dibaca maupun

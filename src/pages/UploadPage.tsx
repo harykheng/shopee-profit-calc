@@ -1,11 +1,23 @@
 import { useEffect, useId, useState, type ChangeEvent } from 'react'
-import { Alert, Button, Card, ErrorBox, Modal, PageTitle, ScrollX, Spinner, Stamp, buttonClass, linkClass } from '../components/ui'
-import { IconArrowRight, IconMegaphone, IconStore, IconUpload } from '../components/icons'
-import { fetchProducts, saveAdjustments, saveIncome, saveOrderItems } from '../lib/api'
+import { Alert, Button, Card, ErrorBox, Modal, PageTitle, ScrollX, Spinner, Stamp, linkClass } from '../components/ui'
+import { IconCheck, IconMinus, IconStore, IconUpload } from '../components/icons'
+import {
+  AdsHowTo,
+  AdsPreview,
+  AdsSavedList,
+  adsProblem,
+  groupAdsFiles,
+  parseAdsFiles,
+  saveAdsGroups,
+  type ParsedAdsFile,
+  type SavedAdsPeriod,
+} from '../components/adsUpload'
+import { fetchProducts, findAdShopElsewhere, saveAdjustments, saveIncome, saveOrderItems } from '../lib/api'
 import { notifyDataChanged } from '../lib/events'
 import { ROUTES, navigate } from '../lib/router'
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from '../lib/format'
 import { ParseError, type ParseWarning } from '../lib/parsers/common'
+import type { AdsParseResult } from '../lib/parsers/ads'
 import type { IncomeParseResult } from '../lib/parsers/income'
 import type { OrdersParseResult } from '../lib/parsers/orders'
 import type { Product, Store, UpsertCounts } from '../lib/types'
@@ -16,6 +28,7 @@ interface SaveSummary {
   storeName: string
   orders?: { inserted: number; updated: number; unchanged: number; skipped: number; newProducts: number }
   income?: UpsertCounts & { totalIncome: number; adjustmentsTotal: number; adjustmentsSaved: number }
+  ads?: SavedAdsPeriod[]
   missingHpp: Product[]
 }
 
@@ -30,6 +43,8 @@ export function UploadPage({
 }) {
   const [orders, setOrders] = useState<Parsed<OrdersParseResult> | null>(null)
   const [income, setIncome] = useState<Parsed<IncomeParseResult> | null>(null)
+  const [ads, setAds] = useState<{ files: ParsedAdsFile[]; loading?: boolean } | null>(null)
+  const [adsElsewhere, setAdsElsewhere] = useState<{ shop: string; storeName: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<unknown>(null)
   const [summary, setSummary] = useState<SaveSummary | null>(null)
@@ -41,6 +56,10 @@ export function UploadPage({
   // Nama toko hanya ditampilkan kalau akun punya lebih dari satu toko (pemilih toko juga hanya ada saat itu).
   const multiStore = stores.length > 1
 
+  const adsOk = (ads?.files ?? []).filter((f) => f.result).map((f) => f.result as AdsParseResult)
+  const adsGroups = groupAdsFiles(adsOk)
+  const adsBlocked = adsProblem(adsGroups)
+
   const onOrdersFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -50,7 +69,12 @@ export function UploadPage({
       if (/\.pdf$/i.test(file.name)) {
         throw new ParseError(
           'Ini file PDF. Untuk export pesanan, pilih file Excel (.xlsx) dari Pesanan Saya → Export. ' +
-            'File PDF laporan penghasilan di-upload di kotak "Laporan penghasilan (PDF)".',
+            'File PDF laporan penghasilan di-upload di kotak "2. Laporan penghasilan".',
+        )
+      }
+      if (/\.csv$/i.test(file.name)) {
+        throw new ParseError(
+          'Ini file CSV. Untuk export pesanan, pilih file Excel (.xlsx). File CSV data iklan di-upload di kotak "3. Data iklan".',
         )
       }
       const { parseOrdersFile } = await import('../lib/parsers/orders')
@@ -70,7 +94,12 @@ export function UploadPage({
       if (/\.xlsx?$/i.test(file.name)) {
         throw new ParseError(
           'Ini file Excel. Untuk laporan penghasilan, pilih file PDF "Catatan Transaksi Penghasilan". ' +
-            'File Excel export pesanan di-upload di kotak "Export pesanan (Excel)".',
+            'File Excel export pesanan di-upload di kotak "1. Export pesanan".',
+        )
+      }
+      if (/\.csv$/i.test(file.name)) {
+        throw new ParseError(
+          'Ini file CSV. Untuk laporan penghasilan, pilih file PDF. File CSV data iklan di-upload di kotak "3. Data iklan".',
         )
       }
       const { parseIncomeFile } = await import('../lib/parsers/incomeFile')
@@ -81,21 +110,54 @@ export function UploadPage({
     }
   }
 
-  const reset = () => {
+  const onAdsFiles = async (e: ChangeEvent<HTMLInputElement>) => {
+    const list = [...(e.target.files ?? [])]
+    if (list.length === 0) return
+    setSummary(null)
+    setAdsElsewhere(null)
+    setAds({ files: [], loading: true })
+    const files = await parseAdsFiles(list)
+    setAds({ files })
+    const shop = files.find((p) => p.result?.shopName)?.result?.shopName
+    if (shop && store) {
+      try {
+        const other = await findAdShopElsewhere(shop, store.id)
+        const otherStore = stores.find((s) => s.id === other)
+        if (otherStore) setAdsElsewhere({ shop, storeName: otherStore.name })
+      } catch {
+        // Tabel belum ada / gagal cek: abaikan, error akan muncul saat simpan.
+      }
+    }
+  }
+
+  const clearFiles = () => {
     setOrders(null)
     setIncome(null)
-    setSummary(null)
-    setSaveError(null)
+    setAds(null)
+    setAdsElsewhere(null)
     setInputKey((k) => k + 1)
   }
 
-  const unsaved = Boolean(orders?.result || income?.result)
-  const canSave = Boolean(store && unsaved) && !saving
+  const leave = (href: string) => {
+    setLeaveTo(null)
+    window.location.hash = href.slice(1)
+  }
+
+  const reset = () => {
+    clearFiles()
+    setSummary(null)
+    setSaveError(null)
+  }
+
+  const hasData = Boolean(orders?.result || income?.result || adsGroups.length > 0)
+  const reading = Boolean(orders?.loading || income?.loading || ads?.loading)
+  const hasFileErrors = Boolean(orders?.error || income?.error || ads?.files.some((f) => f.error))
+  const canSave = Boolean(store) && hasData && !adsBlocked && !reading && !saving
 
   // File yang sudah dibaca tapi belum disimpan hilang kalau pindah halaman. Tahan semua tautan di dalam
-  // aplikasi (menu, tombol Iklan, logo) dan tanya dulu; menutup / memuat ulang tab memakai peringatan browser.
+  // aplikasi (menu, logo) dan tanya dulu; menutup / memuat ulang tab memakai peringatan browser.
   useEffect(() => {
-    if (!unsaved) return
+    if (!hasData) return
     const onClick = (e: MouseEvent) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
       const link = e.target instanceof Element ? e.target.closest('a[href^="#/"]') : null
@@ -114,18 +176,20 @@ export function UploadPage({
       document.removeEventListener('click', onClick, true)
       window.removeEventListener('beforeunload', onBeforeUnload)
     }
-  }, [unsaved])
+  }, [hasData])
 
   /** Mengembalikan true kalau tersimpan. */
   const save = async (): Promise<boolean> => {
-    if (!store) return false
+    if (!store || !canSave) return false
     setSaving(true)
     setSaveError(null)
+    let savedSomething = false
     try {
       const out: SaveSummary = { storeName: store.name, missingHpp: [] }
       if (orders?.result) {
         const r = orders.result
         const counts = await saveOrderItems(store.id, r.items)
+        savedSomething = true
         out.orders = { ...counts, skipped: r.invalid }
         const uploadedSkus = new Set(r.items.map((i) => i.sku))
         out.missingHpp = (await fetchProducts(store.id)).filter((p) => p.hpp === null && uploadedSkus.has(p.sku))
@@ -133,6 +197,7 @@ export function UploadPage({
       if (income?.result) {
         const r = income.result
         const counts = await saveIncome(store.id, r.days)
+        savedSomething = true
         // Hanya panggil kalau ada penyesuaian, supaya laporan tanpa penyesuaian tetap bisa
         // disimpan walau SQL tambahan belum dijalankan.
         const adj = r.adjustments.length > 0 ? await saveAdjustments(store.id, r.adjustments) : null
@@ -143,30 +208,28 @@ export function UploadPage({
           adjustmentsSaved: adj ? adj.inserted + adj.updated + adj.unchanged : 0,
         }
       }
+      if (adsGroups.length > 0) {
+        out.ads = await saveAdsGroups(store.id, adsGroups)
+        savedSomething = true
+      }
       setSummary(out)
-      notifyDataChanged()
-      setOrders(null)
-      setIncome(null)
-      setInputKey((k) => k + 1)
+      clearFiles()
       return true
     } catch (error) {
+      // File tetap dipilih: simpan ulang aman karena data yang sudah masuk tidak akan dobel.
       setSaveError(error)
       return false
     } finally {
+      if (savedSomething) notifyDataChanged()
       setSaving(false)
     }
-  }
-
-  const leave = (href: string) => {
-    setLeaveTo(null)
-    window.location.hash = href.slice(1)
   }
 
   return (
     <>
       <PageTitle
         kicker={multiStore ? store?.name : undefined}
-        subtitle="Laporan dari Seller Centre Shopee. Upload file yang sama dua kali aman, datanya tidak akan dobel."
+        subtitle="Pilih semua laporan dari Seller Centre Shopee, cek preview-nya, lalu simpan sekali. Upload file yang sama dua kali aman, datanya tidak akan dobel."
       >
         Upload laporan
       </PageTitle>
@@ -193,41 +256,84 @@ export function UploadPage({
           <FileInput key={`i${inputKey}`} accept=".pdf,application/pdf" onChange={onIncomeFile} />
           <IncomePreview parsed={income} store={store} multiStore={multiStore} />
         </Card>
+        <Card
+          title={
+            <>
+              3. Data iklan (.csv){' '}
+              <span className="font-sans text-base font-normal text-ink-2">· kalau tokomu beriklan</span>
+            </>
+          }
+          className="lg:col-span-2"
+        >
+          <p className="mb-3 text-ink-2">
+            Seller Centre → Iklan Saya → Download Data. Tiap periode terdiri dari beberapa file: pilih semuanya sekaligus.
+          </p>
+          <AdsHowTo />
+          <FileInput
+            key={`a${inputKey}`}
+            accept=".csv,text/csv"
+            multiple
+            placeholder="Boleh pilih beberapa file .csv sekaligus"
+            onChange={onAdsFiles}
+          />
+          {ads?.loading ? (
+            <Spinner label="Membaca file…" />
+          ) : ads ? (
+            <AdsPreview
+              files={ads.files}
+              groups={adsGroups}
+              problem={adsBlocked}
+              elsewhere={adsElsewhere}
+              storeName={store?.name}
+            />
+          ) : null}
+        </Card>
       </div>
 
-      {/* Data iklan bisa beberapa file per periode, jadi upload-nya tetap di halaman Iklan. */}
-      <section className="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:px-7">
-        <div className="flex min-w-0 items-start gap-3">
-          <IconMegaphone size={22} className="mt-1 shrink-0 text-accent" />
-          <div>
-            <h2 className="font-display text-xl font-bold tracking-tight">3. Data iklan (.csv)</h2>
-            <p className="mt-1 text-ink-2">
-              Kalau tokomu beriklan. Upload di halaman Iklan, karena tiap periode iklan terdiri dari beberapa file.
-            </p>
-          </div>
-        </div>
-        <a href="#/iklan" className={buttonClass('secondary')}>
-          Upload di halaman Iklan
-          <IconArrowRight size={18} />
-        </a>
-      </section>
-
-      {(orders?.result || income?.result) && (
+      {(hasData || saveError != null) && (
         <Card title="Simpan laporan" className="mb-6">
-          <p className="mb-4 text-ink-2">
+          <p className="text-ink-2">
+            Yang akan disimpan
             {multiStore ? (
               <>
-                Datanya disimpan ke toko <strong className="text-ink">{store?.name ?? '(belum dipilih)'}</strong>.
+                {' '}ke toko <strong className="text-ink">{store?.name ?? '(belum dipilih)'}</strong>
               </>
-            ) : (
-              'Datanya disimpan ke akunmu.'
-            )}{' '}
-            File yang sama boleh di-upload lagi, datanya tidak akan dobel.
+            ) : null}
+            :
           </p>
-          {saveError ? <div className="mb-4"><ErrorBox error={saveError} /></div> : null}
+          <ul className="mb-4 mt-2 space-y-1">
+            <SaveItem ok={Boolean(orders?.result)} label="Export pesanan" />
+            <SaveItem ok={Boolean(income?.result)} label="Laporan penghasilan" />
+            <SaveItem
+              ok={adsGroups.length > 0}
+              label={
+                adsGroups.length > 0
+                  ? `Data iklan (${adsOk.length} file, ${adsGroups.length} periode)`
+                  : 'Data iklan'
+              }
+            />
+          </ul>
+          {hasFileErrors && (
+            <div className="mb-4">
+              <Alert tone="warning">File yang gagal dibaca (tanda merah di atas) tidak ikut disimpan.</Alert>
+            </div>
+          )}
+          {adsBlocked && (
+            <div className="mb-4">
+              <Alert tone="error">{adsBlocked}</Alert>
+            </div>
+          )}
+          {saveError ? (
+            <div className="mb-4">
+              <ErrorBox error={saveError} />
+              <p className="mt-2 text-sm text-ink-2">
+                File masih dipilih. Tekan Simpan lagi: data yang sudah sempat masuk tidak akan dobel.
+              </p>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-3">
             <Button onClick={save} disabled={!canSave}>
-              {saving ? 'Menyimpan…' : multiStore ? `Simpan ke ${store?.name ?? 'toko'}` : 'Simpan'}
+              {saving ? 'Menyimpan…' : multiStore ? `Simpan semua ke ${store?.name ?? 'toko'}` : 'Simpan semua'}
             </Button>
             <Button variant="secondary" onClick={reset} disabled={saving}>
               Batal
@@ -241,9 +347,11 @@ export function UploadPage({
       {leaveTo && (
         <UnsavedDialog
           target={leaveTo}
-          files={[orders?.result ? orders.fileName : null, income?.result ? income.fileName : null].filter(
-            (f): f is string => f !== null,
-          )}
+          files={[
+            ...(orders?.result ? [orders.fileName] : []),
+            ...(income?.result ? [income.fileName] : []),
+            ...(ads?.files ?? []).filter((f) => f.result).map((f) => f.fileName),
+          ]}
           storeName={multiStore ? (store?.name ?? null) : null}
           saving={saving}
           canSave={canSave}
@@ -259,7 +367,7 @@ export function UploadPage({
   )
 }
 
-/** Dialog saat pindah halaman padahal export pesanan / laporan penghasilan belum disimpan. */
+/** Dialog saat pindah halaman padahal laporan yang sudah dibaca belum disimpan. */
 function UnsavedDialog({
   target,
   files,
@@ -315,7 +423,27 @@ function UnsavedDialog({
   )
 }
 
-function FileInput({ accept, onChange }: { accept: string; onChange: (e: ChangeEvent<HTMLInputElement>) => void }) {
+function SaveItem({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <li className={`flex items-center gap-2 ${ok ? 'font-semibold text-ink' : 'text-ink-3'}`}>
+      {ok ? <IconCheck size={18} className="shrink-0 text-gain" /> : <IconMinus size={18} className="shrink-0" />}
+      {label}
+      {!ok && <span className="text-sm font-normal">(tidak ada file)</span>}
+    </li>
+  )
+}
+
+function FileInput({
+  accept,
+  multiple,
+  placeholder = 'Belum ada file dipilih',
+  onChange,
+}: {
+  accept: string
+  multiple?: boolean
+  placeholder?: string
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void
+}) {
   const [name, setName] = useState('')
   return (
     <label className="flex cursor-pointer flex-wrap items-center gap-4 rounded-2xl border-2 border-dashed border-control/70 bg-tint p-4 transition-colors hover:border-accent focus-within:border-accent">
@@ -323,13 +451,15 @@ function FileInput({ accept, onChange }: { accept: string; onChange: (e: ChangeE
         <IconUpload size={18} />
         Pilih file
       </span>
-      <span className="min-w-0 flex-1 truncate text-ink-2">{name || 'Belum ada file dipilih'}</span>
+      <span className="min-w-0 flex-1 truncate text-ink-2">{name || placeholder}</span>
       <input
         type="file"
         accept={accept}
+        multiple={multiple}
         className="sr-only"
         onChange={(e) => {
-          setName(e.target.files?.[0]?.name ?? '')
+          const files = e.target.files ?? []
+          setName(files.length > 1 ? `${files.length} file dipilih` : (files[0]?.name ?? ''))
           onChange(e)
         }}
       />
@@ -512,7 +642,7 @@ function SaveSummaryCard({
   multiStore: boolean
   onAgain: () => void
 }) {
-  const { orders, income, missingHpp } = summary
+  const { orders, income, ads, missingHpp } = summary
   return (
     <Card
       title={
@@ -554,6 +684,14 @@ function SaveSummaryCard({
             </ul>
           </div>
         )}
+        {ads && (
+          <div className="rounded-2xl bg-tint p-4 md:col-span-2">
+            <p className="font-semibold">
+              Data iklan ({formatNumber(ads.reduce((n, p) => n + p.files, 0))} file)
+            </p>
+            <AdsSavedList saved={ads} />
+          </div>
+        )}
       </div>
 
       {orders && missingHpp.length > 0 && (
@@ -580,6 +718,11 @@ function SaveSummaryCard({
         <Button variant={orders && missingHpp.length > 0 ? 'secondary' : 'primary'} onClick={() => navigate('rekap')}>
           Lihat Rekap
         </Button>
+        {ads && (
+          <Button variant="secondary" onClick={() => navigate('iklan')}>
+            Lihat analisis iklan
+          </Button>
+        )}
         <Button variant="secondary" onClick={onAgain}>Upload file lain</Button>
       </div>
     </Card>

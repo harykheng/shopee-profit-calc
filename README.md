@@ -12,7 +12,7 @@ Profit bersih = Penghasilan dilepas − Modal (qty × HPP) − Biaya
 - **Modal** dihitung dari export pesanan: item berstatus *Selesai* yang selesai di bulan itu
   (di Shopee, dana dilepas di hari yang sama dengan pesanan selesai). Qty retur tidak dihitung.
 - **Biaya** (iklan Shopee, Meta Ads, packaging, lain-lain) diisi manual. Biaya iklan Shopee terisi
-  otomatis kalau data iklan 1 bulan penuh di-upload di halaman **Iklan**.
+  otomatis kalau data iklan 1 bulan penuh ikut di-upload di halaman **Upload**.
 - **Iklan**: upload data iklan Shopee (.csv) → per produk: ROAS nyata, ROAS balik modal, saran target
   ROAS (untung 5% setelah iklan), dan label Hero / Aman / ROAS terlalu kecil / Takedown.
 
