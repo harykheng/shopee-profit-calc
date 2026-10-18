@@ -34,6 +34,11 @@ interface SaveSummary {
 
 const PREVIEW_ROWS = 10
 
+// Kartu 1 dan 2 berbagi baris grid (judul, keterangan, kotak upload, preview), jadi kotak uploadnya
+// selalu sejajar walau keterangan di salah satu kartu jadi 2 baris. Hanya di layar lebar (kartu berdampingan).
+// Subgrid ikut memakan setengah gap grid induk (12px) di tepi bawah, jadi padding bawahnya dikurangi.
+const ALIGNED = 'lg:grid lg:grid-rows-subgrid lg:row-span-4 lg:content-start lg:gap-y-0 lg:pb-4'
+
 export function UploadPage({
   stores,
   storeId,
@@ -244,14 +249,14 @@ export function UploadPage({
       )}
 
       <div className="mb-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
-        <Card title="1. Export pesanan (.xlsx)">
+        <Card title="1. Export pesanan (.xlsx)" className={ALIGNED}>
           <p className="mb-3 text-ink-2">
             Seller Centre → Pesanan Saya → Export, status <strong className="text-ink">Semua</strong>.
           </p>
           <FileInput key={`o${inputKey}`} accept=".xlsx,.xls" onChange={onOrdersFile} />
           <OrdersPreview parsed={orders} />
         </Card>
-        <Card title="2. Laporan penghasilan (.pdf)">
+        <Card title="2. Laporan penghasilan (.pdf)" className={ALIGNED}>
           <p className="mb-3 text-ink-2">Seller Centre → Keuangan → Penghasilan Saya → laporan bulanan.</p>
           <FileInput key={`i${inputKey}`} accept=".pdf,application/pdf" onChange={onIncomeFile} />
           <IncomePreview parsed={income} store={store} multiStore={multiStore} />
