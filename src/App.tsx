@@ -173,9 +173,18 @@ function MainApp({ user }: { user: User }) {
   const blocked = stores !== null && (stores.length === 0 || expired)
   const notice = expiryNotice(subscription)
 
-  // Pemilih toko hanya muncul kalau user punya lebih dari satu toko.
+  // Nama toko selalu tampil setelah logo: pemilih kalau tokonya lebih dari satu, label biasa kalau cuma satu.
   const storeSelect =
-    stores && stores.length > 1 ? (
+    stores && stores.length === 1 ? (
+      <span
+        title={`Toko: ${stores[0].name}`}
+        className="inline-flex min-h-11 min-w-0 max-w-[13rem] shrink items-center gap-2 rounded-full bg-tint px-3.5 font-semibold text-ink ring-1 ring-line"
+      >
+        <IconStore size={17} className="shrink-0 text-accent" />
+        <span className="sr-only">Toko: </span>
+        <span className="truncate">{stores[0].name}</span>
+      </span>
+    ) : stores && stores.length > 1 ? (
       <label className="min-w-[9.5rem] shrink">
         <span className="sr-only">Toko</span>
         <span className="relative block">
