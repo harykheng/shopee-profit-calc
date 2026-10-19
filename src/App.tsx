@@ -345,7 +345,9 @@ function MainApp({ user }: { user: User }) {
               />
             )}
             {route === 'rekap' && <RecapPage stores={stores} storeId={storeId} />}
-            {route === 'iklan' && <AdsPage key={storeId} stores={stores} storeId={storeId} />}
+            {route === 'iklan' && (
+              <AdsPage key={storeId} stores={stores} storeId={storeId} quickCheck={params.get('cek') === '1'} />
+            )}
             {route === 'simulasi' && <PriceSimPage stores={stores} storeId={storeId} />}
           </div>
           </>

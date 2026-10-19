@@ -1,44 +1,15 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Alert, Button, Card, ErrorBox, PageTitle, ScrollX, Spinner, Stamp, buttonClass, linkClass, type StampTone } from '../components/ui'
-import { IconAlertCircle, IconChevronDown, IconInfo, IconUpload } from '../components/icons'
-import {
-  fetchAdReports,
-  fetchAdRows,
-  fetchIncomeDays,
-  fetchItemsCreatedBetween,
-  fetchFeeCategories,
-  fetchProducts,
-  fetchStoreSettings,
-} from '../lib/api'
-import {
-  DEFAULT_FEE_RATE,
-  analyzeAds,
-  feeRateFromIncome,
-  fullMonthOf,
-  productKey,
-  type AdProductResult,
-  type AdVerdict,
-  type AdsAnalysis,
-  type Targets,
-} from '../lib/adsMath'
-import { productFeeComponents } from '../lib/feeCategories'
-import { resolveSettings, targetsOf } from '../lib/storeSettings'
-import { addMonths, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort, monthEnd, wibDay } from '../lib/format'
+import { IconAlertCircle, IconChevronDown, IconInfo, IconSearch, IconUpload } from '../components/icons'
+import { AdsQuickCheck } from './AdsQuickCheck'
+import { fetchAdReports } from '../lib/api'
+import { fullMonthOf, type AdProductResult, type AdVerdict, type AdsAnalysis, type Targets } from '../lib/adsMath'
+import { loadAdsAnalysis, type Loaded, type Period } from '../lib/adsLoad'
+import { addMonths, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort, monthEnd } from '../lib/format'
 import { formatPeriod, periodKey } from '../components/adsUpload'
 import { navigate } from '../lib/router'
 import { PillSelect } from '../components/pickers'
 import type { AdReport, Store } from '../lib/types'
-
-export interface Period {
-  key: string
-  start: string
-  end: string
-  reports: AdReport[]
-  /** Untuk gabungan: bulan-bulan (YYYY-MM-01) yang digabung. */
-  months?: string[]
-  /** Untuk gabungan: bulan di rentang yang belum punya data iklan 1 bulan penuh. */
-  missingMonths?: string[]
-}
 
 const COMBINED = 'gabungan'
 
@@ -64,8 +35,24 @@ const VERDICTS: Record<AdVerdict, { label: string; tone: StampTone }> = {
 
 const VERDICT_ORDER: AdVerdict[] = ['takedown', 'kurang', 'hpp_kosong', 'hero', 'aman', 'belum_cukup']
 
-export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number | null }) {
+export function AdsPage({
+  stores,
+  storeId,
+  quickCheck = false,
+}: {
+  stores: Store[]
+  storeId: number | null
+  /** Buka Cek cepat langsung (tautan #/iklan?cek=1). */
+  quickCheck?: boolean
+}) {
   const store = stores.find((s) => s.id === storeId) ?? null
+  const [quickOpen, setQuickOpen] = useState(quickCheck)
+  // Tautan ke Cek cepat saat sudah di halaman Iklan: halaman tidak dimuat ulang, jadi buka dari sini.
+  const [lastQuick, setLastQuick] = useState(quickCheck)
+  if (quickCheck !== lastQuick) {
+    setLastQuick(quickCheck)
+    if (quickCheck) setQuickOpen(true)
+  }
   const [reports, setReports] = useState<AdReport[] | null>(null)
   const [reportsError, setReportsError] = useState<unknown>(null)
   const [selected, setSelected] = useState<string | null>(null)
@@ -144,17 +131,27 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
         Iklan
       </PageTitle>
 
-      {/* Upload data iklan sekarang satu tempat dengan export pesanan dan laporan penghasilan. */}
-      {periods.length > 0 && (
+      {/* Data bulanan disimpan lewat halaman Upload; cek iklan beberapa hari lewat Cek cepat (tidak disimpan). */}
+      {quickOpen ? (
+        <AdsQuickCheck store={store} onClose={() => setQuickOpen(false)} />
+      ) : (
         <section className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-tint px-5 py-3 ring-1 ring-line">
-          <p>
-            <span className="font-semibold">Ada data iklan baru?</span>{' '}
-            <span className="text-ink-2">Upload CSV-nya di halaman Upload, bareng laporan lainnya.</span>
+          <p className="min-w-0">
+            <span className="font-semibold">Mau cek iklan beberapa hari terakhir?</span>{' '}
+            <span className="text-ink-2">Cek cepat tanpa menyimpan. Data 1 bulan penuh di-upload di halaman Upload.</span>
           </p>
-          <a href="#/upload" className={buttonClass('secondary')}>
-            <IconUpload size={18} />
-            Ke halaman Upload
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setQuickOpen(true)} disabled={!store}>
+              <IconSearch size={18} />
+              Cek cepat
+            </Button>
+            {periods.length > 0 && (
+              <a href="#/upload" className={buttonClass('secondary')}>
+                <IconUpload size={18} />
+                Upload bulanan
+              </a>
+            )}
+          </div>
         </section>
       )}
 
@@ -164,7 +161,10 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
         <Spinner />
       ) : periods.length === 0 ? (
         <Alert title="Belum ada data iklan untuk toko ini.">
-          <p>Upload file CSV iklan di halaman Upload, bersama export pesanan dan laporan penghasilan.</p>
+          <p>
+            Upload file CSV iklan 1 bulan penuh di halaman Upload, bersama export pesanan dan laporan penghasilan. Untuk
+            cek iklan beberapa hari saja, pakai Cek cepat di atas.
+          </p>
           <a href="#/upload" className={`${buttonClass('primary')} mt-3`}>
             <IconUpload size={18} />
             Ke halaman Upload
@@ -223,82 +223,6 @@ export function AdsPage({ stores, storeId }: { stores: Store[]; storeId: number 
 }
 
 // --- Analisis -----------------------------------------------------------------
-
-export interface Loaded {
-  /** Target untung toko yang dipakai untuk analisis ini (bawaan 5% setelah iklan, 20% sebelum iklan). */
-  targets: Targets
-  analysis: AdsAnalysis
-  feeRate: number
-  feeFrom: string | null
-  hasOrders: boolean
-  /** Untuk gabungan beberapa bulan: hasil per bulan. */
-  perMonth?: { month: string; analysis: AdsAnalysis }[]
-}
-
-/** Muat & hitung analisis iklan satu periode (dipakai halaman Iklan dan bab Iklan di Rekap). */
-export async function loadAdsAnalysis(storeId: number, period: Period): Promise<Loaded> {
-  const monthStart = `${period.start.slice(0, 7)}-01`
-  const lastMonth = `${period.end.slice(0, 7)}-01`
-  const [reports, items, products, incomeDays, categories, settingsRow] = await Promise.all([
-    fetchAdRows(period.reports),
-    fetchItemsCreatedBetween(storeId, period.start, period.end),
-    fetchProducts(storeId),
-    fetchIncomeDays(storeId, addMonths(monthStart, -3), monthEnd(lastMonth)),
-    // Kategori admin belum tentu ada (SQL 20261014 belum dijalankan): tanpa itu, hanya isian manual yang dipakai.
-    fetchFeeCategories(storeId).catch(() => []),
-    // Belum ada pengaturan / SQL 20261015 belum dijalankan: target bawaan.
-    fetchStoreSettings(storeId).catch(() => null),
-  ])
-  const targets = targetsOf(resolveSettings(settingsRow))
-  const feeComponents = productFeeComponents(products, categories)
-
-  // Potongan Shopee: bulan periode iklan; kalau belum ada, 3 bulan sebelumnya; kalau tidak ada juga, 15%.
-  const inPeriod = incomeDays.filter((d) => d.released_date >= monthStart)
-  let feeRate = feeRateFromIncome(inPeriod)
-  let feeFrom: string | null = null
-  if (feeRate !== null) {
-    feeFrom = monthStart === lastMonth ? formatMonth(monthStart) : `${formatMonth(monthStart)} – ${formatMonth(lastMonth)}`
-  } else {
-    feeRate = feeRateFromIncome(incomeDays)
-    if (feeRate !== null) feeFrom = '3 bulan sebelumnya'
-  }
-
-  const hppBySku = new Map(products.map((p) => [p.sku, p.hpp === null ? null : Number(p.hpp)]))
-  const fallback = new Map<string, number[]>()
-  for (const p of products) {
-    if (p.hpp === null) continue
-    const k = productKey(p.product_name)
-    fallback.set(k, [...(fallback.get(k) ?? []), Number(p.hpp)])
-  }
-  const fallbackHpp = new Map([...fallback].map(([k, v]) => [k, v.reduce((s, x) => s + x, 0) / v.length]))
-
-  const toLine = (i: (typeof items)[number]) => ({
-    product_name: i.product_name,
-    status_group: i.status_group,
-    qty: Number(i.qty),
-    returned_qty: Number(i.returned_qty ?? 0),
-    subtotal: Number(i.subtotal),
-    hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
-  })
-  const rate = feeRate ?? DEFAULT_FEE_RATE
-  const analysis = analyzeAds({ reports, orders: items.map(toLine), feeRate: rate, fallbackHpp, feeComponents, targets })
-  // Gabungan: hitung juga per bulan (data iklan & pesanan bulan itu saja) untuk dibandingkan.
-  const perMonth =
-    period.months && period.months.length > 1
-      ? period.months.map((m) => ({
-          month: m,
-          analysis: analyzeAds({
-            reports: reports.filter((r) => r.period === `${m}|${monthEnd(m)}`),
-            orders: items.filter((i) => i.created_at && wibDay(i.created_at).slice(0, 7) === m.slice(0, 7)).map(toLine),
-            feeRate: rate,
-            fallbackHpp,
-            feeComponents,
-            targets,
-          }),
-        }))
-      : undefined
-  return { targets, analysis, feeRate: rate, feeFrom, hasOrders: items.length > 0, perMonth }
-}
 
 function Analysis({ storeId, period }: { storeId: number; period: Period }) {
   const [data, setData] = useState<Loaded | null>(null)

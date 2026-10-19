@@ -28,7 +28,7 @@ import { estimateProfit, soldFlow, type FlowStep, type ProfitEstimate } from '..
 import { resolveSettings } from '../lib/storeSettings'
 import { navigate } from '../lib/router'
 import { fullMonthOf } from '../lib/adsMath'
-import { loadAdsAnalysis, type Period as AdsPeriod } from './AdsPage'
+import { loadAdsAnalysis, type Period as AdsPeriod } from '../lib/adsLoad'
 import { useCountUp } from '../components/motion'
 import type {
   DailyReconciliation,

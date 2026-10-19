@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
-import { Alert, ErrorBox } from './ui'
+import { Alert, ErrorBox, linkClass } from './ui'
 import { IconAlertCircle, IconCheck, IconChevronDown, IconInfo } from './icons'
 import { saveAdReport, saveAdsExpense } from '../lib/api'
 import { fullMonthOf } from '../lib/adsMath'
-import { formatDate, formatMonth, formatRupiah } from '../lib/format'
+import { formatDate, formatMonth, formatRupiah, periodDays } from '../lib/format'
 import { ParseError } from '../lib/parsers/common'
 import { parseAdsCsv, type AdsParseResult } from '../lib/parsers/ads'
 
@@ -122,7 +122,7 @@ export async function saveAdsGroups(storeId: number, groups: AdsFileGroup[]): Pr
   return out
 }
 
-/** Apa yang terjadi dengan Biaya untuk satu kelompok file. */
+/** Apa yang terjadi dengan satu kelompok file di halaman Upload (hanya 1 bulan penuh yang disimpan). */
 function expenseNote(g: AdsFileGroup): { tone: 'info' | 'warning' | 'success'; text: ReactNode } {
   if (g.month && g.keseluruhan) {
     return {
@@ -139,9 +139,9 @@ function expenseNote(g: AdsFileGroup): { tone: 'info' | 'warning' | 'success'; t
       tone: 'warning',
       text: (
         <>
-          File ini berisi <strong>total beberapa bulan sekaligus</strong>. Shopee tidak memberi rincian per bulan, jadi
-          angkanya tidak bisa dipecah dan Biaya tidak diisi. Untuk hasil per bulan, download data iklan per bulan (tanggal 1
-          – akhir bulan), lalu pilih semua filenya sekaligus di sini.
+          <strong>Tidak disimpan.</strong> File ini berisi total beberapa bulan sekaligus dan Shopee tidak memberi rincian
+          per bulan. Download data iklan <strong>per bulan</strong> (tanggal 1 – akhir bulan), lalu pilih semua filenya
+          sekaligus di sini.
         </>
       ),
     }
@@ -156,7 +156,19 @@ function expenseNote(g: AdsFileGroup): { tone: 'info' | 'warning' | 'success'; t
       ),
     }
   }
-  return { tone: 'info', text: 'Bukan 1 bulan penuh: hanya untuk analisis, Biaya tidak diubah.' }
+  return {
+    tone: 'info',
+    text: (
+      <>
+        <strong>Tidak disimpan:</strong> ini data {periodDays(g.start, g.end)} hari. Halaman Upload hanya menyimpan data 1
+        bulan penuh. Untuk cek iklan beberapa hari, pakai{' '}
+        <a href="#/iklan?cek=1" className={linkClass}>
+          Cek cepat di halaman Iklan
+        </a>
+        .
+      </>
+    ),
+  }
 }
 
 export function AdsHowTo() {
