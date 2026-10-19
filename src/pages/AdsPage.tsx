@@ -276,6 +276,7 @@ export async function loadAdsAnalysis(storeId: number, period: Period): Promise<
     product_name: i.product_name,
     status_group: i.status_group,
     qty: Number(i.qty),
+    returned_qty: Number(i.returned_qty ?? 0),
     subtotal: Number(i.subtotal),
     hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
   })
@@ -344,7 +345,7 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
       <div className="space-y-3">
         {!data.hasOrders && (
           <Alert tone="warning" title="Export pesanan untuk periode ini belum di-upload.">
-            Pesanan batal belum dikurangi dan HPP belum bisa dicocokkan. Upload export pesanan (status Semua) di halaman{' '}
+            Pesanan batal &amp; retur belum dikurangi dan HPP belum bisa dicocokkan. Upload export pesanan (status Semua) di halaman{' '}
             <a href="#/upload" className={linkClass}>
               Upload
             </a>
@@ -463,7 +464,7 @@ function PerMonthCard({ rows }: { rows: { month: string; analysis: AdsAnalysis }
             <tr>
               <th className="py-2 pr-3 font-semibold">Bulan</th>
               <th className="py-2 pr-3 text-right font-semibold">Biaya iklan</th>
-              <th className="py-2 pr-3 text-right font-semibold">Omzet iklan (tanpa batal)</th>
+              <th className="py-2 pr-3 text-right font-semibold">Omzet iklan (tanpa batal & retur)</th>
               <th className="py-2 pr-3 text-right font-semibold">ROAS nyata</th>
               <th className="py-2 text-right font-semibold">Untung setelah iklan</th>
             </tr>
@@ -542,7 +543,7 @@ function SummaryCard({ data, period }: { data: Loaded; period: Period }) {
         <Line label="Biaya iklan" value={formatRupiah(a.totalSpend)} strong />
         <Line label="Omzet dari iklan (versi Shopee)" value={formatRupiah(a.adsGmv)} />
         <Line
-          label="Omzet dari iklan tanpa pesanan batal"
+          label="Omzet dari iklan tanpa pesanan batal & retur"
           value={formatRupiah(a.netGmv)}
           note={`ROAS nyata ${formatRoas(a.realRoas)}`}
         />
@@ -654,7 +655,11 @@ function ProductCard({
         <Mini
           label="Terjual"
           value={formatNumber(sold)}
-          detail={p.batalQty > 0 ? `Shopee: ${formatNumber(p.adsSold)} (ada batal)` : undefined}
+          detail={
+            p.batalQty > 0 || p.returQty > 0
+              ? `Shopee: ${formatNumber(p.adsSold)} (ada ${[p.batalQty > 0 && 'batal', p.returQty > 0 && 'retur'].filter(Boolean).join(' & ')})`
+              : undefined
+          }
         />
         <Mini
           label="ROAS nyata"
@@ -809,7 +814,8 @@ function HowToRead({ feeRate, targets }: { feeRate: number; targets: Targets }) 
         </li>
         <li>
           <strong>ROAS nyata</strong>: angka "terjual" dan omzet di laporan iklan Shopee ikut menghitung pesanan yang
-          kemudian <strong>batal</strong>. Aplikasi menguranginya memakai data pesanan periode yang sama.
+          kemudian <strong>batal</strong> atau <strong>diretur</strong>. Aplikasi menguranginya memakai data pesanan
+          periode yang sama (porsi batal + retur per produk).
         </li>
         <li>
           <strong>Untung per barang</strong> = harga jual − potongan Shopee − HPP, sebelum iklan dan packaging. Potongan
@@ -822,7 +828,7 @@ function HowToRead({ feeRate, targets }: { feeRate: number; targets: Targets }) 
         <li>
           <strong>Saran target ROAS di Shopee</strong>: angka untuk diisi di pengaturan iklan (GMV Max ROAS) supaya masih
           untung {formatPercent(targets.adsProfit * 100)} dari harga jual setelah iklan. Sudah termasuk cadangan untuk
-          pesanan batal.
+          pesanan batal dan retur.
         </li>
         <li>
           Label:

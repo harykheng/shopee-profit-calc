@@ -43,6 +43,8 @@ export interface AdOrderLine {
   product_name: string
   status_group: StatusGroup
   qty: number
+  /** Qty yang diretur (pesanan tetap Selesai). Tidak diisi = 0. */
+  returned_qty?: number
   subtotal: number
   /** HPP per unit (snapshot, atau HPP produk sekarang). */
   hpp: number | null
@@ -53,7 +55,7 @@ export interface AdProductResult {
   name: string
   spend: number
   clicks: number
-  /** Terjual & omzet versi Shopee (termasuk pesanan batal). */
+  /** Terjual & omzet versi Shopee (termasuk pesanan batal dan retur). */
   adsSold: number
   adsGmv: number
   shopeeRoas: number | null
@@ -62,7 +64,11 @@ export interface AdProductResult {
   /** Porsi pesanan batal (0–1) dari data pesanan. */
   batalShare: number
   batalQty: number
-  /** Setelah dikurangi pesanan batal. */
+  /** Qty yang diretur dari pesanan yang tidak batal. */
+  returQty: number
+  /** Porsi yang tidak jadi penjualan (0–1): batal + retur. Dipakai untuk ROAS nyata & cadangan target ROAS. */
+  lostShare: number
+  /** Setelah dikurangi pesanan batal dan retur. */
   netSold: number
   netGmv: number
   realRoas: number | null
@@ -84,7 +90,7 @@ export interface AdProductResult {
   bepRoas: number | null
   /** ROAS nyata supaya untung 5%. null = tidak mungkin (margin ≤ 5%). */
   targetRoas: number | null
-  /** Angka target ROAS untuk diisi di Shopee (Shopee ikut menghitung pesanan batal). */
+  /** Angka target ROAS untuk diisi di Shopee (Shopee ikut menghitung pesanan batal dan retur). */
   shopeeTargetRoas: number | null
   profitAfterAds: number | null
   /** Harga jual supaya untung 20% (diisi kalau margin < 20%). */
@@ -141,9 +147,9 @@ export function feeRateFromIncome(days: { total_income: number; subtotal_pesanan
 /**
  * ROAS supaya masih untung ADS_TARGET_PROFIT (5%) dari harga jual setelah iklan.
  * - `targetRoas`: ROAS nyata yang dibutuhkan; null = tidak mungkin (margin ≤ 5% atau > MAX_TARGET_ROAS).
- * - `shopeeTargetRoas`: angka untuk diisi di Shopee, dengan cadangan pesanan batal
- *   (Shopee ikut menghitung pesanan batal); null = tidak mungkin.
- * `margin` = untung per barang (sebelum iklan) ÷ harga jual; `batalShare` = porsi pesanan batal (0–1).
+ * - `shopeeTargetRoas`: angka untuk diisi di Shopee, dengan cadangan pesanan batal & retur
+ *   (Shopee ikut menghitung keduanya); null = tidak mungkin.
+ * `margin` = untung per barang (sebelum iklan) ÷ harga jual; `batalShare` = porsi batal + retur (0–1).
  */
 export function targetRoasFromMargin(
   margin: number | null,
@@ -289,8 +295,12 @@ export function analyzeAds(input: {
     const keptQty = kept.reduce((s, l) => s + l.qty, 0)
     const batalQty = allQty - keptQty
     const batalShare = allQty > 0 ? batalQty / allQty : 0
-    const netSold = a.sold * (1 - batalShare)
-    const netGmv = a.gmv * (1 - batalShare)
+    // Retur: pesanan tetap Selesai, tapi barangnya kembali dan uangnya tidak jadi. Shopee tetap menghitungnya
+    // sebagai konversi iklan, jadi dikurangi seperti pesanan batal.
+    const returQty = kept.reduce((s, l) => s + Math.min(Math.max(l.returned_qty ?? 0, 0), l.qty), 0)
+    const lostShare = allQty > 0 ? (batalQty + returQty) / allQty : 0
+    const netSold = a.sold * (1 - lostShare)
+    const netGmv = a.gmv * (1 - lostShare)
 
     const keptSubtotal = kept.reduce((s, l) => s + l.subtotal, 0)
     const priceSource = keptQty > 0 ? 'pesanan' : a.sold > 0 ? 'iklan' : null
@@ -308,7 +318,7 @@ export function analyzeAds(input: {
     const unitProfit = price !== null && hpp !== null ? price * (1 - productFee) - hpp : null
     const margin = unitProfit !== null && price ? unitProfit / price : null
     const bepRoas = margin !== null && margin > 0 ? 1 / margin : null
-    const { targetRoas, shopeeTargetRoas } = targetRoasFromMargin(margin, batalShare, targets.adsProfit)
+    const { targetRoas, shopeeTargetRoas } = targetRoasFromMargin(margin, lostShare, targets.adsProfit)
     const realRoas = a.spend > 0 ? netGmv / a.spend : null
     const profitAfterAds = unitProfit !== null ? netSold * unitProfit - a.spend : null
     // Penyebut ≤ 0 (potongan + target untung ≥ 100%) = tidak ada harga yang memenuhi target.
@@ -329,6 +339,8 @@ export function analyzeAds(input: {
       hasOrders: lines.length > 0,
       batalShare,
       batalQty,
+      returQty,
+      lostShare,
       netSold,
       netGmv,
       realRoas,

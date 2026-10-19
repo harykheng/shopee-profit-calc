@@ -263,8 +263,9 @@ laporan penghasilan, lalu disimpan sekaligus. Halaman Iklan hanya menampilkan ha
 4. Tekan **Simpan semua**, lalu **Lihat analisis iklan**.
 
 > Supaya hasilnya akurat, **upload export pesanan untuk periode yang sama dulu** (halaman
-> Upload). Laporan iklan Shopee ikut menghitung pesanan yang kemudian **batal**; aplikasi
-> menguranginya memakai data pesanan.
+> Upload). Laporan iklan Shopee ikut menghitung pesanan yang kemudian **batal** atau **diretur**;
+> aplikasi menguranginya memakai data pesanan. Retur yang terjadi setelah export di-download baru
+> terhitung setelah export pesanan di-upload ulang (aman, tidak dobel).
 
 Kalau file iklan dari toko yang sebelumnya disimpan ke toko lain, akan muncul peringatan
 **"Cek toko dulu"**.
@@ -291,7 +292,7 @@ sebaiknya dimatikan. Di bawahnya rinciannya:
 ```
 Biaya iklan                                   Rp…
 Omzet dari iklan (versi Shopee)               Rp…
-Omzet dari iklan tanpa pesanan batal          Rp…   (ROAS nyata …)
+Omzet dari iklan tanpa batal & retur          Rp…   (ROAS nyata …)
 Untung produk yang diiklankan (sebelum iklan) Rp…
 Untung setelah iklan                          Rp…
 ```
@@ -306,10 +307,10 @@ Tiap produk punya kartu berisi:
 | Baris | Artinya |
 |---|---|
 | **Biaya iklan** | Total biaya iklan produk ini (semua jenis iklan dijumlahkan) |
-| **Terjual** | Terjual dari iklan, **sudah dikurangi pesanan batal** ("Shopee: …" = angka versi Shopee) |
-| **ROAS nyata** | Omzet tanpa pesanan batal ÷ biaya iklan |
+| **Terjual** | Terjual dari iklan, **sudah dikurangi pesanan batal dan barang retur** ("Shopee: …" = angka versi Shopee) |
+| **ROAS nyata** | Omzet tanpa pesanan batal & retur ÷ biaya iklan |
 | **Balik modal butuh ROAS** | Di bawah angka ini, iklan produk ini **rugi** |
-| **Saran target ROAS di Shopee** | Angka untuk diisi di pengaturan iklan (GMV Max ROAS) supaya masih **untung 5%** setelah iklan. Sudah termasuk cadangan pesanan batal. |
+| **Saran target ROAS di Shopee** | Angka untuk diisi di pengaturan iklan (GMV Max ROAS) supaya masih **untung 5%** setelah iklan. Sudah termasuk cadangan pesanan batal dan retur. |
 | **Untung setelah iklan** | Untung produk ini dikurangi biaya iklannya |
 | **Untung per barang (sebelum iklan)** | Harga jual − potongan Shopee − HPP |
 | **Untung harga di bawah 20%** | Harga sekarang belum memberi untung 20%; ditampilkan harga yang dibutuhkan |
@@ -552,7 +553,7 @@ Disarankan download per bulan lalu upload semuanya sekaligus.
 
 **ROAS di laporan Shopee bagus, kenapa di aplikasi labelnya Takedown?**
 Dua alasan:
-1. Shopee ikut menghitung pesanan yang batal, jadi ROAS versi Shopee lebih tinggi dari kenyataan.
+1. Shopee ikut menghitung pesanan yang batal dan barang yang diretur, jadi ROAS versi Shopee lebih tinggi dari kenyataan.
 2. ROAS "bagus" tergantung untung per barang. Produk dengan untung tipis butuh ROAS sangat tinggi
    supaya tidak rugi. Lihat baris **Balik modal butuh ROAS** di kartu produk.
 
@@ -575,7 +576,7 @@ disimpan**. File dibaca langsung di browser.
 | **Potongan Shopee** | Biaya admin, biaya proses pesanan, Gratis Ongkir XTRA, voucher, dll. |
 | **Omzet** | Total harga jual barang |
 | **ROAS** | Omzet ÷ biaya iklan. ROAS 10 = biaya iklan Rp1.000 menghasilkan omzet Rp10.000 |
-| **ROAS nyata** | ROAS setelah pesanan batal dikurangi |
+| **ROAS nyata** | ROAS setelah pesanan batal dan retur dikurangi |
 | **Balik modal (BEP)** | Titik di mana iklan tidak untung dan tidak rugi |
 | **Takedown** | Matikan iklan produk itu |
 | **Hero** | Produk yang iklannya paling menghasilkan |

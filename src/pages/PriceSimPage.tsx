@@ -646,6 +646,7 @@ async function loadLatestAdRoas(storeId: number): Promise<AdRoasData | null> {
       product_name: i.product_name,
       status_group: i.status_group,
       qty: Number(i.qty),
+      returned_qty: Number(i.returned_qty ?? 0),
       subtotal: Number(i.subtotal),
       hpp: null,
     })),
