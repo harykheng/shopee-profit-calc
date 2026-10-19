@@ -77,6 +77,8 @@ export interface AdProductResult {
   /** Asal harga jual: rata-rata subtotal export pesanan, atau perkiraan omzet ÷ terjual dari data iklan. */
   priceSource: 'pesanan' | 'iklan' | null
   hpp: number | null
+  /** HPP diambil dari isian sementara (Cek cepat), bukan dari halaman HPP. */
+  hppTemp: boolean
   /** Sebagian pesanan belum ada HPP-nya. */
   hppIncomplete: boolean
   /** Potongan Shopee (0–1) yang dipakai untuk produk ini: rata-rata toko, disesuaikan admin produk kalau diketahui. */
@@ -204,6 +206,8 @@ export function analyzeAds(input: {
   feeComponents?: Map<string, number>
   /** Target untung toko; kosong = bawaan. */
   targets?: Targets
+  /** HPP sementara per nama listing (Cek cepat), dipakai hanya kalau HPP dari pesanan/produk kosong. */
+  tempHpp?: Map<string, number>
 }): AdsAnalysis {
   const { reports, orders, feeRate } = input
   const targets = input.targets ?? DEFAULT_TARGETS
@@ -312,6 +316,9 @@ export function analyzeAds(input: {
     const hppQty = withHpp.reduce((s, l) => s + l.qty, 0)
     let hpp = hppQty > 0 ? withHpp.reduce((s, l) => s + l.qty * (l.hpp as number), 0) / hppQty : null
     if (hpp === null && hppLines.length === 0) hpp = input.fallbackHpp?.get(productKey(a.name)) ?? null
+    const tempValue = hpp === null ? input.tempHpp?.get(productKey(a.name)) : undefined
+    const hppTemp = tempValue !== undefined
+    if (hppTemp) hpp = tempValue
     // Hanya relevan kalau ada barang yang benar-benar terjual.
     const hppIncomplete = kept.length > 0 && withHpp.length < hppLines.length
 
@@ -347,6 +354,7 @@ export function analyzeAds(input: {
       price,
       priceSource,
       hpp,
+      hppTemp,
       hppIncomplete,
       feeRate: productFee,
       // Dengan hanya satu produk yang diketahui tidak ada pembanding, jadi potongannya tidak bergeser:

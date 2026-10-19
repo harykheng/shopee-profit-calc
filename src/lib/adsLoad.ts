@@ -49,13 +49,39 @@ export function loadAdsAnalysis(storeId: number, period: Period): Promise<Loaded
   return buildAdsAnalysis(storeId, period.start, period.end, fetchAdRows(period.reports), period.months)
 }
 
+/** Data toko yang dibutuhkan analisis iklan untuk satu rentang tanggal (dimuat sekali). */
+export interface AdsContext {
+  start: string
+  end: string
+  items: Awaited<ReturnType<typeof fetchItemsCreatedBetween>>
+  products: Awaited<ReturnType<typeof fetchProducts>>
+  incomeDays: Awaited<ReturnType<typeof fetchIncomeDays>>
+  categories: Awaited<ReturnType<typeof fetchFeeCategories>>
+  settingsRow: Awaited<ReturnType<typeof fetchStoreSettings>> | null
+}
+
+export async function loadAdsContext(storeId: number, start: string, end: string): Promise<AdsContext> {
+  const monthStart = `${start.slice(0, 7)}-01`
+  const lastMonth = `${end.slice(0, 7)}-01`
+  const [items, products, incomeDays, categories, settingsRow] = await Promise.all([
+    fetchItemsCreatedBetween(storeId, start, end),
+    fetchProducts(storeId),
+    fetchIncomeDays(storeId, addMonths(monthStart, -3), monthEnd(lastMonth)),
+    // Kategori admin belum tentu ada (SQL 20261014 belum dijalankan): tanpa itu, hanya isian manual yang dipakai.
+    fetchFeeCategories(storeId).catch(() => []),
+    // Belum ada pengaturan / SQL 20261015 belum dijalankan: target bawaan.
+    fetchStoreSettings(storeId).catch(() => null),
+  ])
+  return { start, end, items, products, incomeDays, categories, settingsRow }
+}
+
 /**
- * Hitung analisis dari file iklan yang TIDAK disimpan (Cek cepat). HPP, potongan, target, dan pesanan
- * diambil dari data toko yang sudah tersimpan; tidak ada yang ditulis ke database.
+ * Hitung analisis dari file iklan yang TIDAK disimpan (Cek cepat), memakai data toko yang sudah dimuat.
+ * `tempHpp` = HPP sementara per nama listing untuk produk yang belum punya HPP. Tidak ada yang ditulis ke database.
  */
-export function analyzeUnsavedAds(storeId: number, start: string, end: string, files: AdsParseResult[]): Promise<Loaded> {
-  const reports: AdReportRows[] = files.map((f) => ({ source: f.source, rows: f.rows, period: `${start}|${end}` }))
-  return buildAdsAnalysis(storeId, start, end, Promise.resolve(reports))
+export function analyzeUnsavedAds(ctx: AdsContext, files: AdsParseResult[], tempHpp?: Map<string, number>): Loaded {
+  const reports: AdReportRows[] = files.map((f) => ({ source: f.source, rows: f.rows, period: `${ctx.start}|${ctx.end}` }))
+  return computeAdsAnalysis(ctx, reports, undefined, tempHpp)
 }
 
 async function buildAdsAnalysis(
@@ -65,18 +91,19 @@ async function buildAdsAnalysis(
   loadReports: Promise<AdReportRows[]>,
   months?: string[],
 ): Promise<Loaded> {
+  const [reports, ctx] = await Promise.all([loadReports, loadAdsContext(storeId, start, end)])
+  return computeAdsAnalysis(ctx, reports, months)
+}
+
+function computeAdsAnalysis(
+  ctx: AdsContext,
+  reports: AdReportRows[],
+  months?: string[],
+  tempHpp?: Map<string, number>,
+): Loaded {
+  const { start, end, items, products, incomeDays, categories, settingsRow } = ctx
   const monthStart = `${start.slice(0, 7)}-01`
   const lastMonth = `${end.slice(0, 7)}-01`
-  const [reports, items, products, incomeDays, categories, settingsRow] = await Promise.all([
-    loadReports,
-    fetchItemsCreatedBetween(storeId, start, end),
-    fetchProducts(storeId),
-    fetchIncomeDays(storeId, addMonths(monthStart, -3), monthEnd(lastMonth)),
-    // Kategori admin belum tentu ada (SQL 20261014 belum dijalankan): tanpa itu, hanya isian manual yang dipakai.
-    fetchFeeCategories(storeId).catch(() => []),
-    // Belum ada pengaturan / SQL 20261015 belum dijalankan: target bawaan.
-    fetchStoreSettings(storeId).catch(() => null),
-  ])
   const targets = targetsOf(resolveSettings(settingsRow))
   const feeComponents = productFeeComponents(products, categories)
 
@@ -109,7 +136,7 @@ async function buildAdsAnalysis(
     hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
   })
   const rate = feeRate ?? DEFAULT_FEE_RATE
-  const analysis = analyzeAds({ reports, orders: items.map(toLine), feeRate: rate, fallbackHpp, feeComponents, targets })
+  const analysis = analyzeAds({ reports, orders: items.map(toLine), feeRate: rate, fallbackHpp, feeComponents, targets, tempHpp })
   // Gabungan: hitung juga per bulan (data iklan & pesanan bulan itu saja) untuk dibandingkan.
   const perMonth =
     months && months.length > 1

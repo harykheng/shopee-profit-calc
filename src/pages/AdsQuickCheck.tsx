@@ -1,11 +1,13 @@
 // Cek cepat iklan: lihat apakah iklan beberapa hari terakhir jalan bagus. File dibaca di browser dan
 // TIDAK disimpan; HPP, potongan, target, dan pesanan diambil dari data toko yang sudah tersimpan.
-import { useState, type ChangeEvent, type ReactNode } from 'react'
+import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Alert, Card, ErrorBox, Spinner, Stamp, linkClass, type StampTone } from '../components/ui'
 import { IconUpload, IconX } from '../components/icons'
+import { RupiahInput } from '../components/pickers'
 import { AdsHowTo, adsProblem, formatPeriod, groupAdsFiles, parseAdsFiles, type ParsedAdsFile } from '../components/adsUpload'
-import { analyzeUnsavedAds, type Loaded } from '../lib/adsLoad'
-import type { AdProductResult, AdVerdict } from '../lib/adsMath'
+import { analyzeUnsavedAds, loadAdsContext, type AdsContext, type Loaded } from '../lib/adsLoad'
+import { productKey, type AdProductResult, type AdVerdict } from '../lib/adsMath'
+import type { AdsParseResult } from '../lib/parsers/ads'
 import { formatNumber, formatPercent, formatRupiah, periodDays } from '../lib/format'
 import type { Store } from '../lib/types'
 
@@ -17,10 +19,44 @@ interface CheckedPeriod {
   data: Loaded
 }
 
+/** File satu periode + data toko untuk periode itu (dimuat sekali; analisis dihitung ulang saat HPP sementara diubah). */
+interface LoadedPeriod {
+  key: string
+  start: string
+  end: string
+  days: number
+  files: AdsParseResult[]
+  ctx: AdsContext
+}
+
 type State =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'done'; files: ParsedAdsFile[]; periods: CheckedPeriod[]; problem: string | null; error: unknown }
+  | { kind: 'done'; files: ParsedAdsFile[]; periods: LoadedPeriod[]; problem: string | null; error: unknown }
+
+// HPP sementara per nama listing, diingat di browser ini per toko. Tidak masuk ke halaman HPP / database.
+const tempHppKey = (storeId: number | undefined) => `quick-hpp:${storeId ?? 'none'}`
+
+function readTempHpp(storeId: number | undefined): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(tempHppKey(storeId))
+    const obj: unknown = raw ? JSON.parse(raw) : {}
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {}
+    return Object.fromEntries(
+      Object.entries(obj).filter((e): e is [string, number] => typeof e[1] === 'number' && Number.isFinite(e[1]) && e[1] >= 0),
+    )
+  } catch {
+    return {}
+  }
+}
+
+function writeTempHpp(storeId: number | undefined, value: Record<string, number>) {
+  try {
+    localStorage.setItem(tempHppKey(storeId), JSON.stringify(value))
+  } catch {
+    // Penyimpanan browser tidak tersedia: tetap berlaku selama halaman terbuka.
+  }
+}
 
 /** Vonis versi tes: aturannya sama dengan halaman Iklan, labelnya dibuat untuk keputusan lanjut / stop. */
 const QUICK: Record<AdVerdict, { label: string; tone: StampTone; note: string }> = {
@@ -41,6 +77,15 @@ const roas = (v: number | null | undefined) =>
 export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose: () => void }) {
   const [state, setState] = useState<State>({ kind: 'idle' })
   const [inputKey, setInputKey] = useState(0)
+  const [tempHpp, setTempHppState] = useState<Record<string, number>>(() => readTempHpp(store?.id))
+
+  const setTempHpp = (key: string, value: number | null) => {
+    const next = { ...tempHpp }
+    if (value === null) delete next[key]
+    else next[key] = value
+    setTempHppState(next)
+    writeTempHpp(store?.id, next)
+  }
 
   const onFiles = async (e: ChangeEvent<HTMLInputElement>) => {
     const list = [...(e.target.files ?? [])]
@@ -62,7 +107,8 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
           start: g.start,
           end: g.end,
           days: periodDays(g.start, g.end),
-          data: await analyzeUnsavedAds(store.id, g.start, g.end, g.files),
+          files: g.files,
+          ctx: await loadAdsContext(store.id, g.start, g.end),
         })),
       )
       setState({ kind: 'done', files, periods, problem: null, error: null })
@@ -77,8 +123,20 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
   }
 
   const done = state.kind === 'done' ? state : null
-  const latest = done?.periods[done.periods.length - 1] ?? null
-  const previous = done && done.periods.length > 1 ? done.periods[0] : null
+  // Hitung ulang (tanpa memuat ulang data) setiap kali HPP sementara berubah.
+  const checked = useMemo((): CheckedPeriod[] => {
+    if (!done) return []
+    const temp = new Map(Object.entries(tempHpp))
+    return done.periods.map((p) => ({
+      key: p.key,
+      start: p.start,
+      end: p.end,
+      days: p.days,
+      data: analyzeUnsavedAds(p.ctx, p.files, temp),
+    }))
+  }, [done, tempHpp])
+  const latest = checked[checked.length - 1] ?? null
+  const previous = checked.length > 1 ? checked[0] : null
 
   return (
     <Card
@@ -154,7 +212,7 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
               {!latest.data.hasOrders && (
                 <Alert tone="info">
                   Export pesanan untuk tanggal ini belum di-upload, jadi pesanan batal belum dikurangi sama sekali. HPP
-                  diambil dari halaman HPP.
+                  diambil dari halaman HPP; produk yang belum punya HPP bisa diisi HPP sementara di kartunya.
                 </Alert>
               )}
 
@@ -163,7 +221,7 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
                 <PeriodSummary period={latest} label={previous ? 'Terbaru' : undefined} compare={previous} />
               </div>
 
-              <ProductList latest={latest} previous={previous} />
+              <ProductList latest={latest} previous={previous} onTempHpp={setTempHpp} />
 
               <button type="button" onClick={reset} className={`${linkClass} min-h-11`}>
                 Cek file lain
@@ -201,6 +259,11 @@ function PeriodSummary({ period, label, compare }: { period: CheckedPeriod; labe
       {a.productsWithoutProfit > 0 && (
         <p className="mt-2 text-sm text-ink-3">{a.productsWithoutProfit} produk terjual belum punya HPP, untungnya belum dihitung.</p>
       )}
+      {a.products.some((p) => p.hppTemp) && (
+        <p className="mt-2 text-sm text-ink-3">
+          Termasuk {a.products.filter((p) => p.hppTemp).length} produk dengan HPP sementara.
+        </p>
+      )}
     </section>
   )
 }
@@ -237,7 +300,17 @@ function TrendBadge({ t }: { t: Trend }) {
   )
 }
 
-function ProductList({ latest, previous }: { latest: CheckedPeriod; previous: CheckedPeriod | null }) {
+type OnTempHpp = (key: string, value: number | null) => void
+
+function ProductList({
+  latest,
+  previous,
+  onTempHpp,
+}: {
+  latest: CheckedPeriod
+  previous: CheckedPeriod | null
+  onTempHpp: OnTempHpp
+}) {
   const before = new Map((previous?.data.analysis.products ?? []).map((p) => [p.code, p]))
   const products = [...latest.data.analysis.products]
     .filter((p) => p.spend > 0)
@@ -246,14 +319,24 @@ function ProductList({ latest, previous }: { latest: CheckedPeriod; previous: Ch
   return (
     <ul className="grid gap-4 md:grid-cols-2">
       {products.map((p) => (
-        <ProductRow key={p.code} p={p} before={before.get(p.code)} />
+        <ProductRow key={p.code} p={p} before={before.get(p.code)} onTempHpp={onTempHpp} />
       ))}
     </ul>
   )
 }
 
-function ProductRow({ p, before }: { p: AdProductResult; before: AdProductResult | undefined }) {
+function ProductRow({
+  p,
+  before,
+  onTempHpp,
+}: {
+  p: AdProductResult
+  before: AdProductResult | undefined
+  onTempHpp: OnTempHpp
+}) {
   const v = QUICK[p.verdict]
+  // HPP dari halaman HPP / pesanan tidak ada (atau sedang memakai isian sementara): boleh diisi di sini.
+  const needsHpp = p.hpp === null || p.hppTemp
   const cpc = p.clicks > 0 ? p.spend / p.clicks : null
   const conv = p.clicks > 0 ? p.adsSold / p.clicks : null
   const roasTrend = before ? trend(p.realRoas, before.realRoas) : undefined
@@ -280,7 +363,22 @@ function ProductRow({ p, before }: { p: AdProductResult; before: AdProductResult
         />
         <Metric label="Balik modal butuh ROAS" value={p.bepRoas !== null ? roas(p.bepRoas) : p.unitProfit === null ? '–' : 'tidak mungkin'} />
       </dl>
-      <p className="mt-3 text-sm text-ink-2">{v.note}</p>
+      {needsHpp && (
+        <div className="mt-3 rounded-xl bg-tint p-3">
+          <p className="mb-1.5 text-sm font-semibold">HPP sementara per barang</p>
+          <RupiahInput
+            value={p.hppTemp ? p.hpp : null}
+            onCommit={(value) => onTempHpp(productKey(p.name), value)}
+            ariaLabel={`HPP sementara ${p.name}`}
+          />
+          <p className="mt-1 text-xs text-ink-3">
+            {p.hppTemp
+              ? 'Dipakai hanya di Cek cepat, diingat di browser ini. Isi HPP resmi di halaman HPP.'
+              : 'Produk ini belum punya HPP. Isi perkiraan modal per barang untuk melihat Lanjut/Stop. Tidak disimpan ke halaman HPP.'}
+          </p>
+        </div>
+      )}
+      <p className="mt-3 text-sm text-ink-2">{p.hppTemp && p.verdict !== 'hpp_kosong' ? `${v.note} (pakai HPP sementara)` : v.note}</p>
     </li>
   )
 }

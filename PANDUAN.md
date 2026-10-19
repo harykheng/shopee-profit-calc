@@ -288,6 +288,11 @@ baru atau mengganti target ROAS.
 
 - **Tidak ada yang disimpan.** Hasilnya hilang saat halaman ditutup. HPP, potongan, dan target untung
   diambil dari data toko yang sudah ada.
+- **Produk baru yang belum punya HPP** (biasanya karena export pesanannya belum di-upload) muncul dengan
+  label **Isi HPP** dan kolom **HPP sementara per barang**. Isi perkiraan modalnya, maka ROAS balik modal
+  dan label Lanjut/Stop langsung muncul. Angka ini hanya dipakai di Cek cepat dan **diingat di browser
+  ini** (untuk cek berikutnya), tidak masuk ke halaman HPP. Kosongkan kolomnya untuk menghapus. HPP resmi
+  tetap diisi di halaman HPP setelah export pesanan di-upload.
 - **Angkanya cenderung terlalu bagus.** Pesanan batal dan retur biasanya baru kelihatan 1–2 minggu
   kemudian. Pakai untuk melihat arah, bukan untung akhir.
 - Makin pendek periodenya, makin sering hasilnya **Belum cukup data**. Itu jawaban yang jujur: tunggu

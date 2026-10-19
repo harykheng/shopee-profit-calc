@@ -91,6 +91,42 @@ describe('analyzeAds', () => {
     expect(withRetur.shopeeTargetRoas!).toBeCloseTo(withRetur.targetRoas! / 0.75, 10)
   })
 
+  it('HPP sementara dipakai hanya kalau HPP dari pesanan/produk kosong', () => {
+    const rep = [
+      {
+        source: 'otomatis' as const,
+        rows: [
+          row({ product_code: 'N', product_name: 'Produk Baru', sold: 10, gmv: 10 * 100_000, spend: 50_000 }),
+          row({ product_code: 'L', product_name: 'Produk Lama', sold: 10, gmv: 10 * 100_000, spend: 50_000 }),
+        ],
+      },
+    ]
+    const tempHpp = new Map([
+      [productKey('Produk Baru'), 40_000],
+      [productKey('Produk Lama'), 1],
+    ])
+    const r = analyzeAds({
+      reports: rep,
+      orders: [{ product_name: 'Produk Lama', status_group: 'selesai', qty: 10, subtotal: 1_000_000, hpp: 30_000 }],
+      feeRate: 0.15,
+      tempHpp,
+    })
+    const baru = r.products.find((p) => p.code === 'N')!
+    const lama = r.products.find((p) => p.code === 'L')!
+    // Tanpa pesanan & tanpa HPP: pakai isian sementara, harga dari data iklan.
+    expect(baru.hppTemp).toBe(true)
+    expect(baru.hpp).toBe(40_000)
+    expect(baru.unitProfit).toBeCloseTo(100_000 * 0.85 - 40_000, 6)
+    expect(baru.verdict).not.toBe('hpp_kosong')
+    // HPP resmi ada: isian sementara diabaikan.
+    expect(lama.hppTemp).toBe(false)
+    expect(lama.hpp).toBe(30_000)
+    // Tanpa isian sementara: tetap kosong.
+    const tanpa = analyzeAds({ reports: rep, orders: [], feeRate: 0.15 }).products.find((p) => p.code === 'N')!
+    expect(tanpa.hpp).toBe(null)
+    expect(tanpa.verdict).toBe('hpp_kosong')
+  })
+
   it('qty retur tidak boleh melebihi qty pesanan', () => {
     const p = analyzeAds({
       reports: [{ source: 'otomatis' as const, rows: [row({ product_code: 'X', product_name: 'X', sold: 4, gmv: 400, spend: 10 })] }],
