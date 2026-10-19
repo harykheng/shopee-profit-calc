@@ -118,9 +118,10 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
    pada bar atas.
 2. **Kotak 1:** pilih file Excel export pesanan.
 3. **Kotak 2:** pilih file PDF laporan penghasilan.
-4. **Kotak 3 (kalau beriklan):** pilih **semua file .csv iklan sekaligus**. Boleh dari beberapa bulan;
-   aplikasi mengelompokkannya per periode sendiri (lihat [Halaman Iklan](#8-halaman-iklan) untuk arti
-   preview-nya).
+4. **Kotak 3 (kalau beriklan):** pilih **semua file .csv iklan 1 bulan penuh sekaligus**. Boleh dari
+   beberapa bulan; aplikasi mengelompokkannya per bulan sendiri. File yang bukan 1 bulan penuh (mis. 7
+   hari) **tidak disimpan**; untuk itu pakai **Cek cepat** di halaman Iklan (lihat
+   [Halaman Iklan](#8-halaman-iklan)).
 5. Cek **preview** tiap kotak: jumlah pesanan per status, jumlah hari uang cair, total penghasilan,
    biaya penyesuaian, dan ringkasan iklan per periode.
 6. Di kotak **Simpan laporan**, cek daftar yang akan disimpan, lalu tekan **Simpan semua**. Satu tombol
@@ -249,17 +250,18 @@ ROAS yang sebaiknya diisi di Shopee.
 
 ### Cara upload
 
-File iklan di-upload di **halaman Upload** (kotak **3. Data iklan**), bersama export pesanan dan
-laporan penghasilan, lalu disimpan sekaligus. Halaman Iklan hanya menampilkan hasilnya.
+Data iklan **1 bulan penuh** di-upload di **halaman Upload** (kotak **3. Data iklan**), bersama export
+pesanan dan laporan penghasilan, lalu disimpan sekaligus. Untuk cek iklan **beberapa hari terakhir**,
+pakai **Cek cepat** (di bawah): tidak disimpan.
 
 1. Pilih toko di pilihan Toko pada menu.
 2. Di kotak **3. Data iklan**, tekan **Pilih file**, lalu pilih **semua file .csv iklan sekaligus**.
    Boleh dari beberapa bulan; aplikasi mengelompokkannya per periode sendiri.
 3. Cek preview tiap periode:
    - **1 bulan penuh + Data Keseluruhan** → "Biaya Iklan Shopee [bulan] diisi otomatis: Rp…"
-   - **7 hari / bukan 1 bulan penuh** → hanya untuk analisis, Biaya tidak diubah.
-   - **File berisi beberapa bulan sekaligus** → hanya analisis gabungan; Biaya tidak diisi karena
-     tidak bisa dipecah per bulan.
+   - **1 bulan penuh tanpa Data Keseluruhan** → disimpan, tapi Biaya Iklan Shopee belum diisi.
+   - **7 hari / bukan 1 bulan penuh** → **tidak disimpan**; ada tautan ke Cek cepat.
+   - **File berisi beberapa bulan sekaligus** → **tidak disimpan**; download ulang per bulan.
 4. Tekan **Simpan semua**, lalu **Lihat analisis iklan**.
 
 > Supaya hasilnya akurat, **upload export pesanan untuk periode yang sama dulu** (halaman
@@ -269,6 +271,27 @@ laporan penghasilan, lalu disimpan sekaligus. Halaman Iklan hanya menampilkan ha
 
 Kalau file iklan dari toko yang sebelumnya disimpan ke toko lain, akan muncul peringatan
 **"Cek toko dulu"**.
+
+Data 7 hari yang dulu sempat tersimpan tetap ada dan tetap bisa dipilih di **Periode iklan**.
+
+### Cek cepat (beberapa hari, tidak disimpan)
+
+Untuk melihat apakah iklan **beberapa hari terakhir** jalan bagus, misalnya setelah memasang iklan
+baru atau mengganti target ROAS.
+
+1. Download data iklan periode pendek dari Shopee (mis. 3 atau 7 hari).
+2. Di halaman Iklan, tekan **Cek cepat**, lalu pilih filenya. Boleh **2 periode** sekaligus (mis. minggu
+   lalu dan minggu ini) supaya kelihatan naik atau turun.
+3. Per produk muncul: **Lanjut**, **Lanjut, pantau**, **Stop**, **Belum cukup data**, atau **Isi HPP**,
+   beserta biaya per klik, % klik yang jadi pesanan, ROAS nyata, dan ROAS balik modal. Aturan Stop sama
+   dengan penilaian bulanan.
+
+- **Tidak ada yang disimpan.** Hasilnya hilang saat halaman ditutup. HPP, potongan, dan target untung
+  diambil dari data toko yang sudah ada.
+- **Angkanya cenderung terlalu bagus.** Pesanan batal dan retur biasanya baru kelihatan 1–2 minggu
+  kemudian. Pakai untuk melihat arah, bukan untung akhir.
+- Makin pendek periodenya, makin sering hasilnya **Belum cukup data**. Itu jawaban yang jujur: tunggu
+  beberapa hari lagi.
 
 ### Melihat hasil
 

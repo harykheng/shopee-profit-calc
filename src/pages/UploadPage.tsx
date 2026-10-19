@@ -62,7 +62,10 @@ export function UploadPage({
   const multiStore = stores.length > 1
 
   const adsOk = (ads?.files ?? []).filter((f) => f.result).map((f) => f.result as AdsParseResult)
-  const adsGroups = groupAdsFiles(adsOk)
+  const allAdsGroups = groupAdsFiles(adsOk)
+  // Hanya data 1 bulan penuh yang disimpan; periode lain diarahkan ke Cek cepat di halaman Iklan.
+  const adsGroups = allAdsGroups.filter((g) => g.month !== null)
+  const adsSkipped = allAdsGroups.length - adsGroups.length
   const adsBlocked = adsProblem(adsGroups)
 
   const onOrdersFile = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -271,7 +274,12 @@ export function UploadPage({
           className="lg:col-span-2"
         >
           <p className="mb-3 text-ink-2">
-            Seller Centre → Iklan Saya → Download Data. Tiap periode terdiri dari beberapa file: pilih semuanya sekaligus.
+            Seller Centre → Iklan Saya → Download Data, periode <strong className="text-ink">1 bulan penuh</strong>. Tiap
+            periode terdiri dari beberapa file: pilih semuanya sekaligus. Mau cek iklan beberapa hari terakhir?{' '}
+            <a href="#/iklan?cek=1" className={linkClass}>
+              Pakai Cek cepat
+            </a>{' '}
+            (tidak disimpan).
           </p>
           <AdsHowTo />
           <FileInput
@@ -286,7 +294,7 @@ export function UploadPage({
           ) : ads ? (
             <AdsPreview
               files={ads.files}
-              groups={adsGroups}
+              groups={allAdsGroups}
               problem={adsBlocked}
               elsewhere={adsElsewhere}
               storeName={store?.name}
@@ -313,11 +321,22 @@ export function UploadPage({
               ok={adsGroups.length > 0}
               label={
                 adsGroups.length > 0
-                  ? `Data iklan (${adsOk.length} file, ${adsGroups.length} periode)`
+                  ? `Data iklan (${adsGroups.reduce((n, g) => n + g.files.length, 0)} file, ${adsGroups.length} bulan)`
                   : 'Data iklan'
               }
             />
           </ul>
+          {adsSkipped > 0 && (
+            <div className="mb-4">
+              <Alert tone="info">
+                {adsSkipped} periode data iklan bukan 1 bulan penuh, jadi tidak ikut disimpan. Cek di{' '}
+                <a href="#/iklan?cek=1" className={linkClass}>
+                  Cek cepat
+                </a>
+                .
+              </Alert>
+            </div>
+          )}
           {hasFileErrors && (
             <div className="mb-4">
               <Alert tone="warning">File yang gagal dibaca (tanda merah di atas) tidak ikut disimpan.</Alert>
@@ -355,7 +374,9 @@ export function UploadPage({
           files={[
             ...(orders?.result ? [orders.fileName] : []),
             ...(income?.result ? [income.fileName] : []),
-            ...(ads?.files ?? []).filter((f) => f.result).map((f) => f.fileName),
+            ...(ads?.files ?? [])
+              .filter((f) => f.result && adsGroups.some((g) => g.files.includes(f.result!)))
+              .map((f) => f.fileName),
           ]}
           storeName={multiStore ? (store?.name ?? null) : null}
           saving={saving}

@@ -9,6 +9,7 @@ import {
   formatRupiah,
   formatRupiahShort,
   monthEnd,
+  periodDays,
 } from '../src/lib/format'
 
 describe('format', () => {
@@ -55,5 +56,14 @@ describe('formatRupiahShort', () => {
     expect(formatRupiahShort(-2785162)).toBe('-Rp2,78 juta')
     expect(formatRupiahShort(950)).toBe('Rp950')
     expect(formatRupiahShort(null)).toBe('-')
+  })
+})
+
+describe('periodDays', () => {
+  it('menghitung tanggal awal dan akhir', () => {
+    expect(periodDays('2026-10-13', '2026-10-19')).toBe(7)
+    expect(periodDays('2026-10-19', '2026-10-19')).toBe(1)
+    expect(periodDays('2026-08-01', '2026-08-31')).toBe(31)
+    expect(periodDays('2026-02-26', '2026-03-02')).toBe(5)
   })
 })

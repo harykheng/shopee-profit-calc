@@ -107,3 +107,8 @@ export function monthEnd(month: string): string {
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate()
   return `${y}-${String(m).padStart(2, '0')}-${String(last).padStart(2, '0')}`
 }
+
+/** Jumlah hari dari tanggal awal sampai akhir (YYYY-MM-DD), keduanya ikut dihitung. */
+export function periodDays(start: string, end: string): number {
+  return Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000) + 1
+}
