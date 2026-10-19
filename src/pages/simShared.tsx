@@ -1,6 +1,9 @@
 // Bagian yang dipakai bersama oleh Simulasi satu produk dan Simulasi grup iklan.
 import { useState, type ReactNode } from 'react'
-import { IconCornerDownRight } from '../components/icons'
+import { IconCornerDownRight, IconPlus, IconX } from '../components/icons'
+import { RupiahInput } from '../components/pickers'
+import { inputClass } from '../components/ui'
+import { extraFeeLabel, type ExtraFee } from '../lib/extraFees'
 
 export const DEFAULTS = {
   adminPct: 8.25,
@@ -150,6 +153,145 @@ export function DecimalInput({
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-3">{suffix}</span>
       )}
       {invalid && <p className="mt-1 text-sm text-loss">Isi angka saja, mis. 8,25</p>}
+    </div>
+  )
+}
+
+// --- Biaya tambahan -------------------------------------------------------------
+// Biaya lain yang diisi sendiri (mis. komisi affiliate %, biaya layanan Rp per order).
+// Disimpan di browser ini per toko, bukan di database.
+
+export { extraFeeLabel, extraFeeTotals, type ExtraFee } from '../lib/extraFees'
+
+const extraKey = (storeId: number | null) => `sim-extra-fees:${storeId ?? 'none'}`
+
+function readExtraFees(storeId: number | null): ExtraFee[] {
+  try {
+    const raw = localStorage.getItem(extraKey(storeId))
+    const list: unknown = raw ? JSON.parse(raw) : []
+    if (!Array.isArray(list)) return []
+    return list.filter(
+      (f): f is ExtraFee =>
+        typeof f?.id === 'string' &&
+        typeof f?.name === 'string' &&
+        (f.value === null || typeof f.value === 'number') &&
+        (f.unit === 'pct' || f.unit === 'rp'),
+    )
+  } catch {
+    return []
+  }
+}
+
+/** Daftar biaya tambahan untuk satu toko, diingat di browser ini. */
+export function useExtraFees(storeId: number | null): [ExtraFee[], (next: ExtraFee[]) => void] {
+  const [state, setState] = useState(() => ({ storeId, fees: readExtraFees(storeId) }))
+  // Ganti toko: muat daftar milik toko itu.
+  const current = state.storeId === storeId ? state : { storeId, fees: readExtraFees(storeId) }
+  if (current !== state) setState(current)
+  const update = (fees: ExtraFee[]) => {
+    setState({ storeId, fees })
+    try {
+      localStorage.setItem(extraKey(storeId), JSON.stringify(fees))
+    } catch {
+      // Penyimpanan browser tidak tersedia: tetap berlaku selama halaman terbuka.
+    }
+  }
+  return [current.fees, update]
+}
+
+let nextId = 0
+const newId = () => `${Date.now().toString(36)}-${(nextId++).toString(36)}`
+
+export function ExtraFeesEditor({ fees, onChange }: { fees: ExtraFee[]; onChange: (next: ExtraFee[]) => void }) {
+  const patch = (id: string, p: Partial<ExtraFee>) => onChange(fees.map((f) => (f.id === id ? { ...f, ...p } : f)))
+  return (
+    <div>
+      {fees.length > 0 && (
+        <>
+          <p className="mb-1.5 font-semibold">Biaya tambahan</p>
+          <ul className="space-y-3">
+            {fees.map((f, i) => (
+              <li key={f.id} className="rounded-xl bg-tint p-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={f.name}
+                    onChange={(e) => patch(f.id, { name: e.target.value })}
+                    placeholder="Nama biaya, mis. Komisi affiliate"
+                    aria-label={`Nama biaya tambahan ${i + 1}`}
+                    maxLength={60}
+                    className={`${inputClass} min-w-0 flex-1`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onChange(fees.filter((x) => x.id !== f.id))}
+                    aria-label={`Hapus ${extraFeeLabel(f)}`}
+                    className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors hover:bg-paper hover:text-loss"
+                  >
+                    <IconX size={18} />
+                  </button>
+                </div>
+                <div className="mt-2 flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    {f.unit === 'pct' ? (
+                      <DecimalInput
+                        value={f.value}
+                        onCommit={(v) => patch(f.id, { value: v })}
+                        ariaLabel={`${extraFeeLabel(f)} (persen)`}
+                        suffix="%"
+                      />
+                    ) : (
+                      <RupiahInput
+                        value={f.value}
+                        onCommit={(v) => patch(f.id, { value: v })}
+                        ariaLabel={`${extraFeeLabel(f)} (rupiah per order)`}
+                      />
+                    )}
+                  </div>
+                  <div
+                    role="radiogroup"
+                    aria-label={`Satuan ${extraFeeLabel(f)}`}
+                    className="flex shrink-0 gap-1 rounded-full bg-paper p-1 ring-1 ring-line"
+                  >
+                    {(
+                      [
+                        ['pct', '%'],
+                        ['rp', 'Rp'],
+                      ] as const
+                    ).map(([unit, label]) => (
+                      <button
+                        key={unit}
+                        type="button"
+                        role="radio"
+                        aria-checked={f.unit === unit}
+                        // Ganti satuan: angkanya dikosongkan supaya 2% tidak terbaca Rp2.
+                        onClick={() => f.unit !== unit && patch(f.id, { unit, value: null })}
+                        className={`min-h-9 min-w-11 rounded-full px-3 font-semibold transition-colors duration-150 ${
+                          f.unit === unit ? 'bg-ink text-paper' : 'text-ink-2 hover:text-ink'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="mt-1 text-sm text-ink-3">{f.unit === 'pct' ? 'Persen dari harga jual.' : 'Rupiah per order.'}</p>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <button
+        type="button"
+        onClick={() => onChange([...fees, { id: newId(), name: '', value: null, unit: 'pct' }])}
+        className={`${fees.length > 0 ? 'mt-3' : ''} flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-control px-3 font-semibold text-ink-2 transition-colors hover:border-ink hover:text-ink`}
+      >
+        <IconPlus size={18} />
+        Tambah biaya lain
+      </button>
+      {fees.length > 0 && (
+        <p className="mt-1 text-sm text-ink-3">Diingat di browser ini untuk semua produk di toko ini.</p>
+      )}
     </div>
   )
 }

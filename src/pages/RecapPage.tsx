@@ -17,9 +17,11 @@ import {
   fetchSetupProgress,
   fetchStoreSettings,
   type SetupProgress,
+  fillMissingHpp,
   recalcHpp,
   type CreatedItem,
 } from '../lib/api'
+import { notifyDataChanged } from '../lib/events'
 import { addMonths, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '../lib/format'
 import { monthStatus, monthTodos, type MonthStatus } from '../lib/monthStatus'
 import { estimateProfit, soldFlow, type FlowStep, type ProfitEstimate } from '../lib/recapMath'
@@ -89,12 +91,24 @@ export function RecapPage({
     setError(null)
     setOrders(null)
     try {
-      const [months, products, reconciliation, returned] = await Promise.all([
-        fetchMonthlyRecap(storeId, from, end),
-        fetchProductRecap(storeId, from, end),
-        fetchReconciliation(storeId, from, end),
-        fetchReturnedItems(storeId, from, end),
-      ])
+      const fetchRecap = () =>
+        Promise.all([
+          fetchMonthlyRecap(storeId, from, end),
+          fetchProductRecap(storeId, from, end),
+          fetchReconciliation(storeId, from, end),
+          fetchReturnedItems(storeId, from, end),
+        ])
+      let [months, products, reconciliation, returned] = await fetchRecap()
+      // HPP yang baru diisi di halaman HPP langsung dipakai (barang yang HPP-nya masih kosong saja), tanpa
+      // menekan "Hitung ulang HPP". Kalau gagal, Rekap tetap tampil dengan angka yang ada.
+      const stale = months.filter((m) => Number(m.items_missing_hpp) > 0).map((m) => m.month)
+      if (!readOnly && stale.length > 0) {
+        const filled = await fillMissingHpp(storeId, stale).catch(() => 0)
+        if (filled > 0) {
+          ;[months, products, reconciliation, returned] = await fetchRecap()
+          notifyDataChanged()
+        }
+      }
       setData({ months, products, reconciliation, returned })
     } catch (e) {
       setError(e)
@@ -134,7 +148,7 @@ export function RecapPage({
     } catch (e) {
       setOrders({ error: e })
     }
-  }, [storeId, from, end, rangeValid])
+  }, [storeId, from, end, rangeValid, readOnly])
 
   useEffect(() => {
     setRecalcResult(null)

@@ -4,7 +4,7 @@ import type { SettingsPercent, StoreSettingsRow } from './storeSettings'
 import type { IncomeAdjustment, IncomeDayRow } from './parsers/income'
 import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
-import { addMonths, monthEnd } from './format'
+import { addMonths, monthEnd, wibDay } from './format'
 import { MAX_SHIFT_DAYS } from './monthStatus'
 import type { AdSource } from './shopeeColumns'
 import type {
@@ -448,6 +448,34 @@ export async function recalcHpp(storeId: number, month: string, onlyMissing: boo
   ) as number
 }
 
+/**
+ * Isi HPP pesanan selesai yang masih kosong dengan HPP produk saat ini (sama dengan "Hitung ulang HPP →
+ * yang kosong saja"), supaya Rekap langsung memakai HPP yang baru diisi. HPP yang sudah terkunci tidak diubah.
+ * Mengembalikan jumlah barang yang diperbarui.
+ */
+export async function fillMissingHpp(storeId: number, months: string[]): Promise<number> {
+  const counts = await Promise.all([...new Set(months)].map((m) => recalcHpp(storeId, m, true)))
+  return counts.reduce((s, n) => s + n, 0)
+}
+
+/** Seperti `fillMissingHpp`, untuk semua bulan yang punya pesanan selesai SKU ini dengan HPP kosong. */
+export async function fillMissingHppForSku(storeId: number, sku: string): Promise<number> {
+  const rows = await fetchAllPages<{ completed_at: string }>((a, b) =>
+    supabase
+      .from('order_items')
+      .select('completed_at')
+      .eq('store_id', storeId)
+      .eq('sku', sku)
+      .eq('status_group', 'selesai')
+      .is('hpp_snapshot', null)
+      .not('completed_at', 'is', null)
+      .order('id')
+      .range(a, b),
+  )
+  if (rows.length === 0) return 0
+  return fillMissingHpp(storeId, rows.map((r) => `${wibDay(r.completed_at).slice(0, 7)}-01`))
+}
+
 // --- Iklan ------------------------------------------------------------------
 
 /** Simpan satu file iklan. Upload ulang (toko + periode + jenis sama) mengganti isinya. */
@@ -527,6 +555,7 @@ export interface PeriodItem {
   product_name: string
   status_group: 'selesai' | 'proses' | 'batal'
   qty: number
+  returned_qty: number
   subtotal: number
   hpp_snapshot: number | null
   created_at: string | null
@@ -539,7 +568,7 @@ export async function fetchItemsCreatedBetween(storeId: number, fromDay: string,
   return fetchAllPages<PeriodItem>((a, b) =>
     supabase
       .from('order_items')
-      .select('sku, product_name, status_group, qty, subtotal, hpp_snapshot, created_at')
+      .select('sku, product_name, status_group, qty, returned_qty, subtotal, hpp_snapshot, created_at')
       .eq('store_id', storeId)
       .gte('created_at', `${fromDay}T00:00:00+07:00`)
       .lt('created_at', `${end.toISOString().slice(0, 10)}T00:00:00+07:00`)

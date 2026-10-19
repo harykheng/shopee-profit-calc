@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { RupiahInput } from '../components/pickers'
 import { Alert, Card, ErrorBox, PageTitle, Spinner, buttonClass, inputClass } from '../components/ui'
 import { IconAlertCircle, IconCheck, IconCheckCircle, IconSearch, IconUpload } from '../components/icons'
-import { fetchProducts, updateHpp } from '../lib/api'
+import { fetchProducts, fillMissingHppForSku, updateHpp } from '../lib/api'
+import { notifyDataChanged } from '../lib/events'
 import { friendlyError } from '../lib/errors'
 import { formatNumber } from '../lib/format'
 import type { Product, Store } from '../lib/types'
@@ -65,6 +66,13 @@ export function HppPage({
       const updated = await updateHpp(product.id, hpp)
       setProducts((list) => list?.map((p) => (p.id === updated.id ? updated : p)) ?? null)
       setStatus((s) => ({ ...s, [product.id]: { state: 'saved' } }))
+      // Pesanan selesai yang HPP-nya masih kosong langsung memakai HPP ini, supaya Rekap tidak perlu
+      // "Hitung ulang HPP". Kalau gagal, Rekap mengisinya sendiri saat dibuka.
+      if (storeId && updated.hpp !== null) {
+        fillMissingHppForSku(storeId, updated.sku)
+          .then((n) => n > 0 && notifyDataChanged())
+          .catch(() => {})
+      }
     } catch (e) {
       setStatus((s) => ({ ...s, [product.id]: { state: 'error', message: friendlyError(e) } }))
     }
@@ -81,8 +89,9 @@ export function HppPage({
 
       <div className="mb-6">
         <Alert tone="info">
-          HPP baru dipakai untuk pesanan berikutnya. Untung bulan yang sudah tersimpan <strong className="text-ink">tidak</strong>{' '}
-          ikut berubah, kecuali kamu menekan <strong className="text-ink">Hitung ulang HPP</strong> di Rekap.
+          Pesanan yang HPP-nya masih kosong langsung memakai HPP yang kamu isi, jadi Rekap otomatis terbarui. Kalau
+          HPP yang <strong className="text-ink">sudah ada</strong> diganti, untung bulan yang sudah lewat tidak ikut
+          berubah, kecuali kamu menekan <strong className="text-ink">Hitung ulang HPP</strong> di Rekap.
         </Alert>
       </div>
 

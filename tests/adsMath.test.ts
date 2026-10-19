@@ -53,6 +53,64 @@ describe('analyzeAds', () => {
   })
   const byCode = Object.fromEntries(a.products.map((p) => [p.code, p]))
 
+  it('retur dikurangi seperti batal: terjual, omzet, ROAS nyata, dan cadangan target ROAS', () => {
+    const rep = [
+      {
+        source: 'otomatis' as const,
+        rows: [row({ product_code: 'R', product_name: 'Retur', sold: 20, gmv: 20 * 100_000, spend: 100_000 })],
+      },
+    ]
+    const base = { reports: rep, feeRate: 0.15 }
+    // 20 dipesan: 2 batal, 18 selesai dengan 3 diretur → 5 dari 20 tidak jadi penjualan (25%).
+    const withRetur = analyzeAds({
+      ...base,
+      orders: [
+        { product_name: 'Retur', status_group: 'batal', qty: 2, subtotal: 200_000, hpp: 40_000 },
+        { product_name: 'Retur', status_group: 'selesai', qty: 18, returned_qty: 3, subtotal: 1_800_000, hpp: 40_000 },
+      ],
+    }).products[0]
+    const noRetur = analyzeAds({
+      ...base,
+      orders: [
+        { product_name: 'Retur', status_group: 'batal', qty: 2, subtotal: 200_000, hpp: 40_000 },
+        { product_name: 'Retur', status_group: 'selesai', qty: 18, subtotal: 1_800_000, hpp: 40_000 },
+      ],
+    }).products[0]
+    expect(withRetur.batalQty).toBe(2)
+    expect(withRetur.returQty).toBe(3)
+    expect(withRetur.lostShare).toBeCloseTo(0.25, 10)
+    expect(withRetur.netSold).toBeCloseTo(15, 10)
+    expect(withRetur.netGmv).toBeCloseTo(1_500_000, 6)
+    expect(withRetur.realRoas).toBeCloseTo(15, 10)
+    expect(noRetur.lostShare).toBeCloseTo(0.1, 10)
+    expect(noRetur.realRoas).toBeCloseTo(18, 10)
+    // Harga jual tidak berubah oleh retur; cadangan target ROAS Shopee makin besar.
+    expect(withRetur.price).toBe(100_000)
+    expect(withRetur.targetRoas).toBeCloseTo(noRetur.targetRoas!, 10)
+    expect(withRetur.shopeeTargetRoas!).toBeGreaterThan(noRetur.shopeeTargetRoas!)
+    expect(withRetur.shopeeTargetRoas!).toBeCloseTo(withRetur.targetRoas! / 0.75, 10)
+  })
+
+  it('qty retur tidak boleh melebihi qty pesanan', () => {
+    const p = analyzeAds({
+      reports: [{ source: 'otomatis' as const, rows: [row({ product_code: 'X', product_name: 'X', sold: 4, gmv: 400, spend: 10 })] }],
+      orders: [{ product_name: 'X', status_group: 'selesai', qty: 4, returned_qty: 9, subtotal: 400, hpp: 50 }],
+      feeRate: 0.15,
+    }).products[0]
+    expect(p.returQty).toBe(4)
+    expect(p.lostShare).toBe(1)
+  })
+
+  it('harga jual dari export pesanan (tanpa batal); tanpa pesanan pakai omzet ÷ terjual iklan', () => {
+    expect(byCode.D.price).toBe(200_000)
+    expect(byCode.D.priceSource).toBe('pesanan')
+    const noOrders = analyzeAds({ reports, orders: [], feeRate: 0.15 })
+    const bedak = noOrders.products.find((p) => p.code === 'B')!
+    expect(bedak.price).toBe(30_000)
+    expect(bedak.priceSource).toBe('iklan')
+    expect(noOrders.products.find((p) => p.code === 'S')?.priceSource ?? null).toBe(null)
+  })
+
   it('total biaya dari Data Keseluruhan; grup tanpa rincian dilaporkan', () => {
     expect(a.totalSpend).toBe(325_000)
     expect(a.spendFrom).toBe('keseluruhan')

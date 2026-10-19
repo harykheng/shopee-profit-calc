@@ -118,12 +118,16 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
    pada bar atas.
 2. **Kotak 1:** pilih file Excel export pesanan.
 3. **Kotak 2:** pilih file PDF laporan penghasilan.
-4. Cek **preview**: jumlah pesanan per status, jumlah hari uang cair, total penghasilan, dan biaya
-   penyesuaian kalau ada.
-5. Tekan **Simpan ke …**.
+4. **Kotak 3 (kalau beriklan):** pilih **semua file .csv iklan sekaligus**. Boleh dari beberapa bulan;
+   aplikasi mengelompokkannya per periode sendiri (lihat [Halaman Iklan](#8-halaman-iklan) untuk arti
+   preview-nya).
+5. Cek **preview** tiap kotak: jumlah pesanan per status, jumlah hari uang cair, total penghasilan,
+   biaya penyesuaian, dan ringkasan iklan per periode.
+6. Di kotak **Simpan laporan**, cek daftar yang akan disimpan, lalu tekan **Simpan semua**. Satu tombol
+   untuk semua file; kotak yang tidak diisi dilewati saja.
 
-Data iklan (CSV) tidak di-upload di sini: kotak **3. Data iklan** membawa ke halaman Iklan, karena
-tiap periode iklan terdiri dari beberapa file.
+Kalau ada file yang gagal dibaca, file itu tidak ikut disimpan (yang lain tetap). Kalau penyimpanan
+terputus di tengah, file tetap terpilih: tekan **Simpan semua** lagi, datanya tidak akan dobel.
 
 Setelah disimpan muncul ringkasan:
 - berapa data baru, diperbarui, atau sama seperti sebelumnya;
@@ -162,7 +166,7 @@ Biaya di luar laporan penghasilan Shopee, per toko per bulan:
 
 | Kategori | Keterangan |
 |---|---|
-| **Iklan Shopee** | Terisi **otomatis** dari halaman Iklan (file Data Keseluruhan 1 bulan penuh). Boleh diubah manual, tapi akan tertimpa lagi kalau data iklan bulan itu di-upload ulang. |
+| **Iklan Shopee** | Terisi **otomatis** dari data iklan yang di-upload (file Data Keseluruhan 1 bulan penuh). Boleh diubah manual, tapi akan tertimpa lagi kalau data iklan bulan itu di-upload ulang. |
 | **Meta Ads** | Iklan Facebook/Instagram |
 | **Packaging** | Bubble wrap, lakban, kardus, dll. |
 | **Lain-lain** | Biaya lain |
@@ -245,19 +249,23 @@ ROAS yang sebaiknya diisi di Shopee.
 
 ### Cara upload
 
+File iklan di-upload di **halaman Upload** (kotak **3. Data iklan**), bersama export pesanan dan
+laporan penghasilan, lalu disimpan sekaligus. Halaman Iklan hanya menampilkan hasilnya.
+
 1. Pilih toko di pilihan Toko pada menu.
-2. Tekan **Pilih file**, lalu pilih **semua file .csv iklan sekaligus**. Boleh dari beberapa bulan;
-   aplikasi mengelompokkannya per periode sendiri.
+2. Di kotak **3. Data iklan**, tekan **Pilih file**, lalu pilih **semua file .csv iklan sekaligus**.
+   Boleh dari beberapa bulan; aplikasi mengelompokkannya per periode sendiri.
 3. Cek preview tiap periode:
    - **1 bulan penuh + Data Keseluruhan** → "Biaya Iklan Shopee [bulan] diisi otomatis: Rp…"
    - **7 hari / bukan 1 bulan penuh** → hanya untuk analisis, Biaya tidak diubah.
    - **File berisi beberapa bulan sekaligus** → hanya analisis gabungan; Biaya tidak diisi karena
      tidak bisa dipecah per bulan.
-4. Tekan **Simpan**.
+4. Tekan **Simpan semua**, lalu **Lihat analisis iklan**.
 
 > Supaya hasilnya akurat, **upload export pesanan untuk periode yang sama dulu** (halaman
-> Upload). Laporan iklan Shopee ikut menghitung pesanan yang kemudian **batal**; aplikasi
-> menguranginya memakai data pesanan.
+> Upload). Laporan iklan Shopee ikut menghitung pesanan yang kemudian **batal** atau **diretur**;
+> aplikasi menguranginya memakai data pesanan. Retur yang terjadi setelah export di-download baru
+> terhitung setelah export pesanan di-upload ulang (aman, tidak dobel).
 
 Kalau file iklan dari toko yang sebelumnya disimpan ke toko lain, akan muncul peringatan
 **"Cek toko dulu"**.
@@ -284,7 +292,7 @@ sebaiknya dimatikan. Di bawahnya rinciannya:
 ```
 Biaya iklan                                   Rp…
 Omzet dari iklan (versi Shopee)               Rp…
-Omzet dari iklan tanpa pesanan batal          Rp…   (ROAS nyata …)
+Omzet dari iklan tanpa batal & retur          Rp…   (ROAS nyata …)
 Untung produk yang diiklankan (sebelum iklan) Rp…
 Untung setelah iklan                          Rp…
 ```
@@ -299,10 +307,10 @@ Tiap produk punya kartu berisi:
 | Baris | Artinya |
 |---|---|
 | **Biaya iklan** | Total biaya iklan produk ini (semua jenis iklan dijumlahkan) |
-| **Terjual** | Terjual dari iklan, **sudah dikurangi pesanan batal** ("Shopee: …" = angka versi Shopee) |
-| **ROAS nyata** | Omzet tanpa pesanan batal ÷ biaya iklan |
+| **Terjual** | Terjual dari iklan, **sudah dikurangi pesanan batal dan barang retur** ("Shopee: …" = angka versi Shopee) |
+| **ROAS nyata** | Omzet tanpa pesanan batal & retur ÷ biaya iklan |
 | **Balik modal butuh ROAS** | Di bawah angka ini, iklan produk ini **rugi** |
-| **Saran target ROAS di Shopee** | Angka untuk diisi di pengaturan iklan (GMV Max ROAS) supaya masih **untung 5%** setelah iklan. Sudah termasuk cadangan pesanan batal. |
+| **Saran target ROAS di Shopee** | Angka untuk diisi di pengaturan iklan (GMV Max ROAS) supaya masih **untung 5%** setelah iklan. Sudah termasuk cadangan pesanan batal dan retur. |
 | **Untung setelah iklan** | Untung produk ini dikurangi biaya iklannya |
 | **Untung per barang (sebelum iklan)** | Harga jual − potongan Shopee − HPP |
 | **Untung harga di bawah 20%** | Harga sekarang belum memberi untung 20%; ditampilkan harga yang dibutuhkan |
@@ -370,6 +378,7 @@ memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
 | **Harga jual** | Harga jual per unit/paket. **Kosongkan** untuk melihat saran harga dari modal (lihat di bawah). | – |
 | **Biaya admin** | Persen biaya admin kategori produk itu (boleh pakai koma, mis. 8,25) | 8,25% |
 | **Ikut Gratis Ongkir XTRA** | Centang kalau produk ikut program ini (potongan 4%) | dicentang |
+| **Biaya tambahan** | Tombol **+ Tambah biaya lain** untuk biaya di luar daftar ini (mis. komisi affiliate, cashback, biaya layanan). Tiap baris diberi nama dan dipilih **%** (dari harga jual) atau **Rp** (per order). Diingat di browser ini untuk semua produk di toko itu; tidak ikut tombol *Simpan untuk produk ini*. Hanya di simulasi satu produk. | kosong |
 | **Biaya proses pesanan** | Biaya tetap per order dari Shopee | Rp1.250 |
 | **Packaging per order** | Bubble wrap, lakban, kardus, dll. per order | Rp0 |
 | **ROAS realistis** | ROAS yang biasa didapat di iklan (lihat halaman Iklan) | 5,5 |
@@ -437,6 +446,7 @@ Tekan **Ganti / isi manual** untuk memilih produk lain atau mengisi semuanya sen
 − Biaya admin                   Rp…   (admin % × harga jual)
 − Biaya proses pesanan          Rp…   (tetap per order)
 − Gratis Ongkir XTRA            Rp…   (4% × harga jual, kalau ikut)
+− Biaya tambahan (kalau ada)    Rp…   (satu baris per biaya, % × harga jual atau Rp per order)
 − Packaging                     Rp…
 = Penghasilan                   Rp…   (uang cair per order, setelah packaging)
 − HPP                           Rp…
@@ -543,13 +553,13 @@ Disarankan download per bulan lalu upload semuanya sekaligus.
 
 **ROAS di laporan Shopee bagus, kenapa di aplikasi labelnya Takedown?**
 Dua alasan:
-1. Shopee ikut menghitung pesanan yang batal, jadi ROAS versi Shopee lebih tinggi dari kenyataan.
+1. Shopee ikut menghitung pesanan yang batal dan barang yang diretur, jadi ROAS versi Shopee lebih tinggi dari kenyataan.
 2. ROAS "bagus" tergantung untung per barang. Produk dengan untung tipis butuh ROAS sangat tinggi
    supaya tidak rugi. Lihat baris **Balik modal butuh ROAS** di kartu produk.
 
 **Salah upload ke toko lain?**
 Hubungi pengelola aplikasi untuk menghapus datanya. Untuk mencegahnya, selalu cek nama toko di bar atas
-sebelum upload. Halaman Iklan juga memberi peringatan kalau tokonya terlihat beda.
+sebelum upload. Kotak data iklan di halaman Upload juga memberi peringatan kalau tokonya terlihat beda.
 
 **Apakah data pembeli tersimpan?**
 Tidak. Nama, alamat, no. HP, username, catatan, dan no. resi pembeli **tidak pernah dibaca maupun
@@ -566,7 +576,7 @@ disimpan**. File dibaca langsung di browser.
 | **Potongan Shopee** | Biaya admin, biaya proses pesanan, Gratis Ongkir XTRA, voucher, dll. |
 | **Omzet** | Total harga jual barang |
 | **ROAS** | Omzet ÷ biaya iklan. ROAS 10 = biaya iklan Rp1.000 menghasilkan omzet Rp10.000 |
-| **ROAS nyata** | ROAS setelah pesanan batal dikurangi |
+| **ROAS nyata** | ROAS setelah pesanan batal dan retur dikurangi |
 | **Balik modal (BEP)** | Titik di mana iklan tidak untung dan tidak rugi |
 | **Takedown** | Matikan iklan produk itu |
 | **Hero** | Produk yang iklannya paling menghasilkan |
