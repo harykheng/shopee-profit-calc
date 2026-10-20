@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 import {
   HEADER_SEARCH_ROWS,
+  INCOME_XLSX,
   ORDER_COLUMNS,
   REQUIRED_ORDER_COLUMNS,
   SKU_KEY_SEPARATOR,
@@ -72,6 +73,12 @@ export function parseOrdersFile(data: ArrayBuffer | Uint8Array): OrdersParseResu
 }
 
 export function parseOrdersWorkbook(workbook: XLSX.WorkBook): OrdersParseResult {
+  if (isIncomeWorkbook(workbook)) {
+    throw new ParseError(
+      'Ini file penghasilan "Sudah Dilepas", bukan export pesanan. ' +
+        'Upload file ini di kotak "2. Laporan penghasilan".',
+    )
+  }
   // Cari sheet pertama yang punya header export pesanan.
   let lastMissing: string[] = []
   for (const name of workbook.SheetNames) {
@@ -89,7 +96,13 @@ export function parseOrdersWorkbook(workbook: XLSX.WorkBook): OrdersParseResult 
   throw new ParseError(NOT_ORDER_EXPORT + detail)
 }
 
-function sheetToRows(sheet: XLSX.WorkSheet): unknown[][] {
+/** Workbook export penghasilan "Sudah Dilepas" (bukan export pesanan). */
+export function isIncomeWorkbook(workbook: XLSX.WorkBook): boolean {
+  const names = new Set(workbook.SheetNames)
+  return names.has(INCOME_XLSX.sheets.orders) && names.has(INCOME_XLSX.sheets.summary)
+}
+
+export function sheetToRows(sheet: XLSX.WorkSheet): unknown[][] {
   // Metadata ukuran sheet dari Shopee kadang salah (mis. hanya "A1"),
   // jadi hitung ulang dari sel yang benar-benar ada.
   const range = { s: { r: Infinity, c: Infinity }, e: { r: -1, c: -1 } }

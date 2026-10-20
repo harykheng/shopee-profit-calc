@@ -101,6 +101,7 @@ const STORE_TABLES = [
   'order_items',
   'income',
   'income_adjustments',
+  'income_orders',
   'expenses',
   'ad_reports',
   'fee_categories',
@@ -146,6 +147,8 @@ async function cleanup(final = false) {
       await client.from('expenses').delete().eq('store_id', storeId).eq('month', CANARY_MONTH).eq('category', 'lain_lain')
     }
     await client.from('income').delete().eq('store_id', storeId).eq('released_date', CANARY_MONTH)
+    await client.from('income_adjustments').delete().eq('store_id', storeId).eq('released_date', CANARY_MONTH).eq('description', MARK)
+    await client.from('income_orders').delete().eq('store_id', storeId).eq('order_no', MARK)
     await client.from('order_items').delete().eq('store_id', storeId).eq('order_no', MARK)
     await client.from('products').delete().eq('store_id', storeId).eq('sku', MARK)
     await client.from('fee_categories').delete().eq('store_id', storeId).eq('name', MARK)
@@ -255,6 +258,19 @@ try {
     {
       name: 'A upload penghasilan ke toko B (RPC upsert_income)',
       run: (id) => A.client.rpc('upsert_income', { p_store_id: id, p_rows: [{ released_date: CANARY_MONTH, total_income: 0 }] }),
+    },
+    {
+      name: 'A upload laporan penghasilan Excel ke toko B (RPC save_income_report)',
+      run: (id) =>
+        A.client.rpc('save_income_report', {
+          p_store_id: id,
+          // Periode 1 hari penanda saja, supaya kontrol ke toko A tidak mengganti data lain.
+          p_period_start: CANARY_MONTH,
+          p_period_end: CANARY_MONTH,
+          p_days: [{ released_date: CANARY_MONTH, total_income: 0 }],
+          p_adjustments: [{ released_date: CANARY_MONTH, description: MARK, amount: 0 }],
+          p_orders: [{ order_no: MARK, line_no: 1, released_date: CANARY_MONTH, total_income: 0 }],
+        }),
     },
     {
       name: 'A upload pesanan ke toko B (RPC upsert_order_items)',

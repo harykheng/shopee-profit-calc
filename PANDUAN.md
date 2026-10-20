@@ -33,7 +33,7 @@ Untung bersih = Uang masuk dari Shopee − Modal barang terjual − Biaya
 
 | Bagian | Diambil dari |
 |---|---|
-| **Uang masuk** | PDF laporan penghasilan Shopee (uang yang sudah cair ke saldo) |
+| **Uang masuk** | Laporan penghasilan Shopee "Sudah Dilepas" (uang yang sudah cair ke saldo) |
 | **Modal** | Export pesanan Shopee × HPP yang diisi di halaman HPP |
 | **Biaya** | Diisi di halaman Biaya (iklan Shopee bisa terisi otomatis) |
 
@@ -57,7 +57,7 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 **tiap toko**.
 
 1. **Download** 3 jenis file dari Shopee Seller Centre ([lihat bagian 3](#3-file-apa-saja-yang-perlu-di-download-dari-shopee)).
-2. **Upload** → upload export pesanan (Excel) dan laporan penghasilan (PDF).
+2. **Upload** → upload export pesanan (Excel) dan laporan penghasilan (Excel "Sudah Dilepas").
 3. **HPP** → isi HPP produk yang masih merah.
 4. **Iklan** → upload file data iklan (.csv). Biaya iklan Shopee terisi otomatis.
 5. **Biaya** → isi Meta Ads, packaging, lain-lain. Kalau tidak ada, simpan Rp0.
@@ -89,9 +89,17 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
 - Status **Semua** (bukan hanya Selesai), supaya aplikasi juga tahu pesanan yang batal atau masih
   dikirim. Ini dipakai di tab "Semua pesanan" dan untuk menghitung ROAS nyata di halaman Iklan.
 
-### b. Laporan penghasilan (PDF)
+### b. Laporan penghasilan (Excel "Sudah Dilepas")
 
-**Keuangan → Penghasilan Saya → laporan bulanan** (.pdf, "Catatan Transaksi Penghasilan").
+**Keuangan → Penghasilan Saya → tab Sudah Dilepas → Export** (.xlsx).
+
+- Pilih periode **1 bulan penuh** (tanggal 1 sampai akhir bulan), sama seperti laporan bulanan.
+- Angkanya sama persis dengan PDF laporan bulanan, ditambah **rincian per pesanan dan per produk**
+  (biaya admin, proses pesanan, Gratis Ongkir XTRA, retur). Rincian ini disimpan untuk hitungan untung
+  per produk yang lebih tepat.
+- **PDF laporan bulanan** ("Catatan Transaksi Penghasilan") masih bisa di-upload, misalnya untuk bulan
+  lama. Untuk satu bulan cukup salah satu. Kalau keduanya di-upload, yang disimpan **terakhir** menjadi
+  acuan biaya penyesuaian bulan itu, jadi tidak ada yang dobel.
 
 ### c. Data iklan (CSV)
 
@@ -117,7 +125,7 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
 1. Kalau akunmu punya lebih dari satu toko, cek kotak **"Disimpan ke toko …"**. Kalau salah, ganti toko di pilihan toko
    pada bar atas.
 2. **Kotak 1:** pilih file Excel export pesanan.
-3. **Kotak 2:** pilih file PDF laporan penghasilan.
+3. **Kotak 2:** pilih file Excel "Sudah Dilepas" (atau PDF laporan bulanan).
 4. **Kotak 3 (kalau beriklan):** pilih **semua file .csv iklan 1 bulan penuh sekaligus**. Boleh dari
    beberapa bulan; aplikasi mengelompokkannya per bulan sendiri. File yang bukan 1 bulan penuh (mis. 7
    hari) **tidak disimpan**; untuk itu pakai **Cek cepat** di halaman Iklan (lihat
@@ -223,7 +231,7 @@ Dibaca dari atas ke bawah:
 | **Belum lengkap · N hal** | Klik untuk melihat apa yang kurang. |
 
 Yang dicek:
-1. Laporan penghasilan (PDF) bulan itu sudah di-upload.
+1. Laporan penghasilan bulan itu sudah di-upload (Excel "Sudah Dilepas" atau PDF).
 2. Semua uang yang cair sudah ketemu pesanannya. Kalau belum, biasanya export pesanan bulan
    sebelumnya belum di-upload.
 3. Semua barang sudah punya HPP.

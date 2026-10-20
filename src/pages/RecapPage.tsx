@@ -320,8 +320,9 @@ function EmptyRecap({ storeId, storeName, period }: { storeId: number | null; st
           <SetupStep n={1} title="Export pesanan (.xlsx)" action={null}>
             Seller Centre → Pesanan Saya → Export, status <strong className="text-ink">Semua</strong>.
           </SetupStep>
-          <SetupStep n={2} title="Laporan penghasilan (.pdf)" action={null}>
-            Seller Centre → Keuangan → Penghasilan Saya → laporan bulanan.
+          <SetupStep n={2} title="Laporan penghasilan (.xlsx)" action={null}>
+            Seller Centre → Keuangan → Penghasilan Saya → <strong className="text-ink">Sudah Dilepas</strong> → Export.
+            PDF laporan bulanan juga bisa.
           </SetupStep>
           <SetupStep
             n={3}
@@ -919,7 +920,7 @@ function Checklist({
       {showTitle && <p className="font-bold">{label}</p>}
       <CheckRow ok={s.hasIncome}>
         {s.hasIncome ? 'Laporan penghasilan sudah di-upload' : (
-          <><strong>Laporan penghasilan (PDF) {label} belum di-upload.</strong> Upload di halaman Upload.</>
+          <><strong>Laporan penghasilan {label} belum di-upload.</strong> Upload di halaman Upload.</>
         )}
       </CheckRow>
       <CheckRow ok={s.missingOrders.days.length === 0}>
@@ -942,7 +943,7 @@ function Checklist({
       {s.hasIncome && s.ordersWithoutIncome.days.length > 0 && (
         <CheckRow ok={false}>
           <strong>{formatNumber(s.ordersWithoutIncome.orders)} pesanan selesai tidak ada di laporan penghasilan</strong>{' '}
-          ({dayList(s.ordersWithoutIncome.days)}). Pastikan PDF {label} yang di-upload lengkap.
+          ({dayList(s.ordersWithoutIncome.days)}). Pastikan laporan penghasilan {label} yang di-upload lengkap.
         </CheckRow>
       )}
       <CheckRow ok={s.missingHpp === 0}>

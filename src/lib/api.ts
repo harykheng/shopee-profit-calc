@@ -1,7 +1,7 @@
 // Semua akses ke Supabase ada di sini.
 import type { AdRow, AdsParseResult } from './parsers/ads'
 import type { SettingsPercent, StoreSettingsRow } from './storeSettings'
-import type { IncomeAdjustment, IncomeDayRow } from './parsers/income'
+import type { IncomeParseResult } from './parsers/income'
 import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
 import { addMonths, monthEnd, wibDay } from './format'
@@ -81,20 +81,35 @@ export async function saveOrderItems(storeId: number, items: OrderItemRow[]) {
   return total
 }
 
-export async function saveIncome(storeId: number, days: IncomeDayRow[]): Promise<UpsertCounts> {
-  const rows = check(
-    await supabase.rpc('upsert_income', { p_store_id: storeId, p_rows: days }),
-  ) as UpsertCounts[]
-  return rows[0]
+export interface IncomeReportCounts extends UpsertCounts {
+  /** Jumlah biaya penyesuaian yang tersimpan. */
+  adjustments: number
+  /** Jumlah baris rincian per pesanan & produk yang tersimpan (0 untuk PDF). */
+  orders: number
 }
 
-export async function saveAdjustments(storeId: number, adjustments: IncomeAdjustment[]): Promise<UpsertCounts> {
+/**
+ * Simpan satu laporan penghasilan (PDF bulanan atau Excel "Sudah Dilepas") dalam satu transaksi.
+ * Penyesuaian di periode laporan diganti, bukan ditambah (lihat 20261020000000_income_orders.sql).
+ */
+export async function saveIncomeReport(storeId: number, r: IncomeParseResult): Promise<IncomeReportCounts> {
   const rows = check(
-    await supabase.rpc('upsert_income_adjustments', {
+    await supabase.rpc('save_income_report', {
       p_store_id: storeId,
-      p_rows: adjustments.map((a) => ({ released_date: a.date, description: a.description, amount: a.amount })),
+      p_period_start: r.periodStart,
+      p_period_end: r.periodEnd,
+      p_days: r.days,
+      p_adjustments: r.adjustmentsComplete
+        ? r.adjustments.map((a) => ({
+            released_date: a.date,
+            description: a.description,
+            amount: a.amount,
+            order_no: a.orderNo ?? null,
+          }))
+        : null,
+      p_orders: r.source === 'xlsx' ? r.orders : null,
     }),
-  ) as UpsertCounts[]
+  ) as IncomeReportCounts[]
   return rows[0]
 }
 

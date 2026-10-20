@@ -6,6 +6,8 @@ describe('friendlyError: database belum diperbarui', () => {
     ['column stores.active_until does not exist', '20261012000000_multi_tenant.sql'],
     ['relation "public.store_members" does not exist', '20261012000000_multi_tenant.sql'],
     ['function upsert_income_adjustments not found', '20261004000000_income_adjustments.sql'],
+    ['Could not find the function public.save_income_report(p_adjustments, p_days) in the schema cache', '20261020000000_income_orders.sql'],
+    ['column "order_no" of relation "income_adjustments" does not exist', '20261020000000_income_orders.sql'],
     ['column products.admin_pct does not exist', '20261007000000_product_fee_settings.sql'],
     ['function save_ad_report does not exist', '20261006000000_ads.sql'],
   ]
