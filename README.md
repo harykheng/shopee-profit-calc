@@ -86,6 +86,10 @@ menghapus data.
 > Sudah setup sebelum 6 Oktober 2026? Jalankan sekali file `20261006000000_ads.sql` supaya
 > halaman **Iklan** bisa dipakai.
 
+> Sudah setup sebelum 23 Oktober 2026? Jalankan sekali file `20261023000000_admin_reset_password.sql`
+> (aman diulang). Isinya fungsi admin `admin_reset_password` untuk SQL Editor (lihat OPERASI.md bagian 2);
+> tidak dipakai aplikasi, jadi tidak ada urutan terhadap deploy.
+
 > Sudah setup sebelum 22 Oktober 2026? Jalankan sekali file `20261022000000_income_monthly_breakdown.sql`
 > (aman diulang, hanya view baru) **setelah** `20261021000000_income_per_order_views.sql`. Dipakai Bab 2
 > Rekap yang dimulai dari omzet (potongan Shopee per jenis) dan kotak "Kenapa untungnya segini?" di Bab 1.
@@ -154,7 +158,9 @@ Karena pendaftaran publik dimatikan, akun dibuat manual oleh pemilik:
    on conflict do nothing;
    ```
 
-Lupa password: buka user di menu yang sama → reset / ganti password, lalu beri tahu orangnya.
+Lupa password: di SQL Editor jalankan `select public.admin_reset_password('email', 'PasswordBaru123');`
+(lihat [OPERASI.md](OPERASI.md) bagian 2), lalu beri tahu orangnya. Bisa juga lewat menu yang sama →
+ganti password, tapi banner "ganti password" tidak muncul lagi untuk pengguna yang pernah menggantinya.
 Menghapus akses: hapus user tersebut.
 
 ## 3. Deploy ke Vercel
@@ -334,7 +340,7 @@ membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
    di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
    free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
 2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
-   satu per satu, dari `20260930000000_init.sql` sampai `20261022000000_income_monthly_breakdown.sql`.
+   satu per satu, dari `20260930000000_init.sql` sampai `20261023000000_admin_reset_password.sql`.
 3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
    hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
 
@@ -403,8 +409,9 @@ update public.stores set active_until = '2027-01-31' where id = 5;
 update public.stores set active_until = (now() at time zone 'Asia/Jakarta')::date - 1 where id = 5;
 ```
 
-Reset password: Authentication → Users → pilih user → ubah password (pelanggan menghubungi lewat
-tautan "Lupa password?" di halaman login, yang membuka WhatsApp).
+Reset password: `select public.admin_reset_password('pelanggan@email.com', 'PasswordBaru123');` di SQL
+Editor (pelanggan menghubungi lewat tautan "Lupa password?" di halaman login, yang membuka WhatsApp).
+Fungsi ini juga memunculkan lagi banner "ganti password" dan mengeluarkan akun itu dari semua perangkat.
 
 ### f) Env var Cloudflare Pages / Vercel untuk app.studioharel.id
 
@@ -490,7 +497,7 @@ aman: seed tidak menambah apa pun.
 ### Sebelum pelanggan pertama
 
 - [ ] Project HitungCuan sudah di paket Pro (backup aktif).
-- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261022000000_income_monthly_breakdown.sql`
+- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261023000000_admin_reset_password.sql`
       (cek: tabel `store_settings`, `fee_categories`, `client_errors`, `income_orders`, dan view
       `order_item_income` ada).
 - [ ] **Pemantau error:** buka aplikasi, sengaja picu satu error (mis. buka halaman dengan akun yang
@@ -511,7 +518,7 @@ aman: seed tidak menambah apa pun.
 - [ ] **File asli calon pelanggan sudah diuji** (lihat bagian di bawah).
 - [ ] Signup publik mati, dan tidak ada `service_role` key di variabel hosting atau di git.
 - [ ] **Header keamanan aktif** di domain produksi (perintah `curl` di bagian "Header keamanan").
-- [ ] Sudah berlatih `admin_add_customer` dan memperpanjang lewat SQL.
+- [ ] Sudah berlatih `admin_add_customer`, memperpanjang lewat SQL, dan `admin_reset_password`.
 
 ### Uji pemisahan data antar-toko
 

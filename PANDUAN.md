@@ -667,6 +667,13 @@ Yang perlu diingat:
 Dijelaskan di banner kuning bagian atas selama kamu masih memakai password dari pengelola. Selama
 password itu belum diganti, kartu **Ganti password** tampil paling atas di halaman Akun.
 
+### Lupa password
+
+Di halaman login, tekan **Lupa password?**. WhatsApp ke pengelola terbuka dengan pesan yang sudah
+berisi emailmu. Pengelola membuatkan password baru (password lama tidak bisa dilihat siapa pun, termasuk
+pengelola) dan mengirimkannya lewat WhatsApp. Setelah login dengan password baru itu, banner kuning muncul
+lagi: ganti password-nya sendiri di halaman **Akun**. Akunmu juga otomatis keluar dari perangkat lain.
+
 ### Data saya
 
 Data tokomu adalah milikmu. Di halaman Akun, **Minta salinan data** dan **Minta hapus data & akun**
