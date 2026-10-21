@@ -6,6 +6,10 @@ const SYSTEM_TROUBLE = 'Ada gangguan di sistem kami. Coba lagi sebentar lagi; ka
 /** Error karena migration belum dijalankan: [kata kunci, nama file SQL]. */
 const MISSING_MIGRATIONS: [match: (lower: string) => boolean, file: string][] = [
   [(l) => l.includes('active_until') || l.includes('store_members'), '20261012000000_multi_tenant.sql'],
+  [
+    (l) => l.includes('save_income_report') || l.includes('income_orders') || (l.includes('income_adjustments') && l.includes('order_no')),
+    '20261020000000_income_orders.sql',
+  ],
   [(l) => l.includes('upsert_income_adjustments') || l.includes('income_adjustments'), '20261004000000_income_adjustments.sql'],
   [
     (l) => l.includes('admin_pct') || l.includes("'xtra'") || l.includes('column products.xtra'),

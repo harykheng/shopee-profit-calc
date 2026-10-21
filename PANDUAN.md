@@ -33,7 +33,7 @@ Untung bersih = Uang masuk dari Shopee − Modal barang terjual − Biaya
 
 | Bagian | Diambil dari |
 |---|---|
-| **Uang masuk** | PDF laporan penghasilan Shopee (uang yang sudah cair ke saldo) |
+| **Uang masuk** | Laporan penghasilan Shopee "Sudah Dilepas" (uang yang sudah cair ke saldo) |
 | **Modal** | Export pesanan Shopee × HPP yang diisi di halaman HPP |
 | **Biaya** | Diisi di halaman Biaya (iklan Shopee bisa terisi otomatis) |
 
@@ -57,7 +57,7 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 **tiap toko**.
 
 1. **Download** 3 jenis file dari Shopee Seller Centre ([lihat bagian 3](#3-file-apa-saja-yang-perlu-di-download-dari-shopee)).
-2. **Upload** → upload export pesanan (Excel) dan laporan penghasilan (PDF).
+2. **Upload** → upload export pesanan (Excel) dan laporan penghasilan (Excel "Sudah Dilepas").
 3. **HPP** → isi HPP produk yang masih merah.
 4. **Iklan** → upload file data iklan (.csv). Biaya iklan Shopee terisi otomatis.
 5. **Biaya** → isi Meta Ads, packaging, lain-lain. Kalau tidak ada, simpan Rp0.
@@ -89,9 +89,17 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
 - Status **Semua** (bukan hanya Selesai), supaya aplikasi juga tahu pesanan yang batal atau masih
   dikirim. Ini dipakai di tab "Semua pesanan" dan untuk menghitung ROAS nyata di halaman Iklan.
 
-### b. Laporan penghasilan (PDF)
+### b. Laporan penghasilan (Excel "Sudah Dilepas")
 
-**Keuangan → Penghasilan Saya → laporan bulanan** (.pdf, "Catatan Transaksi Penghasilan").
+**Keuangan → Penghasilan Saya → tab Sudah Dilepas → Export** (.xlsx).
+
+- Pilih periode **1 bulan penuh** (tanggal 1 sampai akhir bulan), sama seperti laporan bulanan.
+- Angkanya sama persis dengan PDF laporan bulanan, ditambah **rincian per pesanan dan per produk**
+  (biaya admin, proses pesanan, Gratis Ongkir XTRA, retur). Rincian ini disimpan untuk hitungan untung
+  per produk yang lebih tepat.
+- **PDF laporan bulanan** ("Catatan Transaksi Penghasilan") masih bisa di-upload, misalnya untuk bulan
+  lama. Untuk satu bulan cukup salah satu. Kalau keduanya di-upload, yang disimpan **terakhir** menjadi
+  acuan biaya penyesuaian bulan itu, jadi tidak ada yang dobel.
 
 ### c. Data iklan (CSV)
 
@@ -117,7 +125,7 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
 1. Kalau akunmu punya lebih dari satu toko, cek kotak **"Disimpan ke toko …"**. Kalau salah, ganti toko di pilihan toko
    pada bar atas.
 2. **Kotak 1:** pilih file Excel export pesanan.
-3. **Kotak 2:** pilih file PDF laporan penghasilan.
+3. **Kotak 2:** pilih file Excel "Sudah Dilepas" (atau PDF laporan bulanan).
 4. **Kotak 3 (kalau beriklan):** pilih **semua file .csv iklan 1 bulan penuh sekaligus**. Boleh dari
    beberapa bulan; aplikasi mengelompokkannya per bulan sendiri. File yang bukan 1 bulan penuh (mis. 7
    hari) **tidak disimpan**; untuk itu pakai **Cek cepat** di halaman Iklan (lihat
@@ -186,8 +194,8 @@ Rekap dibaca seperti cerita, dari atas ke bawah:
 
 | Bab | Isi |
 |---|---|
-| **Bab 1 · Untung bersih** | Kalimat besar, mis. "Agustus 2026, Harel Beauty untung bersih", lalu angkanya besar berwarna hijau (**Rp2,78 juta**), angka tepatnya (Rp2.785.162), stiker status bulan, dan lembar **"Dari setiap Rp100 yang masuk"** (berapa untuk modal, biaya, dan berapa yang jadi untung). Kalau rugi, kalimatnya bilang "rugi" dan angkanya merah. |
-| **Bab 2 · Dari mana angkanya** | Hitungannya (lihat di bawah). |
+| **Bab 1 · Untung bersih** | Kalimat besar, mis. "Agustus 2026, Harel Beauty untung bersih", lalu angkanya besar berwarna hijau (**Rp2,78 juta**), angka tepatnya (Rp2.785.162), stiker status bulan, dan kotak **"Kenapa untungnya segini?"**: maksimal 3 penyebab terbesar, misalnya iklan yang terlalu besar dibanding omzet, produk yang rugi, atau potongan Shopee, masing-masing dengan tautan ke tempat memperbaikinya. Kalau laporan penghasilan belum ada, kotak itu diganti lembar **"Dari setiap Rp100 yang masuk"**. Kalau rugi, kalimatnya bilang "rugi" dan angkanya merah. |
+| **Bab 2 · Dari omzet sampai untung** | Hitungannya, mulai dari omzet (lihat di bawah). |
 | **Bab 3 · Iklan** | Ringkasan iklan bulan yang sama (untung/rugi setelah iklan, iklan yang sebaiknya dimatikan). Hanya muncul kalau melihat satu bulan; kalau belum ada data iklan 1 bulan penuh, ada ajakan untuk upload. |
 | **Bab 4 · Pesanan & produk** | Tab-tab rincian (lihat di bawah). |
 
@@ -196,14 +204,24 @@ Rekap dibaca seperti cerita, dari atas ke bawah:
 
 ### Dari mana angkanya (Bab 2)
 
-Dibaca dari atas ke bawah:
+Di atasnya ada satu batang **"Dari omzet, uangnya ke mana saja"**: berapa persen omzet untuk potongan
+Shopee, modal, iklan, packaging, dan berapa yang jadi untung. Lalu hitungannya, dibaca dari atas ke bawah:
 
 ```
-  Uang masuk dari Shopee      Rp…   (uang yang cair bulan ini, refund sudah dipotong)
++ Omzet                       Rp…   (harga produk yang uangnya cair bulan ini)
+− Refund ke pembeli           Rp…
+− Voucher dari penjual        Rp…
+− Potongan Shopee             Rp…   (biaya admin, Gratis Ongkir XTRA, biaya proses pesanan, …)
++ Kompensasi / penyesuaian    Rp…
+= Uang masuk dari Shopee      Rp…
 − Modal barang terjual        Rp…   (barang selesai × HPP)
 − Biaya                       Rp…   (iklan, packaging, dll.)
 = UNTUNG BERSIH               Rp…
 ```
+
+- Baris yang nilainya Rp0 tidak ditampilkan. Ongkir yang ditanggung toko hanya muncul kalau ada.
+- Dengan laporan **PDF**, omzet sudah dipotong refund dan biaya admin digabung dengan biaya proses
+  pesanan (PDF tidak memisahkannya). Dengan Excel **"Sudah Dilepas"**, semuanya terpisah.
 
 - **Barang terjual** = jumlah pcs/unit yang selesai dan uangnya cair bulan itu.
 - **Barang retur.** Uang barang yang diretur sudah dikembalikan ke pembeli (sudah terpotong di uang
@@ -223,9 +241,11 @@ Dibaca dari atas ke bawah:
 | **Belum lengkap · N hal** | Klik untuk melihat apa yang kurang. |
 
 Yang dicek:
-1. Laporan penghasilan (PDF) bulan itu sudah di-upload.
+1. Laporan penghasilan bulan itu sudah di-upload (Excel "Sudah Dilepas" atau PDF).
 2. Semua uang yang cair sudah ketemu pesanannya. Kalau belum, biasanya export pesanan bulan
-   sebelumnya belum di-upload.
+   sebelumnya belum di-upload. Kalau laporan penghasilannya Excel "Sudah Dilepas", aplikasi menyebut
+   **nomor pesanannya**: yang tidak ada di export pesanan sama sekali, dan yang ada tapi statusnya belum
+   Selesai (upload ulang export pesanan yang terbaru).
 3. Semua barang sudah punya HPP.
 4. Biaya sudah disimpan (boleh Rp0).
 
@@ -237,8 +257,8 @@ Yang dicek:
 
 | Tab | Isi |
 |---|---|
-| **Semua pesanan** | Semua pesanan yang **dibuat** di bulan itu (selesai, masih dikirim, batal) dan **perkiraan untung** dari pesanan yang sudah selesai. Disebut perkiraan karena Shopee mencatat uang cair per hari, bukan per pesanan. |
-| **Per produk** | Barang terjual dan modal per produk, plus daftar barang retur. |
+| **Semua pesanan** | Semua pesanan yang **dibuat** di bulan itu (selesai, masih dikirim, batal) dan **untung** dari pesanan yang sudah selesai. Kalau uang tiap pesanan sudah ada di laporan Excel "Sudah Dilepas", angkanya pasti; kalau belum (laporan PDF, atau uangnya belum cair), ditulis **perkiraan** karena PDF hanya mencatat uang cair per hari. |
+| **Per produk** | Barang terjual dan modal per produk, plus daftar barang retur. Dengan laporan Excel "Sudah Dilepas", tiap produk juga menampilkan **uang masuk** (setelah potongan Shopee asli) dan **untung** sebelum biaya iklan & packaging, dengan label **RUGI** (untung di bawah 0) atau **TIPIS** (di bawah 10% dari uang masuk). Urutannya bisa diganti: **Terlaris**, **Paling untung**, atau **Rugi dulu**. Kalau sebagian uangnya belum cair, tertulis dari berapa barang angka itu dihitung. |
 | **Per bulan** | Muncul kalau melihat beberapa bulan sekaligus. |
 
 ---
@@ -364,7 +384,11 @@ Iklan tidak akan bisa memberi untung 5% (atau ROAS yang dibutuhkan di atas 50). 
 
 ### Dari mana angka-angkanya?
 
-- **Potongan Shopee** diambil dari laporan penghasilan periode itu (admin, gratis ongkir XTRA,
+- **Potongan Shopee asli per produk.** Kalau laporan Excel "Sudah Dilepas" sudah di-upload, potongan
+  tiap produk diambil langsung dari laporan itu (dicocokkan lewat Kode Produk di data iklan), minimal 3
+  pesanan per produk di bulan iklan, atau ditambah 3 bulan sebelumnya. Kartu produk menulis "asli dari
+  laporan penghasilan". Pesanan yang di-refund tidak ikut dihitung.
+- **Kalau belum ada potongan asli**, potongan diambil dari laporan penghasilan periode itu (admin, gratis ongkir XTRA,
   biaya proses, voucher). Kalau belum ada, dipakai 3 bulan sebelumnya; kalau tidak ada juga,
   dipakai 15%. Itu **rata-rata seluruh toko**. Kalau kamu sudah mengisi biaya admin tiap produk
   (lihat "Kategori biaya admin" di Simulasi Harga), potongan tiap produk digeser sesuai admin-nya:

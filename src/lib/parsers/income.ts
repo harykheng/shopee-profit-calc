@@ -9,9 +9,41 @@ export interface IncomeAdjustment {
   date: string
   description: string
   amount: number
+  /** Nomor pesanan yang terhubung (hanya dari file Excel "Sudah Dilepas"). */
+  orderNo?: string
+}
+
+/**
+ * Satu produk di satu pesanan yang dananya sudah dilepas (hanya dari file Excel "Sudah Dilepas").
+ * Angka sudah dikelompokkan seperti tabel harian. Tidak berisi data pembeli.
+ */
+export interface IncomeOrderLine {
+  order_no: string
+  /** Urutan produk di pesanan itu (1, 2, ...). */
+  line_no: number
+  /** No. Pengajuan retur/refund; '' kalau tidak ada. */
+  return_no: string
+  /** ID Produk Shopee; '' kalau tidak tercantum. */
+  product_id: string
+  product_name: string
+  /** YYYY-MM-DD; null kalau kosong. */
+  created_date: string | null
+  released_date: string
+  harga_produk: number
+  pengembalian_dana: number
+  subtotal_ongkir: number
+  voucher_subsidi: number
+  biaya_admin: number
+  biaya_proses: number
+  biaya_gratis_ongkir: number
+  /** Biaya lain (kampanye, AMS, premi, pajak, kolom baru yang belum dikenal, ...). */
+  biaya_lain: number
+  total_income: number
 }
 
 export interface IncomeParseResult {
+  /** pdf = laporan bulanan; xlsx = export "Sudah Dilepas" (punya rincian per pesanan). */
+  source: 'pdf' | 'xlsx'
   /** Nama toko di kop laporan (untuk dicocokkan dengan toko yang dipilih). */
   shopName: string | null
   periodStart: string | null
@@ -25,6 +57,13 @@ export interface IncomeParseResult {
   }
   /** Biaya penyesuaian (terpisah dari tabel harian; tidak termasuk di totalIncome). */
   adjustments: IncomeAdjustment[]
+  /**
+   * false kalau bagian penyesuaian ada tapi tidak terbaca. Penyesuaian yang sudah tersimpan
+   * untuk periode ini lalu tidak diganti (supaya tidak terhapus).
+   */
+  adjustmentsComplete: boolean
+  /** Rincian per pesanan & produk; kosong untuk PDF. */
+  orders: IncomeOrderLine[]
   warnings: ParseWarning[]
 }
 
@@ -221,6 +260,7 @@ export function parseIncomeLines(lines: string[]): IncomeParseResult {
   }
 
   return {
+    source: 'pdf',
     shopName,
     periodStart,
     periodEnd,
@@ -231,6 +271,8 @@ export function parseIncomeLines(lines: string[]): IncomeParseResult {
       pengembalianDana: summaryAmount(INCOME_PDF.summaryLabels.pengembalianDana),
     },
     adjustments,
+    adjustmentsComplete: !warnings.some((w) => w.code === 'adjustments_unreadable'),
+    orders: [],
     warnings,
   }
 }

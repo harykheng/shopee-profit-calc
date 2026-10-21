@@ -115,6 +115,7 @@ nomor atau email yang belum terverifikasi.
    select * from public.order_items         where store_id = 5 order by id;
    select * from public.income              where store_id = 5 order by released_date;
    select * from public.income_adjustments  where store_id = 5 order by id;
+   select * from public.income_orders       where store_id = 5 order by released_date, order_no, line_no;
    select * from public.expenses            where store_id = 5 order by month, category;
    select * from public.fee_categories      where store_id = 5 order by name;
    select * from public.store_settings      where store_id = 5;

@@ -4,7 +4,7 @@ import type { DailyReconciliation, MonthlyRecap } from './types'
 export interface MonthStatus {
   /** true kalau semua syarat terpenuhi → profit bulan ini angka pasti. */
   final: boolean
-  /** Laporan penghasilan (PDF) bulan ini sudah di-upload. */
+  /** Laporan penghasilan (Excel "Sudah Dilepas" atau PDF) bulan ini sudah di-upload. */
   hasIncome: boolean
   /** Uang cair yang pesanannya belum di-upload (biasanya pesanan bulan lalu). */
   missingOrders: { amount: number; days: string[] }

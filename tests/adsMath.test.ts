@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { analyzeAds, feeRateFromIncome, fullMonthOf, productKey, verdictFor, type AdOrderLine } from '../src/lib/adsMath'
+import { actualFeeRates, analyzeAds, feeRateFromIncome, fullMonthOf, productKey, verdictFor, type AdOrderLine } from '../src/lib/adsMath'
 import type { AdRow } from '../src/lib/parsers/ads'
 
 const row = (p: Partial<AdRow>): AdRow => ({
@@ -279,5 +279,48 @@ describe('helper', () => {
     expect(fullMonthOf('2026-07-01', '2026-07-30')).toBeNull()
     expect(fullMonthOf('2026-07-02', '2026-07-31')).toBeNull()
     expect(fullMonthOf('2026-07-01', '2026-08-31')).toBeNull()
+  })
+})
+
+describe('actualFeeRates & analyzeAds — potongan asli per Kode Produk', () => {
+  const rows = [
+    // Bulan periode iklan (Juli): produk A cukup data, produk B hanya 1 pesanan.
+    { month: '2026-07-01', product_id: 'A', lines: 5, harga_produk: 100_000, total_income: 82_000 },
+    { month: '2026-07-01', product_id: 'B', lines: 1, harga_produk: 50_000, total_income: 45_000 },
+    // 3 bulan sebelumnya: B jadi cukup kalau digabung, C cuma 2 pesanan.
+    { month: '2026-05-01', product_id: 'B', lines: 4, harga_produk: 200_000, total_income: 175_000 },
+    { month: '2026-06-01', product_id: 'C', lines: 2, harga_produk: 40_000, total_income: 30_000 },
+  ]
+
+  it('uses the ad period first, then earlier months, and needs enough orders', () => {
+    const r = actualFeeRates(rows, '2026-07-01')
+    expect(r.get('A')).toBeCloseTo(0.18)
+    // B: 1 pesanan di Juli (kurang) → semua bulan: 1 − 220.000 / 250.000
+    expect(r.get('B')).toBeCloseTo(0.12)
+    expect(r.has('C')).toBe(false)
+  })
+
+  it('replaces the store average for matching product codes only', () => {
+    const reports = [
+      {
+        source: 'otomatis' as const,
+        rows: [
+          row({ ad_name: 'Iklan Produk Otomatis', product_code: 'A', product_name: 'Bedak', sold: 10, gmv: 200_000, spend: 20_000 }),
+          row({ ad_name: 'Iklan Produk Otomatis', product_code: 'X', product_name: 'Tabur', sold: 10, gmv: 200_000, spend: 20_000 }),
+        ],
+      },
+    ]
+    const orders: AdOrderLine[] = [
+      { product_name: 'Bedak', status_group: 'selesai', qty: 10, subtotal: 200_000, hpp: 10_000 },
+      { product_name: 'Tabur', status_group: 'selesai', qty: 10, subtotal: 200_000, hpp: 10_000 },
+    ]
+    const res = analyzeAds({ reports, orders, feeRate: 0.15, actualFees: actualFeeRates(rows, '2026-07-01') })
+    const a = res.products.find((p) => p.code === 'A')!
+    const x = res.products.find((p) => p.code === 'X')!
+    expect(a).toMatchObject({ feeSource: 'aktual' })
+    expect(a.feeRate).toBeCloseTo(0.18)
+    expect(x).toMatchObject({ feeRate: 0.15, feeSource: 'rata-rata' })
+    // Untung per barang: 20.000 × (1 − 18%) − 10.000
+    expect(a.unitProfit).toBeCloseTo(6_400)
   })
 })

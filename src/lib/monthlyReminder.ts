@@ -26,7 +26,7 @@ export function reminderItems(status: MonthStatus, month: string): ReminderItem[
   return monthTodos(status).map((t): ReminderItem => {
     switch (t.key) {
       case 'income':
-        return { key: t.key, text: 'Laporan penghasilan (PDF) belum di-upload.', action: 'Upload laporan', route: 'upload' }
+        return { key: t.key, text: 'Laporan penghasilan belum di-upload.', action: 'Upload laporan', route: 'upload' }
       case 'orders':
         return {
           key: t.key,
@@ -37,7 +37,7 @@ export function reminderItems(status: MonthStatus, month: string): ReminderItem[
       case 'noincome':
         return {
           key: t.key,
-          text: 'Ada pesanan yang tidak ada di laporan penghasilan. Pastikan PDF-nya lengkap.',
+          text: 'Ada pesanan yang tidak ada di laporan penghasilan. Pastikan laporannya lengkap.',
           action: 'Upload laporan',
           route: 'upload',
         }
@@ -69,7 +69,7 @@ export function buildReminder(input: {
       kind: 'missing',
       title: `Data ${label} belum di-upload`,
       items: [
-        { key: 'income', text: 'Laporan penghasilan (PDF) bulan ini belum ada.', action: 'Upload laporan', route: 'upload' },
+        { key: 'income', text: 'Laporan penghasilan bulan ini belum ada.', action: 'Upload laporan', route: 'upload' },
         { key: 'orders', text: 'Export pesanan (Excel) bulan ini belum ada.', action: 'Upload pesanan', route: 'upload' },
       ],
     }

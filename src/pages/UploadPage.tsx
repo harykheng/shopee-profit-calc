@@ -12,7 +12,7 @@ import {
   type ParsedAdsFile,
   type SavedAdsPeriod,
 } from '../components/adsUpload'
-import { fetchProducts, findAdShopElsewhere, saveAdjustments, saveIncome, saveOrderItems } from '../lib/api'
+import { fetchProducts, findAdShopElsewhere, saveIncomeReport, saveOrderItems } from '../lib/api'
 import { notifyDataChanged } from '../lib/events'
 import { ROUTES, navigate } from '../lib/router'
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from '../lib/format'
@@ -27,7 +27,13 @@ type Parsed<T> = { fileName: string; result?: T; error?: unknown; loading?: bool
 interface SaveSummary {
   storeName: string
   orders?: { inserted: number; updated: number; unchanged: number; skipped: number; newProducts: number }
-  income?: UpsertCounts & { totalIncome: number; adjustmentsTotal: number; adjustmentsSaved: number }
+  income?: UpsertCounts & {
+    totalIncome: number
+    adjustmentsTotal: number
+    adjustmentsSaved: number
+    /** Jumlah pesanan yang rinciannya tersimpan (hanya file Excel "Sudah Dilepas"). */
+    ordersSaved: number
+  }
   ads?: SavedAdsPeriod[]
   missingHpp: Product[]
 }
@@ -99,19 +105,20 @@ export function UploadPage({
     setSummary(null)
     setIncome({ fileName: file.name, loading: true })
     try {
-      if (/\.xlsx?$/i.test(file.name)) {
-        throw new ParseError(
-          'Ini file Excel. Untuk laporan penghasilan, pilih file PDF "Catatan Transaksi Penghasilan". ' +
-            'File Excel export pesanan di-upload di kotak "1. Export pesanan".',
-        )
-      }
       if (/\.csv$/i.test(file.name)) {
         throw new ParseError(
-          'Ini file CSV. Untuk laporan penghasilan, pilih file PDF. File CSV data iklan di-upload di kotak "3. Data iklan".',
+          'Ini file CSV. Untuk laporan penghasilan, pilih file Excel "Sudah Dilepas" atau PDF laporan bulanan. ' +
+            'File CSV data iklan di-upload di kotak "3. Data iklan".',
         )
       }
-      const { parseIncomeFile } = await import('../lib/parsers/incomeFile')
-      const result = await parseIncomeFile(await file.arrayBuffer())
+      let result: IncomeParseResult
+      if (/\.xlsx?$/i.test(file.name)) {
+        const { parseIncomeXlsxFile } = await import('../lib/parsers/incomeXlsx')
+        result = parseIncomeXlsxFile(await file.arrayBuffer())
+      } else {
+        const { parseIncomeFile } = await import('../lib/parsers/incomeFile')
+        result = await parseIncomeFile(await file.arrayBuffer())
+      }
       setIncome({ fileName: file.name, result })
     } catch (error) {
       setIncome({ fileName: file.name, error })
@@ -204,16 +211,14 @@ export function UploadPage({
       }
       if (income?.result) {
         const r = income.result
-        const counts = await saveIncome(store.id, r.days)
+        const counts = await saveIncomeReport(store.id, r)
         savedSomething = true
-        // Hanya panggil kalau ada penyesuaian, supaya laporan tanpa penyesuaian tetap bisa
-        // disimpan walau SQL tambahan belum dijalankan.
-        const adj = r.adjustments.length > 0 ? await saveAdjustments(store.id, r.adjustments) : null
         out.income = {
           ...counts,
           totalIncome: r.totalIncome,
           adjustmentsTotal: r.adjustments.reduce((s, a) => s + a.amount, 0),
-          adjustmentsSaved: adj ? adj.inserted + adj.updated + adj.unchanged : 0,
+          adjustmentsSaved: counts.adjustments,
+          ordersSaved: new Set(r.orders.map((o) => o.order_no)).size,
         }
       }
       if (adsGroups.length > 0) {
@@ -259,9 +264,12 @@ export function UploadPage({
           <FileInput key={`o${inputKey}`} accept=".xlsx,.xls" onChange={onOrdersFile} />
           <OrdersPreview parsed={orders} />
         </Card>
-        <Card title="2. Laporan penghasilan (.pdf)" className={ALIGNED}>
-          <p className="mb-3 text-ink-2">Seller Centre → Keuangan → Penghasilan Saya → laporan bulanan.</p>
-          <FileInput key={`i${inputKey}`} accept=".pdf,application/pdf" onChange={onIncomeFile} />
+        <Card title="2. Laporan penghasilan (.xlsx / .pdf)" className={ALIGNED}>
+          <p className="mb-3 text-ink-2">
+            Seller Centre → Keuangan → Penghasilan Saya → <strong className="text-ink">Sudah Dilepas</strong> → Export
+            (.xlsx), 1 bulan penuh. PDF laporan bulanan juga bisa.
+          </p>
+          <FileInput key={`i${inputKey}`} accept=".xlsx,.pdf,application/pdf" onChange={onIncomeFile} />
           <IncomePreview parsed={income} store={store} multiStore={multiStore} />
         </Card>
         <Card
@@ -583,6 +591,7 @@ function IncomePreview({
   if (parsed.error) return <div className="mt-4"><ErrorBox error={parsed.error} reportFile={{ kind: 'laporan penghasilan', fileName: parsed.fileName }} /></div>
   const r = parsed.result!
   const adjustmentsTotal = r.adjustments.reduce((s, a) => s + a.amount, 0)
+  const orderCount = new Set(r.orders.map((o) => o.order_no)).size
   const shopMismatch =
     store &&
     r.shopName &&
@@ -594,15 +603,26 @@ function IncomePreview({
         Periode {formatDate(r.periodStart)} – {formatDate(r.periodEnd)}: {r.days.length} hari dana dilepas, total
         penghasilan <strong className="num">{formatRupiah(r.totalIncome + adjustmentsTotal)}</strong>
         {adjustmentsTotal !== 0 && <> (termasuk biaya penyesuaian {formatRupiah(adjustmentsTotal)})</>}.
+        {r.source === 'xlsx' && (
+          <> Rincian per pesanan: <strong className="num">{formatNumber(orderCount)}</strong> pesanan.</>
+        )}
       </Alert>
+      {r.source === 'pdf' && (
+        <div className="mt-4">
+          <Alert tone="info">
+            PDF hanya mencatat uang cair per hari. File Excel <strong>Sudah Dilepas</strong> berisi angka yang sama
+            ditambah rincian per pesanan; mulai bulan depan, pakai file itu.
+          </Alert>
+        </div>
+      )}
       {shopMismatch && (
         <div className="mt-4">
           <Alert tone="warning" title="Nama toko berbeda">
-            Nama toko di PDF: <strong>{r.shopName}</strong>. {multiStore ? 'Toko yang dipilih' : 'Nama toko di akunmu'}:{' '}
+            Nama toko di file: <strong>{r.shopName}</strong>. {multiStore ? 'Toko yang dipilih' : 'Nama toko di akunmu'}:{' '}
             <strong>{store!.name}</strong>.{' '}
             {multiStore
               ? 'Pastikan toko yang dipilih sudah benar sebelum menyimpan.'
-              : 'Kalau ini memang PDF tokomu (hanya beda penulisan nama), lanjutkan simpan; kalau bukan, jangan disimpan.'}
+              : 'Kalau ini memang laporan tokomu (hanya beda penulisan nama), lanjutkan simpan; kalau bukan, jangan disimpan.'}
           </Alert>
         </div>
       )}
@@ -613,7 +633,8 @@ function IncomePreview({
             <ul className="mt-1 list-disc pl-6 text-sm">
               {r.adjustments.map((a, i) => (
                 <li key={i}>
-                  {formatDate(a.date)} · {a.description} · {formatRupiah(a.amount)}
+                  {formatDate(a.date)} · {a.description}
+                  {a.orderNo && <> · pesanan {a.orderNo}</>} · {formatRupiah(a.amount)}
                 </li>
               ))}
             </ul>
@@ -701,6 +722,9 @@ function SaveSummaryCard({
               <li>Diperbarui: <strong className="num">{formatNumber(income.updated)}</strong></li>
               <li>Sudah ada, tidak berubah: <strong className="num">{formatNumber(income.unchanged)}</strong></li>
               <li>Total penghasilan di file: <strong className="num">{formatRupiah(income.totalIncome + income.adjustmentsTotal)}</strong></li>
+              {income.ordersSaved > 0 && (
+                <li>Rincian per pesanan: <strong className="num">{formatNumber(income.ordersSaved)}</strong> pesanan</li>
+              )}
               {income.adjustmentsSaved > 0 && (
                 <li>
                   Termasuk {formatNumber(income.adjustmentsSaved)} biaya penyesuaian:{' '}

@@ -86,6 +86,26 @@ menghapus data.
 > Sudah setup sebelum 6 Oktober 2026? Jalankan sekali file `20261006000000_ads.sql` supaya
 > halaman **Iklan** bisa dipakai.
 
+> Sudah setup sebelum 22 Oktober 2026? Jalankan sekali file `20261022000000_income_monthly_breakdown.sql`
+> (aman diulang, hanya view baru) **setelah** `20261021000000_income_per_order_views.sql`. Dipakai Bab 2
+> Rekap yang dimulai dari omzet (potongan Shopee per jenis) dan kotak "Kenapa untungnya segini?" di Bab 1.
+> Tanpa file ini Rekap tetap jalan dengan tampilan lama (dimulai dari uang masuk).
+
+> Sudah setup sebelum 21 Oktober 2026? Jalankan sekali file `20261021000000_income_per_order_views.sql`
+> (aman diulang, tidak mengubah data) **setelah** `20261020000000_income_orders.sql`. Isinya view untuk
+> memakai rincian per pesanan: untung per produk dan perkiraan untung pesanan memakai uang masuk asli,
+> nomor pesanan yang cair tapi belum ada di export, dan potongan asli per Kode Produk di halaman Iklan.
+> `product_monthly_recap` mendapat 5 kolom baru di akhir. Untung bersih bulanan tidak berubah. Tanpa
+> file ini aplikasi tetap jalan seperti sebelumnya (fitur di atas saja yang tidak muncul).
+
+> Sudah setup sebelum 20 Oktober 2026? Jalankan sekali file `20261020000000_income_orders.sql`
+> (aman diulang, tidak mengubah data). **Wajib sebelum versi ini di-deploy**: menyimpan laporan
+> penghasilan (PDF maupun Excel) sekarang lewat fungsi `save_income_report`. File ini menambah tabel
+> `income_orders` (rincian per pesanan dari Excel "Sudah Dilepas"), kolom `income_adjustments.order_no`,
+> dan memperbarui `admin_export_store` / `admin_delete_store`. Angka Rekap tidak berubah.
+> Biaya penyesuaian sekarang **diganti per periode laporan** (laporan yang disimpan terakhir menjadi
+> acuan), karena PDF dan Excel bisa mencatat penyesuaian yang sama dengan tanggal berbeda.
+
 > Sudah setup sebelum 16 Oktober 2026? Jalankan sekali file `20261016000000_operations.sql` (aman
 > diulang, tidak mengubah data): tabel `client_errors` + ringkasan `client_error_summary` untuk
 > memantau error pelanggan, dan fungsi admin `admin_export_store`, `admin_delete_store`,
@@ -314,7 +334,7 @@ membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
    di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
    free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
 2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
-   satu per satu, dari `20260930000000_init.sql` sampai `20261016000000_operations.sql`.
+   satu per satu, dari `20260930000000_init.sql` sampai `20261022000000_income_monthly_breakdown.sql`.
 3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
    hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
 
@@ -470,8 +490,9 @@ aman: seed tidak menambah apa pun.
 ### Sebelum pelanggan pertama
 
 - [ ] Project HitungCuan sudah di paket Pro (backup aktif).
-- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261016000000_operations.sql`
-      (cek: tabel `store_settings`, `fee_categories`, dan `client_errors` ada).
+- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261022000000_income_monthly_breakdown.sql`
+      (cek: tabel `store_settings`, `fee_categories`, `client_errors`, `income_orders`, dan view
+      `order_item_income` ada).
 - [ ] **Pemantau error:** buka aplikasi, sengaja picu satu error (mis. buka halaman dengan akun yang
       belum punya migration), lalu pastikan `select * from public.client_error_summary;` menampilkannya.
       Pasang pengingat harian untuk mengecek ringkasan ini ([OPERASI.md](OPERASI.md) bagian 1).

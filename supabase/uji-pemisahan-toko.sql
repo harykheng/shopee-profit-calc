@@ -84,12 +84,15 @@ begin
                                                      where schemaname = 'public' and tablename = 'products' and policyname = 'anggota: baca')),
     ('20261014000000_fee_categories.sql',          to_regclass('public.fee_categories') is not null),
     ('20261015000000_store_settings.sql',          to_regclass('public.store_settings') is not null),
-    ('20261016000000_operations.sql',              to_regclass('public.client_errors') is not null)
+    ('20261016000000_operations.sql',              to_regclass('public.client_errors') is not null),
+    ('20261020000000_income_orders.sql',           to_regclass('public.income_orders') is not null),
+    ('20261021000000_income_per_order_views.sql',  to_regclass('public.order_item_income') is not null),
+    ('20261022000000_income_monthly_breakdown.sql', to_regclass('public.income_monthly_breakdown') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261016000000_operations.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261022000000_income_monthly_breakdown.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -118,6 +121,7 @@ begin
         ('products (HPP baru)', 'update public.products set hpp = 2000 where store_id = $1'),
         ('income',             'insert into public.income (store_id, released_date, subtotal_pesanan, total_income) values ($1, $2, 5000, 4000)'),
         ('income_adjustments', 'insert into public.income_adjustments (store_id, released_date, description, amount) values ($1, $2, ''uji'', 100)'),
+        ('income_orders',      'insert into public.income_orders (store_id, order_no, line_no, product_id, released_date, harga_produk, total_income) values ($1, ''UJI-B'', 1, ''UJI-B'', $2, 5000, 4000)'),
         ('expenses',           'insert into public.expenses (store_id, month, category, amount, note) values ($1, $2, ''packaging'', 100, ''uji'')'),
         ('ad_rows',            'insert into public.ad_rows (report_id, seq, ad_name, spend) values ($3, 1, ''uji'', 100)'),
         ('fee_categories',     'insert into public.fee_categories (store_id, name, admin_pct) values ($1, ''UJI kategori'', 5)'),
@@ -250,6 +254,7 @@ begin
         ('Ubah data toko lain: order_items',        'update public.order_items set qty = qty where not (store_id = any($1))'),
         ('Ubah data toko lain: income',             'update public.income set total_income = total_income where not (store_id = any($1))'),
         ('Ubah data toko lain: income_adjustments', 'update public.income_adjustments set amount = amount where not (store_id = any($1))'),
+        ('Ubah data toko lain: income_orders',      'update public.income_orders set total_income = total_income where not (store_id = any($1))'),
         ('Ubah data toko lain: expenses',           'update public.expenses set note = note where not (store_id = any($1))'),
         ('Ubah data toko lain: ad_reports',         'update public.ad_reports set shop_name = shop_name where not (store_id = any($1))'),
         ('Ubah data toko lain: ad_rows',            'update public.ad_rows set spend = spend where report_id not in (select id from public.ad_reports where store_id = any($1))'),
@@ -259,6 +264,7 @@ begin
         ('Hapus data toko lain: order_items',        'delete from public.order_items where not (store_id = any($1))'),
         ('Hapus data toko lain: income',             'delete from public.income where not (store_id = any($1))'),
         ('Hapus data toko lain: income_adjustments', 'delete from public.income_adjustments where not (store_id = any($1))'),
+        ('Hapus data toko lain: income_orders',      'delete from public.income_orders where not (store_id = any($1))'),
         ('Hapus data toko lain: expenses',           'delete from public.expenses where not (store_id = any($1))'),
         ('Hapus data toko lain: ad_reports',         'delete from public.ad_reports where not (store_id = any($1))'),
         ('Hapus data toko lain: ad_rows',            'delete from public.ad_rows where report_id not in (select id from public.ad_reports where store_id = any($1))'),
@@ -301,6 +307,8 @@ begin
          'insert into public.income (store_id, released_date, total_income) values ($1, date ''2000-01-01'', 1)'),
         ('Tulis ke toko lain: income_adjustments',
          'insert into public.income_adjustments (store_id, released_date, description, amount) values ($1, date ''2000-01-01'', ''uji'', 1)'),
+        ('Tulis ke toko lain: income_orders',
+         'insert into public.income_orders (store_id, order_no, line_no, released_date, total_income) values ($1, ''UJI-TULIS'', 1, date ''2000-01-01'', 1)'),
         ('Tulis ke toko lain: expenses',
          'insert into public.expenses (store_id, month, category, amount) values ($1, date ''2000-01-01'', ''meta_ads'', 1)'),
         ('Tulis ke toko lain: ad_reports',
@@ -321,6 +329,8 @@ begin
          'select inserted + updated from public.upsert_income($1, ''[{"released_date":"2000-01-01","total_income":1}]''::jsonb)'),
         ('Upload penyesuaian ke toko lain (upsert_income_adjustments)',
          'select inserted + updated from public.upsert_income_adjustments($1, ''[{"released_date":"2000-01-01","description":"uji","amount":1}]''::jsonb)'),
+        ('Upload laporan penghasilan Excel ke toko lain (save_income_report)',
+         'select inserted + updated + adjustments + orders from public.save_income_report($1, date ''2000-01-01'', date ''2000-01-31'', ''[{"released_date":"2000-01-01","total_income":1}]''::jsonb, ''[{"released_date":"2000-01-01","description":"uji","amount":1}]''::jsonb, ''[{"order_no":"UJI-RPC","line_no":1,"released_date":"2000-01-01","total_income":1}]''::jsonb)'),
         ('Upload iklan ke toko lain (save_ad_report)',
          'select 1 from public.save_ad_report($1, date ''2000-02-01'', date ''2000-02-07'', ''otomatis'', ''uji'', ''[{"ad_name":"uji"}]''::jsonb)'),
         ('Hitung ulang HPP toko lain (recalc_hpp)',

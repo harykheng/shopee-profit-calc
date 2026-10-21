@@ -84,6 +84,12 @@ export interface ProductRecap {
   qty_returned: number
   total_modal: number | null
   missing_hpp: boolean
+  // Kolom dari SQL 20261021 (tidak ada kalau belum dijalankan). Uang masuk asli dari Excel "Sudah Dilepas".
+  item_count?: number
+  items_with_income?: number
+  income?: number | null
+  qty_with_income?: number | null
+  modal_with_income?: number | null
 }
 
 export interface DailyReconciliation {

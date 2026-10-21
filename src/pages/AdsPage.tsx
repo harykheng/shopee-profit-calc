@@ -3,7 +3,7 @@ import { Alert, Button, Card, ErrorBox, PageTitle, ScrollX, Spinner, Stamp, butt
 import { IconAlertCircle, IconChevronDown, IconInfo, IconSearch, IconUpload } from '../components/icons'
 import { AdsQuickCheck } from './AdsQuickCheck'
 import { fetchAdReports } from '../lib/api'
-import { fullMonthOf, type AdProductResult, type AdVerdict, type AdsAnalysis, type Targets } from '../lib/adsMath'
+import { MIN_LINES_FOR_ACTUAL_FEE, fullMonthOf, type AdProductResult, type AdVerdict, type AdsAnalysis, type Targets } from '../lib/adsMath'
 import { loadAdsAnalysis, type Loaded, type Period } from '../lib/adsLoad'
 import { addMonths, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort, monthEnd } from '../lib/format'
 import { formatPeriod, periodKey } from '../components/adsUpload'
@@ -631,7 +631,11 @@ function ProductCard({
       {p.unitProfit !== null && (
         <p className="mt-2 text-sm text-ink-3">
           Potongan Shopee {formatPercent(p.feeRate * 100)} ·{' '}
-          {p.feeSource === 'produk' ? 'disesuaikan admin produk ini' : 'rata-rata toko'}
+          {p.feeSource === 'aktual'
+            ? 'asli dari laporan penghasilan'
+            : p.feeSource === 'produk'
+              ? 'disesuaikan admin produk ini'
+              : 'rata-rata toko'}
         </p>
       )}
 
@@ -700,12 +704,13 @@ function Row({ label, value, strong, tone }: { label: string; value: string; str
 }
 
 /**
- * Seberapa banyak produk yang potongannya sudah memakai admin produk/kategori. Hanya tampil kalau
- * ada yang belum, supaya jelas apa yang bisa diperbaiki.
+ * Seberapa banyak produk yang potongannya sudah tepat (asli dari laporan, atau admin produk/kategori).
+ * Hanya tampil kalau ada yang belum, supaya jelas apa yang bisa diperbaiki.
  */
 function FeeCoverage({ products }: { products: AdProductResult[] }) {
   const withProfit = products.filter((p) => p.unitProfit !== null)
-  const known = withProfit.filter((p) => p.feeSource === 'produk').length
+  const actual = withProfit.filter((p) => p.feeSource === 'aktual').length
+  const known = withProfit.filter((p) => p.feeSource !== 'rata-rata').length
   if (withProfit.length === 0 || known === withProfit.length) return null
   return (
     <p className="mt-2 flex gap-2 text-sm text-ink-2">
@@ -713,12 +718,21 @@ function FeeCoverage({ products }: { products: AdProductResult[] }) {
       <span>
         {known === 0
           ? 'Semua produk memakai potongan rata-rata toko.'
-          : `${formatNumber(known)} dari ${formatNumber(withProfit.length)} produk memakai admin produk, sisanya rata-rata toko.`}{' '}
-        Biaya admin tiap kategori beda;{' '}
+          : `${formatNumber(known)} dari ${formatNumber(withProfit.length)} produk memakai potongan ${
+              actual === known ? 'asli dari laporan penghasilan' : actual > 0 ? 'asli atau admin produk' : 'admin produk'
+            }, sisanya rata-rata toko.`}{' '}
+        {actual > 0 ? (
+          <>Potongan asli butuh minimal {MIN_LINES_FOR_ACTUAL_FEE} pesanan per produk di laporan penghasilan. Untuk produk lain,{' '}</>
+        ) : (
+          <>
+            Upload laporan penghasilan Excel <strong>Sudah Dilepas</strong> supaya potongan tiap produk memakai angka asli
+            (butuh minimal {MIN_LINES_FOR_ACTUAL_FEE} pesanan per produk), atau{' '}
+          </>
+        )}
         <button type="button" className={linkClass} onClick={() => navigate('simulasi')}>
           atur kategori admin di Simulasi Harga
-        </button>{' '}
-        supaya verdict lebih tepat.
+        </button>
+        .
       </span>
     </p>
   )

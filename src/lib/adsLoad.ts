@@ -3,12 +3,14 @@ import {
   fetchAdRows,
   fetchFeeCategories,
   fetchIncomeDays,
+  fetchIncomeProductMonthly,
   fetchItemsCreatedBetween,
   fetchProducts,
   fetchStoreSettings,
 } from './api'
 import {
   DEFAULT_FEE_RATE,
+  actualFeeRates,
   analyzeAds,
   feeRateFromIncome,
   productKey,
@@ -58,12 +60,14 @@ export interface AdsContext {
   incomeDays: Awaited<ReturnType<typeof fetchIncomeDays>>
   categories: Awaited<ReturnType<typeof fetchFeeCategories>>
   settingsRow: Awaited<ReturnType<typeof fetchStoreSettings>> | null
+  /** Potongan asli per ID Produk per bulan (Excel "Sudah Dilepas"): bulan periode + 3 bulan sebelumnya. */
+  productIncome: Awaited<ReturnType<typeof fetchIncomeProductMonthly>>
 }
 
 export async function loadAdsContext(storeId: number, start: string, end: string): Promise<AdsContext> {
   const monthStart = `${start.slice(0, 7)}-01`
   const lastMonth = `${end.slice(0, 7)}-01`
-  const [items, products, incomeDays, categories, settingsRow] = await Promise.all([
+  const [items, products, incomeDays, categories, settingsRow, productIncome] = await Promise.all([
     fetchItemsCreatedBetween(storeId, start, end),
     fetchProducts(storeId),
     fetchIncomeDays(storeId, addMonths(monthStart, -3), monthEnd(lastMonth)),
@@ -71,8 +75,10 @@ export async function loadAdsContext(storeId: number, start: string, end: string
     fetchFeeCategories(storeId).catch(() => []),
     // Belum ada pengaturan / SQL 20261015 belum dijalankan: target bawaan.
     fetchStoreSettings(storeId).catch(() => null),
+    // Kosong kalau Excel "Sudah Dilepas" belum di-upload / SQL 20261021 belum dijalankan.
+    fetchIncomeProductMonthly(storeId, addMonths(monthStart, -3), lastMonth),
   ])
-  return { start, end, items, products, incomeDays, categories, settingsRow }
+  return { start, end, items, products, incomeDays, categories, settingsRow, productIncome }
 }
 
 /**
@@ -101,7 +107,7 @@ function computeAdsAnalysis(
   months?: string[],
   tempHpp?: Map<string, number>,
 ): Loaded {
-  const { start, end, items, products, incomeDays, categories, settingsRow } = ctx
+  const { start, end, items, products, incomeDays, categories, settingsRow, productIncome } = ctx
   const monthStart = `${start.slice(0, 7)}-01`
   const lastMonth = `${end.slice(0, 7)}-01`
   const targets = targetsOf(resolveSettings(settingsRow))
@@ -136,7 +142,17 @@ function computeAdsAnalysis(
     hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
   })
   const rate = feeRate ?? DEFAULT_FEE_RATE
-  const analysis = analyzeAds({ reports, orders: items.map(toLine), feeRate: rate, fallbackHpp, feeComponents, targets, tempHpp })
+  const actualFees = actualFeeRates(productIncome, monthStart)
+  const analysis = analyzeAds({
+    reports,
+    orders: items.map(toLine),
+    feeRate: rate,
+    fallbackHpp,
+    feeComponents,
+    targets,
+    tempHpp,
+    actualFees,
+  })
   // Gabungan: hitung juga per bulan (data iklan & pesanan bulan itu saja) untuk dibandingkan.
   const perMonth =
     months && months.length > 1
@@ -149,6 +165,10 @@ function computeAdsAnalysis(
             fallbackHpp,
             feeComponents,
             targets,
+            actualFees: actualFeeRates(
+              productIncome.filter((r) => r.month >= addMonths(m, -3) && r.month <= m),
+              m,
+            ),
           }),
         }))
       : undefined

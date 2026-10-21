@@ -81,10 +81,14 @@ export interface AdProductResult {
   hppTemp: boolean
   /** Sebagian pesanan belum ada HPP-nya. */
   hppIncomplete: boolean
-  /** Potongan Shopee (0–1) yang dipakai untuk produk ini: rata-rata toko, disesuaikan admin produk kalau diketahui. */
+  /** Potongan Shopee (0–1) yang dipakai untuk produk ini: asli dari laporan, atau rata-rata toko yang disesuaikan admin produk. */
   feeRate: number
-  /** 'produk' = potongan digeser sesuai admin produk/kategori; 'rata-rata' = rata-rata toko apa adanya (belum diisi, atau belum ada produk lain sebagai pembanding). */
-  feeSource: 'produk' | 'rata-rata'
+  /**
+   * 'aktual' = potongan asli produk ini dari laporan Excel "Sudah Dilepas" (dicocokkan lewat Kode Produk);
+   * 'produk' = rata-rata toko digeser sesuai admin produk/kategori;
+   * 'rata-rata' = rata-rata toko apa adanya (belum diisi, atau belum ada produk lain sebagai pembanding).
+   */
+  feeSource: 'aktual' | 'produk' | 'rata-rata'
   /** Sisa per barang setelah potongan Shopee dan HPP (sebelum iklan). */
   unitProfit: number | null
   margin: number | null
@@ -168,6 +172,40 @@ export function targetRoasFromMargin(
 /** Potongan per produk tidak boleh keluar dari rentang masuk akal setelah disesuaikan. */
 const MAX_PRODUCT_FEE_RATE = 0.9
 
+/** Minimal baris pesanan per produk sebelum potongan aslinya dipakai (1–2 pesanan bisa kebetulan kena voucher). */
+export const MIN_LINES_FOR_ACTUAL_FEE = 3
+
+/**
+ * Potongan Shopee asli (0–1) per ID Produk (= Kode Produk di data iklan), dari laporan Excel "Sudah Dilepas".
+ * Pakai bulan periode iklan; kalau di periode itu produknya kurang dari MIN_LINES_FOR_ACTUAL_FEE pesanan,
+ * pakai semua bulan yang diberikan (biasanya ditambah 3 bulan sebelumnya). Masih kurang = tidak ada di hasil.
+ */
+export function actualFeeRates(
+  rows: { month: string; product_id: string; lines: number; harga_produk: number; total_income: number }[],
+  periodFrom: string,
+): Map<string, number> {
+  const sum = (list: typeof rows) => {
+    const out = new Map<string, { lines: number; harga: number; income: number }>()
+    for (const r of list) {
+      const e = out.get(r.product_id) ?? { lines: 0, harga: 0, income: 0 }
+      e.lines += Number(r.lines)
+      e.harga += Number(r.harga_produk)
+      e.income += Number(r.total_income)
+      out.set(r.product_id, e)
+    }
+    return out
+  }
+  const inPeriod = sum(rows.filter((r) => r.month >= periodFrom))
+  const all = sum(rows)
+  const rates = new Map<string, number>()
+  for (const [id, total] of all) {
+    const e = (inPeriod.get(id)?.lines ?? 0) >= MIN_LINES_FOR_ACTUAL_FEE ? inPeriod.get(id)! : total
+    if (e.lines < MIN_LINES_FOR_ACTUAL_FEE || e.harga <= 0) continue
+    rates.set(id, Math.min(Math.max(1 - e.income / e.harga, 0), MAX_PRODUCT_FEE_RATE))
+  }
+  return rates
+}
+
 /**
  * Porsi potongan (admin + XTRA, 0–1) yang dipakai sebagai pembanding: rata-rata produk yang sudah
  * diketahui, ditimbang nilai penjualannya di periode ini. Itulah porsi yang "tertanam" di potongan
@@ -208,6 +246,8 @@ export function analyzeAds(input: {
   targets?: Targets
   /** HPP sementara per nama listing (Cek cepat), dipakai hanya kalau HPP dari pesanan/produk kosong. */
   tempHpp?: Map<string, number>
+  /** Potongan asli per Kode Produk (lihat actualFeeRates). Kalau ada, menggantikan feeRate + feeComponents. */
+  actualFees?: Map<string, number>
 }): AdsAnalysis {
   const { reports, orders, feeRate } = input
   const targets = input.targets ?? DEFAULT_TARGETS
@@ -289,10 +329,13 @@ export function analyzeAds(input: {
     if (a.spend <= 0) continue
     const key = productKey(a.name)
     const component = components.get(key)
+    const actualFee = input.actualFees?.get(code)
     const productFee =
-      component !== undefined && refComponent !== null
-        ? Math.min(Math.max(feeRate + component - refComponent, 0), MAX_PRODUCT_FEE_RATE)
-        : feeRate
+      actualFee !== undefined
+        ? actualFee
+        : component !== undefined && refComponent !== null
+          ? Math.min(Math.max(feeRate + component - refComponent, 0), MAX_PRODUCT_FEE_RATE)
+          : feeRate
     const lines = ordersByKey.get(key) ?? []
     const allQty = lines.reduce((s, l) => s + l.qty, 0)
     const kept = lines.filter((l) => l.status_group !== 'batal')
@@ -359,7 +402,7 @@ export function analyzeAds(input: {
       feeRate: productFee,
       // Dengan hanya satu produk yang diketahui tidak ada pembanding, jadi potongannya tidak bergeser:
       // jujur disebut rata-rata toko.
-      feeSource: component !== undefined && components.size >= 2 ? 'produk' : 'rata-rata',
+      feeSource: actualFee !== undefined ? 'aktual' : component !== undefined && components.size >= 2 ? 'produk' : 'rata-rata',
       unitProfit,
       margin,
       bepRoas,

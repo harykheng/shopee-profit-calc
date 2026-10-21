@@ -125,6 +125,78 @@ export const INCOME_PDF = {
   noAdjustmentsText: 'Tidak ada riwayat',
 } as const
 
+// ---------------------------------------------------------------------------
+// Penghasilan "Sudah Dilepas" (Keuangan → Penghasilan Saya → Sudah Dilepas → Export), file .xlsx
+// Isinya sama dengan PDF bulanan (sudah dicek per tanggal), ditambah rincian per pesanan & produk.
+// ---------------------------------------------------------------------------
+
+export const INCOME_XLSX = {
+  sheets: { orders: 'Penghasilan', summary: 'Summary', adjustments: 'Adjustment' },
+  /** Kolom jenis baris: "Order" = total satu pesanan, "Sku" = rincian satu produk di pesanan itu. */
+  rowKind: 'Lihat berdasarkan',
+  orderKind: 'Order',
+  skuKind: 'Sku',
+  columns: {
+    orderNo: 'No. Pesanan',
+    returnNo: 'No. Pengajuan',
+    productId: 'ID Produk',
+    productName: 'Nama Produk',
+    createdAt: 'Waktu Pesanan Dibuat',
+    releasedAt: 'Tanggal Dana Dilepaskan',
+    total: 'Total Penghasilan',
+    hargaProduk: 'Harga Produk',
+    pengembalianDana: 'Jumlah Pengembalian Dana ke Pembeli',
+    biayaAdmin: 'Biaya Administrasi',
+    biayaProses: 'Biaya Proses Pesanan',
+  },
+  /** Kolom-kolom yang dijumlahkan menjadi satu angka (sama dengan pengelompokan di PDF). */
+  groups: {
+    ongkir: [
+      'Ongkir Dibayar Pembeli',
+      'Ongkos Kirim yang Dibayarkan ke Jasa Kirim',
+      'Potongan Ongkos Kirim dari Jasa Kirim',
+      'Gratis Ongkir dari Shopee',
+      'Ongkos Kirim Pengembalian Barang',
+      'Return to Seller Fee',
+      'Pengembalian Biaya Kirim',
+    ],
+    voucher: [
+      'Voucher disponsor oleh Penjual',
+      'Cashback Koin disponsori Penjual',
+      'Diskon Produk dari Shopee',
+      'Voucher co-fund disponsor oleh Penjual',
+      'Cashback Koin Co-fund disponsori Penjual',
+    ],
+    /** Biaya lain yang dikenal. Sisa yang tidak dikenal tetap ikut di biaya lain (total tetap benar). */
+    lain: [
+      'Biaya Layanan',
+      'Biaya Kampanye',
+      'Biaya Komisi AMS',
+      'Biaya Isi Saldo Otomatis (dari Penghasilan)',
+      'Premi',
+      'FBS Fee',
+      'PPh 22',
+    ],
+  },
+  /** Semua kolom yang diawali teks ini dijumlahkan sebagai biaya Gratis Ongkir XTRA (ada per kategori). */
+  xtraPrefix: 'Biaya Gratis Ongkir XTRA',
+  summary: {
+    shopLabel: 'Username (Penjual)',
+    fromLabel: 'Dari',
+    toLabel: 'ke',
+    totalLabel: '3. Total yang Dilepas',
+  },
+  adjustments: {
+    type: 'Tipe Penyesuaian | Deskripsi',
+    reason: 'Alasan Penyesuaian',
+    amount: 'Biaya Penyesuaian',
+    orderNo: 'No. Pesanan Terhubung',
+    releasedAt: 'Tanggal Dana Dilepaskan',
+    createdAt: 'Tanggal Penyesuaian Dibuat',
+    totalLabel: 'Total Penyesuaian',
+  },
+} as const
+
 /** Kolom angka di tabel `income` (satu baris per tanggal dana dilepas). */
 export const INCOME_COLUMNS = [
   'subtotal_pesanan',
