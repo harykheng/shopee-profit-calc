@@ -1,5 +1,5 @@
 // Hitungan untuk halaman Rekap yang tidak dilakukan di database.
-import { wibDay } from './format'
+import { formatPercent, formatRupiahShort, wibDay } from './format'
 
 // --- "Kenapa barang terjual beda dengan barang dipesan?" ---------------------
 
@@ -315,13 +315,9 @@ export interface RecapInsight {
   detail: string
 }
 
-const pctText = (x: number) => `${(Math.round(x * 1000) / 10).toLocaleString('id-ID')}%`
-const rpShort = (n: number) =>
-  n >= 1_000_000
-    ? `Rp${(Math.round(n / 10_000) / 100).toLocaleString('id-ID')} jt`
-    : n >= 1_000
-      ? `Rp${Math.round(n / 1_000).toLocaleString('id-ID')} rb`
-      : `Rp${Math.round(n).toLocaleString('id-ID')}`
+// Format sama dengan bagian lain aplikasi ("Rp1,05 juta", "15,8%").
+const pctText = (x: number) => formatPercent(x * 100)
+const rpShort = (n: number) => formatRupiahShort(n)
 
 /**
  * Maksimal 3 penyebab terbesar untung/rugi bulan ini, urut dari yang paling perlu ditindaklanjuti.
@@ -352,7 +348,7 @@ export function recapInsights(input: {
           ? 'sementara toko rugi.'
           : ratio !== null && ratio >= 1
             ? `${(Math.round(ratio * 10) / 10).toLocaleString('id-ID')}× untung bersih.`
-            : '',
+            : 'masih di bawah untung bersih.',
     })
   }
   if (input.rugi + input.tipis > 0) {
@@ -364,7 +360,8 @@ export function recapInsights(input: {
       key: 'produk',
       tone: input.rugi > 0 ? 'bad' : 'info',
       title: parts.join(', '),
-      detail: input.tipis > 0 ? `(di bawah ${pctText(THIN_MARGIN)} dari uang masuk).` : '',
+      // Untung per produk belum dikurangi iklan, jadi disebut supaya tidak dikira sesudah iklan.
+      detail: input.tipis > 0 ? `(di bawah ${pctText(THIN_MARGIN)} dari uang masuk), sebelum iklan.` : '(sebelum iklan).',
     })
   }
   if (input.shopeeFee > 0) {

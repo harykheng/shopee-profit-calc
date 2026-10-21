@@ -582,7 +582,7 @@ function NotaCard({
           </div>
         </div>
         {insights.length > 0 ? (
-          <Insights items={insights} onShowProducts={onShowProducts} />
+          <Insights items={insights} loss={loss} onShowProducts={onShowProducts} />
         ) : (
           <MoneySplit income={t.modal + t.expenses + t.profit} modal={t.modal} expenses={t.expenses} profit={t.profit} />
         )}
@@ -615,7 +615,7 @@ function NotaCard({
       {/* Bab 2: dari mana angkanya. */}
       <section id="bab2" className="scroll-mt-6 space-y-4">
         <ChapterTitle n={2} kicker="Hitungannya">
-          {breakdown ? 'Dari omzet sampai untung' : 'Dari mana angkanya'}
+          {breakdown ? (loss ? 'Dari omzet sampai rugi' : 'Dari omzet sampai untung') : 'Dari mana angkanya'}
         </ChapterTitle>
         {breakdown && <OmzetBar b={breakdown} months={data.months} modal={t.modal} profit={t.profit} />}
         <div className="space-y-5 rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-7">
@@ -737,7 +737,11 @@ function OmzetLines({ b, adjustments }: { b: IncomeBreakdown; adjustments: numbe
       <NotaLine
         op="+"
         label={b.detailed ? 'Omzet' : 'Omzet (setelah refund)'}
-        detail={b.detailed ? `harga produk${b.orders ? `, ${formatNumber(b.orders)} pesanan` : ''}` : 'subtotal pesanan di laporan penghasilan PDF'}
+        detail={
+          b.detailed
+            ? `harga produk${b.orders ? `, ${formatNumber(b.orders)} pesanan` : ''}`
+            : 'laporan PDF tidak memisahkan refund, jadi sudah dipotong di sini'
+        }
         amount={formatRupiah(b.omzet)}
       />
       {b.refund !== 0 && (
@@ -766,7 +770,7 @@ function OmzetLines({ b, adjustments }: { b: IncomeBreakdown; adjustments: numbe
         <NotaLine
           op={adjustments > 0 ? '+' : '−'}
           label="Kompensasi / penyesuaian"
-          detail="dicatat Shopee terpisah dari uang cair harian"
+          detail="dari Shopee, mis. ganti rugi barang retur atau hilang"
           amount={formatRupiah(Math.abs(adjustments))}
         />
       )}
@@ -780,7 +784,15 @@ function OmzetBar({ b, months, modal, profit }: { b: IncomeBreakdown; months: Mo
   const sum = (k: 'iklan_shopee' | 'meta_ads' | 'packaging' | 'lain_lain') => months.reduce((n, m) => n + Number(m[k]), 0)
   const segs = [
     { key: 'shopee', label: 'Potongan Shopee', value: b.shopeeFee, color: 'bg-accent' },
-    { key: 'refund', label: 'Refund, voucher & ongkir', value: b.refund + b.voucher - Math.min(b.ongkir, 0), color: 'bg-control' },
+    {
+      key: 'refund',
+      label: [b.refund > 0 && 'refund', b.voucher > 0 && 'voucher', b.ongkir < 0 && 'ongkir']
+        .filter(Boolean)
+        .join(', ')
+        .replace(/^./, (c) => c.toUpperCase()),
+      value: b.refund + b.voucher - Math.min(b.ongkir, 0),
+      color: 'bg-control',
+    },
     { key: 'modal', label: 'Modal', value: modal, color: 'bg-ink-2' },
     { key: 'iklan', label: 'Iklan', value: sum('iklan_shopee') + sum('meta_ads'), color: 'bg-loss' },
     { key: 'packaging', label: 'Packaging', value: sum('packaging'), color: 'bg-rule' },
@@ -825,7 +837,15 @@ function OmzetBar({ b, months, modal, profit }: { b: IncomeBreakdown; months: Mo
 }
 
 /** Bab 1, kolom kanan: maksimal 3 penyebab terbesar untung/rugi bulan ini. */
-function Insights({ items, onShowProducts }: { items: RecapInsight[]; onShowProducts: (sort: ProductSort) => void }) {
+function Insights({
+  items,
+  loss,
+  onShowProducts,
+}: {
+  items: RecapInsight[]
+  loss: boolean
+  onShowProducts: (sort: ProductSort) => void
+}) {
   const link = (key: RecapInsight['key']) => {
     switch (key) {
       case 'iklan':
@@ -849,7 +869,7 @@ function Insights({ items, onShowProducts }: { items: RecapInsight[]; onShowProd
   return (
     <section aria-labelledby="insights-title" className="flex min-w-0 flex-col self-start rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-6">
       <h2 id="insights-title" className="font-display text-xl font-bold leading-tight tracking-tight">
-        Kenapa untungnya segini?
+        {loss ? 'Kenapa bulan ini rugi?' : 'Kenapa untungnya segini?'}
       </h2>
       <ol className="mt-4 space-y-2.5">
         {items.map((it, i) => (

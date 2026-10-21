@@ -176,9 +176,18 @@ describe('recapInsights', () => {
   it('names the biggest causes, at most 3, most actionable first', () => {
     const r = recapInsights({ ...july, ads: 1_050_000, modal: 3_900_000, profit: 543_533, rugi: 1, tipis: 1 })
     expect(r.map((i) => i.key)).toEqual(['iklan', 'produk', 'potongan'])
-    expect(r[0]).toMatchObject({ tone: 'bad', title: 'Iklan Rp1,05 jt = 15,8% dari omzet', detail: '1,9× untung bersih.' })
-    expect(r[1]).toMatchObject({ tone: 'bad', title: '1 produk rugi, 1 produk untungnya tipis' })
-    expect(r[2]).toMatchObject({ title: 'Potongan Shopee 14,7% dari omzet', detail: '(Rp974 rb). Terbesar: biaya admin 8,4%.' })
+    expect(r[0]).toMatchObject({ tone: 'bad', title: 'Iklan Rp1,05 juta = 15,8% dari omzet', detail: '1,9× untung bersih.' })
+    expect(r[1]).toMatchObject({
+      tone: 'bad',
+      title: '1 produk rugi, 1 produk untungnya tipis',
+      detail: '(di bawah 10% dari uang masuk), sebelum iklan.',
+    })
+    expect(r[2]).toMatchObject({ title: 'Potongan Shopee 14,7% dari omzet', detail: '(Rp974 ribu). Terbesar: biaya admin 8,4%.' })
+  })
+
+  it('still finishes the sentence when ads are below the profit', () => {
+    const r = recapInsights({ ...july, ads: 700_000, modal: 3_000_000, profit: 2_000_000, rugi: 0, tipis: 0 })
+    expect(r[0]).toMatchObject({ key: 'iklan', detail: 'masih di bawah untung bersih.' })
   })
 
   it('skips small ads and mentions a heavy cost of goods', () => {

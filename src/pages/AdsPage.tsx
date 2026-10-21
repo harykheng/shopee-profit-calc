@@ -721,8 +721,14 @@ function FeeCoverage({ products }: { products: AdProductResult[] }) {
           : `${formatNumber(known)} dari ${formatNumber(withProfit.length)} produk memakai potongan ${
               actual === known ? 'asli dari laporan penghasilan' : actual > 0 ? 'asli atau admin produk' : 'admin produk'
             }, sisanya rata-rata toko.`}{' '}
-        Upload laporan penghasilan Excel <strong>Sudah Dilepas</strong> supaya potongan tiap produk memakai angka asli
-        (butuh minimal {MIN_LINES_FOR_ACTUAL_FEE} pesanan per produk), atau{' '}
+        {actual > 0 ? (
+          <>Potongan asli butuh minimal {MIN_LINES_FOR_ACTUAL_FEE} pesanan per produk di laporan penghasilan. Untuk produk lain,{' '}</>
+        ) : (
+          <>
+            Upload laporan penghasilan Excel <strong>Sudah Dilepas</strong> supaya potongan tiap produk memakai angka asli
+            (butuh minimal {MIN_LINES_FOR_ACTUAL_FEE} pesanan per produk), atau{' '}
+          </>
+        )}
         <button type="button" className={linkClass} onClick={() => navigate('simulasi')}>
           atur kategori admin di Simulasi Harga
         </button>
