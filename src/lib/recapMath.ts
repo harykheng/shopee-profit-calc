@@ -144,3 +144,245 @@ export function estimateProfit(
   modal = Math.round(modal)
   return { sales, income, fees: sales - income, modal, profit: income - modal, missingHpp, averaged, exact, items: items.length }
 }
+
+// --- Bab 2: dari omzet sampai uang masuk -------------------------------------
+
+/** Satu baris view income_monthly_breakdown (SQL 20261022). Angka biaya bertanda negatif seperti di laporan. */
+export interface IncomeBreakdownRow {
+  month: string
+  subtotal_pesanan: number
+  subtotal_ongkir: number
+  voucher_subsidi: number
+  biaya_platform: number
+  biaya_gratis_ongkir: number
+  biaya_layanan_tambahan: number
+  total_income: number
+  order_count: number | null
+  harga_produk: number | null
+  pengembalian_dana: number | null
+  biaya_admin: number | null
+  biaya_proses: number | null
+  orders_complete: boolean
+}
+
+export interface IncomeBreakdown {
+  /** true = semua bulan punya rincian per pesanan (Excel "Sudah Dilepas"): omzet sebelum refund, admin & proses terpisah. */
+  detailed: boolean
+  /** Harga produk (Excel) atau subtotal pesanan setelah refund (PDF). */
+  omzet: number
+  /** Jumlah pesanan (hanya Excel). */
+  orders: number | null
+  /** Uang yang dikembalikan ke pembeli (positif = mengurangi). 0 kalau tidak diketahui terpisah (PDF). */
+  refund: number
+  /** Voucher dari penjual (positif = mengurangi). */
+  voucher: number
+  /** Ongkir bersih: negatif = ditanggung toko. Biasanya 0. */
+  ongkir: number
+  /** Total potongan Shopee (positif = mengurangi). */
+  shopeeFee: number
+  /** Rincian potongan Shopee (positif), hanya yang bukan 0, urut dari yang terbesar. */
+  feeParts: { label: string; amount: number }[]
+  /** Uang cair (tanpa biaya penyesuaian). */
+  released: number
+}
+
+/**
+ * Rincian omzet → uang cair untuk beberapa bulan. null kalau tidak ada data, atau kalau rinciannya
+ * tidak pas dengan uang cair (Bab 2 lalu memakai tampilan lama yang dimulai dari uang masuk).
+ */
+export function incomeBreakdown(rows: IncomeBreakdownRow[]): IncomeBreakdown | null {
+  if (rows.length === 0) return null
+  const sum = (f: (r: IncomeBreakdownRow) => number | null) => rows.reduce((s, r) => s + Number(f(r) ?? 0), 0)
+  const detailed = rows.every((r) => r.orders_complete)
+  const omzet = detailed ? sum((r) => r.harga_produk) : sum((r) => r.subtotal_pesanan)
+  const refund = detailed ? -sum((r) => r.pengembalian_dana) : 0
+  const voucher = -sum((r) => r.voucher_subsidi)
+  const ongkir = sum((r) => r.subtotal_ongkir)
+  const xtra = -sum((r) => r.biaya_gratis_ongkir)
+  const lain = -sum((r) => r.biaya_layanan_tambahan)
+  const parts = detailed
+    ? [
+        { label: 'Biaya admin', amount: -sum((r) => r.biaya_admin) },
+        { label: 'Gratis Ongkir XTRA', amount: xtra },
+        { label: 'Biaya proses pesanan', amount: -sum((r) => r.biaya_proses) },
+        { label: 'Biaya lain-lain', amount: lain },
+      ]
+    : [
+        { label: 'Biaya admin & proses pesanan', amount: -sum((r) => r.biaya_platform) },
+        { label: 'Gratis Ongkir XTRA', amount: xtra },
+        { label: 'Biaya lain-lain', amount: lain },
+      ]
+  const feeParts = parts.filter((p) => p.amount !== 0).sort((a, b) => b.amount - a.amount)
+  const shopeeFee = parts.reduce((s, p) => s + p.amount, 0)
+  const released = sum((r) => r.total_income)
+  // Harus pas sampai rupiah: omzet − refund − voucher + ongkir − potongan = uang cair.
+  if (Math.abs(omzet - refund - voucher + ongkir - shopeeFee - released) > 1) return null
+  const orders = detailed ? sum((r) => r.order_count) : null
+  return { detailed, omzet, orders, refund, voucher, ongkir, shopeeFee, feeParts, released }
+}
+
+// --- Per produk: untung dari uang masuk asli -----------------------------------
+
+/** Untung di bawah ini (dari uang masuk) ditandai "tipis". */
+export const THIN_MARGIN = 0.1
+
+export interface ProductRecapRow {
+  sku: string
+  product_name: string
+  variant_name: string
+  qty_sold: number
+  qty_returned: number
+  total_modal: number | null
+  missing_hpp: boolean
+  item_count?: number
+  items_with_income?: number
+  income?: number | null
+  qty_with_income?: number | null
+  modal_with_income?: number | null
+}
+
+export interface ProductRow {
+  sku: string
+  name: string
+  variant: string
+  qty: number
+  returned: number
+  modal: number
+  missing: boolean
+  items: number
+  /** Item yang uang masuknya sudah ada di Excel "Sudah Dilepas". */
+  itemsWithIncome: number
+  income: number
+  qtyWithIncome: number
+  modalWithIncome: number
+  /** Uang masuk − modal dari barang yang uangnya sudah ada; null = belum ada uang masuk asli / HPP kosong. */
+  profit: number | null
+  /** profit ÷ uang masuk. */
+  margin: number | null
+  status: 'rugi' | 'tipis' | null
+}
+
+/** Gabungkan baris product_monthly_recap (bisa beberapa bulan) per SKU. */
+export function productRows(products: ProductRecapRow[]): ProductRow[] {
+  const map = new Map<string, Omit<ProductRow, 'profit' | 'margin' | 'status'>>()
+  for (const p of products) {
+    const r = map.get(p.sku) ?? {
+      sku: p.sku, name: p.product_name, variant: p.variant_name, qty: 0, returned: 0, modal: 0, missing: false,
+      items: 0, itemsWithIncome: 0, income: 0, qtyWithIncome: 0, modalWithIncome: 0,
+    }
+    r.qty += Number(p.qty_sold)
+    r.returned += Number(p.qty_returned)
+    r.modal += Number(p.total_modal ?? 0)
+    r.missing ||= p.missing_hpp
+    r.items += Number(p.item_count ?? 0)
+    r.itemsWithIncome += Number(p.items_with_income ?? 0)
+    r.income += Number(p.income ?? 0)
+    r.qtyWithIncome += Number(p.qty_with_income ?? 0)
+    r.modalWithIncome += Number(p.modal_with_income ?? 0)
+    map.set(p.sku, r)
+  }
+  return [...map.values()]
+    .map((r) => {
+      const profit = r.itemsWithIncome > 0 && !r.missing ? r.income - r.modalWithIncome : null
+      const margin = profit !== null && r.income > 0 ? profit / r.income : null
+      const status: ProductRow['status'] =
+        profit === null ? null : profit < 0 ? 'rugi' : margin !== null && margin < THIN_MARGIN ? 'tipis' : null
+      return { ...r, profit, margin, status }
+    })
+    .sort((a, b) => b.qty - a.qty)
+}
+
+export type ProductSort = 'terlaris' | 'untung' | 'rugi'
+
+/** Urutkan produk. Produk tanpa untung asli selalu di belakang untuk urutan untung/rugi. */
+export function sortProducts(rows: ProductRow[], sort: ProductSort): ProductRow[] {
+  if (sort === 'terlaris') return [...rows].sort((a, b) => b.qty - a.qty)
+  const dir = sort === 'untung' ? -1 : 1
+  return [...rows].sort((a, b) => {
+    if (a.profit === null || b.profit === null) return (a.profit === null ? 1 : 0) - (b.profit === null ? 1 : 0)
+    return dir * (a.profit - b.profit)
+  })
+}
+
+// --- Bab 1: kenapa untungnya segini ------------------------------------------------
+
+export interface RecapInsight {
+  key: 'iklan' | 'produk' | 'potongan' | 'modal'
+  tone: 'bad' | 'info'
+  /** Kalimat utama (tebal). */
+  title: string
+  /** Lanjutan kalimat (boleh kosong). */
+  detail: string
+}
+
+const pctText = (x: number) => `${(Math.round(x * 1000) / 10).toLocaleString('id-ID')}%`
+const rpShort = (n: number) =>
+  n >= 1_000_000
+    ? `Rp${(Math.round(n / 10_000) / 100).toLocaleString('id-ID')} jt`
+    : n >= 1_000
+      ? `Rp${Math.round(n / 1_000).toLocaleString('id-ID')} rb`
+      : `Rp${Math.round(n).toLocaleString('id-ID')}`
+
+/**
+ * Maksimal 3 penyebab terbesar untung/rugi bulan ini, urut dari yang paling perlu ditindaklanjuti.
+ * Kosong kalau omzet belum diketahui.
+ */
+export function recapInsights(input: {
+  omzet: number
+  shopeeFee: number
+  feeParts: { label: string; amount: number }[]
+  /** Iklan Shopee + Meta Ads. */
+  ads: number
+  modal: number
+  profit: number
+  rugi: number
+  tipis: number
+}): RecapInsight[] {
+  const { omzet, ads, profit } = input
+  if (omzet <= 0) return []
+  const out: RecapInsight[] = []
+  if (ads > 0 && ads / omzet >= 0.1) {
+    const ratio = profit > 0 ? ads / profit : null
+    out.push({
+      key: 'iklan',
+      tone: 'bad',
+      title: `Iklan ${rpShort(ads)} = ${pctText(ads / omzet)} dari omzet`,
+      detail:
+        profit <= 0
+          ? 'sementara toko rugi.'
+          : ratio !== null && ratio >= 1
+            ? `${(Math.round(ratio * 10) / 10).toLocaleString('id-ID')}× untung bersih.`
+            : '',
+    })
+  }
+  if (input.rugi + input.tipis > 0) {
+    const parts = [
+      input.rugi > 0 ? `${input.rugi} produk rugi` : null,
+      input.tipis > 0 ? `${input.tipis} produk untungnya tipis` : null,
+    ].filter(Boolean)
+    out.push({
+      key: 'produk',
+      tone: input.rugi > 0 ? 'bad' : 'info',
+      title: parts.join(', '),
+      detail: input.tipis > 0 ? `(di bawah ${pctText(THIN_MARGIN)} dari uang masuk).` : '',
+    })
+  }
+  if (input.shopeeFee > 0) {
+    const top = input.feeParts[0]
+    out.push({
+      key: 'potongan',
+      tone: 'info',
+      title: `Potongan Shopee ${pctText(input.shopeeFee / omzet)} dari omzet`,
+      detail: `(${rpShort(input.shopeeFee)}).${top ? ` Terbesar: ${top.label.toLowerCase()} ${pctText(top.amount / omzet)}.` : ''}`,
+    })
+  }
+  if (input.modal / omzet >= 0.7) {
+    out.push({
+      key: 'modal',
+      tone: 'bad',
+      title: `Modal ${pctText(input.modal / omzet)} dari omzet`,
+      detail: 'harga jual tipis dibanding HPP.',
+    })
+  }
+  return out.slice(0, 3)
+}

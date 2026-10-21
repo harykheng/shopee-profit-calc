@@ -16,6 +16,7 @@ import {
   fetchReconciliation,
   fetchReturnedItems,
   fetchUnmatchedIncomeOrders,
+  fetchIncomeBreakdown,
   fetchSetupProgress,
   fetchStoreSettings,
   type SetupProgress,
@@ -27,7 +28,22 @@ import {
 import { notifyDataChanged } from '../lib/events'
 import { addMonths, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '../lib/format'
 import { monthStatus, monthTodos, type MonthStatus } from '../lib/monthStatus'
-import { estimateProfit, soldFlow, type FlowStep, type ProfitEstimate } from '../lib/recapMath'
+import {
+  THIN_MARGIN,
+  estimateProfit,
+  incomeBreakdown,
+  productRows,
+  recapInsights,
+  soldFlow,
+  sortProducts,
+  type FlowStep,
+  type IncomeBreakdown,
+  type IncomeBreakdownRow,
+  type ProductRow,
+  type ProductSort,
+  type ProfitEstimate,
+  type RecapInsight,
+} from '../lib/recapMath'
 import { resolveSettings } from '../lib/storeSettings'
 import { navigate } from '../lib/router'
 import { fullMonthOf } from '../lib/adsMath'
@@ -49,6 +65,8 @@ interface RecapData {
   returned: ReturnedItem[]
   /** Pesanan yang uangnya cair (Excel "Sudah Dilepas") tapi belum cocok dengan export pesanan. */
   unmatched: UnmatchedIncomeOrder[]
+  /** Rincian omzet → uang cair per bulan (kosong kalau SQL 20261022 belum dijalankan). */
+  breakdown: IncomeBreakdownRow[]
 }
 
 /** Data untuk tab "Semua pesanan" & penjelasan barang terjual (butuh SQL ke-3). */
@@ -82,6 +100,13 @@ export function RecapPage({
   const [error, setError] = useState<unknown>(null)
   const [orders, setOrders] = useState<OrdersData | { error: unknown } | null>(null)
   const [tab, setTab] = useState<Tab>('pesanan')
+  const [productSort, setProductSort] = useState<ProductSort>('terlaris')
+  /** Dari diagnosa Bab 1: buka tab Per produk dengan urutan tertentu, lalu gulir ke sana. */
+  const showProducts = (sort: ProductSort) => {
+    setTab('produk')
+    setProductSort(sort)
+    requestAnimationFrame(() => document.getElementById('rincian')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
   const [recalcMonth, setRecalcMonth] = useState<string | null>(null)
   const [recalcResult, setRecalcResult] = useState<string | null>(null)
 
@@ -103,19 +128,20 @@ export function RecapPage({
           fetchReconciliation(storeId, from, end),
           fetchReturnedItems(storeId, from, end),
           fetchUnmatchedIncomeOrders(storeId, from, end),
+          fetchIncomeBreakdown(storeId, from, end),
         ])
-      let [months, products, reconciliation, returned, unmatched] = await fetchRecap()
+      let [months, products, reconciliation, returned, unmatched, breakdown] = await fetchRecap()
       // HPP yang baru diisi di halaman HPP langsung dipakai (barang yang HPP-nya masih kosong saja), tanpa
       // menekan "Hitung ulang HPP". Kalau gagal, Rekap tetap tampil dengan angka yang ada.
       const stale = months.filter((m) => Number(m.items_missing_hpp) > 0).map((m) => m.month)
       if (!readOnly && stale.length > 0) {
         const filled = await fillMissingHpp(storeId, stale).catch(() => 0)
         if (filled > 0) {
-          ;[months, products, reconciliation, returned, unmatched] = await fetchRecap()
+          ;[months, products, reconciliation, returned, unmatched, breakdown] = await fetchRecap()
           notifyDataChanged()
         }
       }
-      setData({ months, products, reconciliation, returned, unmatched })
+      setData({ months, products, reconciliation, returned, unmatched, breakdown })
     } catch (e) {
       setError(e)
       return
@@ -221,11 +247,12 @@ export function RecapPage({
             rangeEnd={end}
             onRecalc={setRecalcMonth}
             storeName={storeName}
+            onShowProducts={showProducts}
           />
 
           {from === end && storeId && <AdsChapter storeId={storeId} month={from} />}
 
-          <section className="space-y-4">
+          <section id="rincian" className="scroll-mt-6 space-y-4">
             <ChapterTitle n={from === end ? 4 : 3} kicker="Rinciannya">
               Pesanan & produk
             </ChapterTitle>
@@ -236,7 +263,15 @@ export function RecapPage({
             </div>
             <div key={tab} className="page-in">
               {tab === 'pesanan' && <OrdersTab orders={orders} period={period} />}
-              {tab === 'produk' && <ProductsTab products={data.products} returned={data.returned} period={period} />}
+              {tab === 'produk' && (
+                <ProductsTab
+                  products={data.products}
+                  returned={data.returned}
+                  period={period}
+                  sort={productSort}
+                  setSort={setProductSort}
+                />
+              )}
               {tab === 'bulan' && data.months.length > 1 && (
                 <MonthsTab months={data.months} reconciliation={data.reconciliation} onRecalc={setRecalcMonth} />
               )}
@@ -430,6 +465,7 @@ function NotaCard({
   rangeEnd,
   onRecalc,
   storeName,
+  onShowProducts,
 }: {
   data: RecapData
   orders: OrdersData | null
@@ -438,6 +474,7 @@ function NotaCard({
   rangeEnd: string
   onRecalc: (month: string) => void
   storeName: string
+  onShowProducts: (sort: ProductSort) => void
 }) {
   const readOnly = useContext(ReadOnlyContext)
   const t = data.months.reduce(
@@ -472,9 +509,28 @@ function NotaCard({
   const expenseDetail = expenseParts
     .map(([label, key]) => [label, data.months.reduce((n, m) => n + Number(m[key]), 0)] as const)
     .filter(([, v]) => v > 0)
-    .map(([label, v]) => `${label} ${formatRupiah(v)}`)
-    .join(' · ')
-  const margin = t.income > 0 ? (t.profit / t.income) * 100 : null
+    .map(([label, v]) => [label, v] as const)
+  // Rincian dari omzet (Bab 2). Hanya dipakai kalau uang cairnya pas dengan rekap bulanan.
+  const breakdown = useMemo(() => {
+    const b = incomeBreakdown(data.breakdown)
+    return b && Math.abs(b.released + t.adjustments - t.income) <= 1 ? b : null
+  }, [data.breakdown, t.adjustments, t.income])
+  const ads = data.months.reduce((n, m) => n + Number(m.iklan_shopee) + Number(m.meta_ads), 0)
+  const products = useMemo(() => productRows(data.products), [data.products])
+  const insights = breakdown
+    ? recapInsights({
+        omzet: breakdown.omzet,
+        shopeeFee: breakdown.shopeeFee,
+        feeParts: breakdown.feeParts,
+        ads,
+        modal: t.modal,
+        profit: t.profit,
+        rugi: products.filter((p) => p.status === 'rugi').length,
+        tipis: products.filter((p) => p.status === 'tipis').length,
+      })
+    : []
+  const ofOmzet = (v: number) => (breakdown && breakdown.omzet > 0 ? formatPercent((v / breakdown.omzet) * 100) : '')
+  const margin = breakdown && breakdown.omzet > 0 ? (t.profit / breakdown.omzet) * 100 : t.income > 0 ? (t.profit / t.income) * 100 : null
 
   const flow = orders ? buildFlow(orders, t.qty, rangeEnd) : null
   const biayaMonth = unfilledExpenses[0]?.month ?? singleMonth ?? data.months[0]?.month
@@ -501,7 +557,7 @@ function NotaCard({
           </p>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink-2">
             Tepatnya <b className="num text-ink">{formatRupiah(t.profit)}</b>
-            {margin !== null && <> ({formatPercent(margin)} dari uang masuk)</>}, dari{' '}
+            {margin !== null && <> ({formatPercent(margin)} dari {breakdown ? 'omzet' : 'uang masuk'})</>}, dari{' '}
             <b className="text-ink">{formatNumber(t.qty)} barang</b> yang sudah sampai ke pembeli dan uangnya cair.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
@@ -525,7 +581,11 @@ function NotaCard({
             {!allFinal && firstTodo && <span className="font-semibold text-warn">Belum final: {firstTodo.short}</span>}
           </div>
         </div>
-        <MoneySplit income={t.modal + t.expenses + t.profit} modal={t.modal} expenses={t.expenses} profit={t.profit} />
+        {insights.length > 0 ? (
+          <Insights items={insights} onShowProducts={onShowProducts} />
+        ) : (
+          <MoneySplit income={t.modal + t.expenses + t.profit} modal={t.modal} expenses={t.expenses} profit={t.profit} />
+        )}
       </section>
 
       {showStatus && (
@@ -553,19 +613,21 @@ function NotaCard({
       )}
 
       {/* Bab 2: dari mana angkanya. */}
-      <section className="space-y-4">
+      <section id="bab2" className="scroll-mt-6 space-y-4">
         <ChapterTitle n={2} kicker="Hitungannya">
-          Dari mana angkanya
+          {breakdown ? 'Dari omzet sampai untung' : 'Dari mana angkanya'}
         </ChapterTitle>
+        {breakdown && <OmzetBar b={breakdown} months={data.months} modal={t.modal} profit={t.profit} />}
         <div className="space-y-5 rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-7">
           <div className="print-in">
+            {breakdown && <OmzetLines b={breakdown} adjustments={t.adjustments} />}
             <NotaLine
-              op="+"
+              op={breakdown ? '=' : '+'}
               label="Uang masuk dari Shopee"
               detail={[
                 `Dana cair ${formatNumber(releaseDays)} hari`,
-                t.adjustments !== 0 ? `penyesuaian ${formatRupiah(t.adjustments)}` : null,
-                refund !== 0 ? `refund ${formatRupiah(-refund)} sudah dipotong` : null,
+                !breakdown && t.adjustments !== 0 ? `penyesuaian ${formatRupiah(t.adjustments)}` : null,
+                !breakdown && refund !== 0 ? `refund ${formatRupiah(-refund)} sudah dipotong` : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}
@@ -577,6 +639,7 @@ function NotaCard({
               detail={
                 <>
                   {formatNumber(t.qty)} barang × HPP masing-masing
+                  {breakdown && <> · {ofOmzet(t.modal)} dari omzet</>}
                   {t.returnedLoss > 0 && <> · termasuk {formatRupiah(t.returnedLoss)} dari barang retur yang tidak bisa dijual lagi</>}
                   {singleMonth && !readOnly && (
                     <>
@@ -595,7 +658,13 @@ function NotaCard({
               label="Biaya (iklan, packaging, dll.)"
               detail={
                 <>
-                  {expenseDetail || (unfilledExpenses.length > 0 ? 'Belum diisi' : 'Tidak ada biaya')}
+                  {expenseDetail.length > 0
+                    ? expenseDetail
+                        .map(([label, v]) => `${label} ${formatRupiah(v)}${breakdown ? ` (${ofOmzet(v)})` : ''}`)
+                        .join(' · ')
+                    : unfilledExpenses.length > 0
+                      ? 'Belum diisi'
+                      : 'Tidak ada biaya'}
                   {biayaMonth && !readOnly && (
                     <>
                       {' · '}
@@ -646,6 +715,161 @@ function ChapterTitle({ n, kicker, children }: { n: number; kicker: string; chil
       </Kicker>
       <h2 className="mt-1 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{children}</h2>
     </div>
+  )
+}
+
+/** Baris rincian di bawah satu baris nota (mis. jenis-jenis potongan Shopee). */
+function NotaSub({ label, amount }: { label: ReactNode; amount: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[1.5rem_1fr_auto] items-baseline gap-x-2 pb-2 text-sm text-ink-2">
+      <span />
+      <span className="min-w-0">{label}</span>
+      <span className="num whitespace-nowrap">{amount}</span>
+    </div>
+  )
+}
+
+/** Bab 2, bagian atas: dari omzet sampai uang cair (potongan Shopee per jenis). */
+function OmzetLines({ b, adjustments }: { b: IncomeBreakdown; adjustments: number }) {
+  const pct = (v: number) => (b.omzet > 0 ? formatPercent((v / b.omzet) * 100) : '')
+  return (
+    <>
+      <NotaLine
+        op="+"
+        label={b.detailed ? 'Omzet' : 'Omzet (setelah refund)'}
+        detail={b.detailed ? `harga produk${b.orders ? `, ${formatNumber(b.orders)} pesanan` : ''}` : 'subtotal pesanan di laporan penghasilan PDF'}
+        amount={formatRupiah(b.omzet)}
+      />
+      {b.refund !== 0 && (
+        <NotaLine op="−" label="Refund ke pembeli" detail={`${pct(b.refund)} dari omzet`} amount={formatRupiah(b.refund)} />
+      )}
+      {b.voucher !== 0 && (
+        <NotaLine op="−" label="Voucher dari penjual" detail={`${pct(b.voucher)} dari omzet`} amount={formatRupiah(b.voucher)} />
+      )}
+      {b.ongkir !== 0 && (
+        <NotaLine
+          op={b.ongkir < 0 ? '−' : '+'}
+          label={b.ongkir < 0 ? 'Ongkir ditanggung toko' : 'Selisih ongkir'}
+          detail={`${pct(Math.abs(b.ongkir))} dari omzet`}
+          amount={formatRupiah(Math.abs(b.ongkir))}
+        />
+      )}
+      {b.shopeeFee !== 0 && (
+        <div className="border-line [&+&]:border-t">
+          <NotaLine op="−" label="Potongan Shopee" detail={`${pct(b.shopeeFee)} dari omzet`} amount={formatRupiah(b.shopeeFee)} />
+          {b.feeParts.map((f) => (
+            <NotaSub key={f.label} label={`${f.label} · ${pct(f.amount)}`} amount={formatRupiah(f.amount)} />
+          ))}
+        </div>
+      )}
+      {adjustments !== 0 && (
+        <NotaLine
+          op={adjustments > 0 ? '+' : '−'}
+          label="Kompensasi / penyesuaian"
+          detail="dicatat Shopee terpisah dari uang cair harian"
+          amount={formatRupiah(Math.abs(adjustments))}
+        />
+      )}
+    </>
+  )
+}
+
+/** Bab 2: satu batang "dari omzet, uangnya ke mana saja". */
+function OmzetBar({ b, months, modal, profit }: { b: IncomeBreakdown; months: MonthlyRecap[]; modal: number; profit: number }) {
+  if (b.omzet <= 0) return null
+  const sum = (k: 'iklan_shopee' | 'meta_ads' | 'packaging' | 'lain_lain') => months.reduce((n, m) => n + Number(m[k]), 0)
+  const segs = [
+    { key: 'shopee', label: 'Potongan Shopee', value: b.shopeeFee, color: 'bg-accent' },
+    { key: 'refund', label: 'Refund, voucher & ongkir', value: b.refund + b.voucher - Math.min(b.ongkir, 0), color: 'bg-control' },
+    { key: 'modal', label: 'Modal', value: modal, color: 'bg-ink-2' },
+    { key: 'iklan', label: 'Iklan', value: sum('iklan_shopee') + sum('meta_ads'), color: 'bg-loss' },
+    { key: 'packaging', label: 'Packaging', value: sum('packaging'), color: 'bg-rule' },
+    { key: 'lain', label: 'Biaya lain', value: sum('lain_lain'), color: 'bg-line' },
+    { key: 'untung', label: 'Untung', value: Math.max(profit, 0), color: 'bg-gain' },
+  ].filter((sg) => sg.value > 0)
+  const pct = (v: number) => formatPercent((v / b.omzet) * 100)
+  return (
+    <figure className="rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-6">
+      <figcaption className="font-semibold">
+        Dari omzet {formatRupiahShort(b.omzet)}, uangnya ke mana saja
+      </figcaption>
+      <div
+        role="img"
+        aria-label={segs.map((sg) => `${sg.label} ${pct(sg.value)}`).join(', ')}
+        className="mt-3 flex h-6 gap-[2px] overflow-hidden rounded-full bg-line"
+      >
+        {segs.map((sg, i) => (
+          <div
+            key={sg.key}
+            title={`${sg.label}: ${pct(sg.value)} dari omzet`}
+            style={{ flexGrow: sg.value, animationDelay: `${200 + i * 100}ms` }}
+            className={`grow-bar min-w-[3px] basis-0 ${sg.color}`}
+          />
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink-2">
+        {segs.map((sg) => (
+          <span key={sg.key} className="num">
+            <i aria-hidden="true" className={`mr-1.5 inline-block h-2.5 w-2.5 rounded-full ${sg.color} ${sg.key === 'lain' ? 'ring-1 ring-rule' : ''}`} />
+            {sg.label} {pct(sg.value)}
+          </span>
+        ))}
+      </div>
+      {profit < 0 && (
+        <p className="mt-2 text-sm font-semibold text-loss">
+          Potongan, modal, dan biaya lebih besar dari omzet: rugi {formatRupiah(-profit)}.
+        </p>
+      )}
+    </figure>
+  )
+}
+
+/** Bab 1, kolom kanan: maksimal 3 penyebab terbesar untung/rugi bulan ini. */
+function Insights({ items, onShowProducts }: { items: RecapInsight[]; onShowProducts: (sort: ProductSort) => void }) {
+  const link = (key: RecapInsight['key']) => {
+    switch (key) {
+      case 'iklan':
+        return <button type="button" className={linkClass} onClick={() => navigate('iklan')}>Lihat iklan per produk</button>
+      case 'produk':
+        return <button type="button" className={linkClass} onClick={() => onShowProducts('rugi')}>Lihat produknya</button>
+      case 'potongan':
+        return (
+          <button
+            type="button"
+            className={linkClass}
+            onClick={() => document.getElementById('bab2')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
+            Lihat rinciannya
+          </button>
+        )
+      case 'modal':
+        return <button type="button" className={linkClass} onClick={() => navigate('simulasi')}>Cek harga jual di Simulasi</button>
+    }
+  }
+  return (
+    <section aria-labelledby="insights-title" className="flex min-w-0 flex-col self-start rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-6">
+      <h2 id="insights-title" className="font-display text-xl font-bold leading-tight tracking-tight">
+        Kenapa untungnya segini?
+      </h2>
+      <ol className="mt-4 space-y-2.5">
+        {items.map((it, i) => (
+          <li key={it.key} className={`flex gap-3 rounded-2xl p-3.5 ${it.tone === 'bad' ? 'bg-loss-tint' : 'bg-tint'}`}>
+            <span
+              aria-hidden="true"
+              className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold text-white ${
+                it.tone === 'bad' ? 'bg-loss' : 'bg-ink-2'
+              }`}
+            >
+              {i + 1}
+            </span>
+            <span className="min-w-0 leading-relaxed">
+              <strong>{it.title}</strong>
+              {it.detail && <>{it.detail.startsWith('(') ? ' ' : ', '}{it.detail}</>} {link(it.key)}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 
@@ -1252,35 +1476,18 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
 
 // --- Tab: per produk -------------------------------------------------------------
 
-interface ProductRow {
-  sku: string
-  name: string
-  variant: string
-  qty: number
-  returned: number
-  modal: number
-  missing: boolean
-  items: number
-  /** Item yang uang masuknya sudah ada di Excel "Sudah Dilepas". */
-  itemsWithIncome: number
-  income: number
-  qtyWithIncome: number
-  modalWithIncome: number
-}
-
 /** Uang masuk asli & untung satu produk (dari barang yang uangnya sudah ada di Excel "Sudah Dilepas"). */
 function ProductIncomeLine({ r }: { r: ProductRow }) {
   const partial = r.itemsWithIncome < r.items
-  const profit = r.income - r.modalWithIncome
   return (
     <p className="text-sm num text-ink-2">
       Uang masuk {formatRupiah(r.income)}
-      {!r.missing && (
+      {r.profit !== null && (
         <>
           {' · '}
-          <span className={profit < 0 ? 'font-semibold text-loss' : 'font-semibold text-ink'}>
-            Untung {formatRupiah(profit)}
-            {r.income > 0 && ` (${formatPercent((profit / r.income) * 100)})`}
+          <span className={r.profit < 0 ? 'font-semibold text-loss' : r.status === 'tipis' ? 'font-semibold text-ink' : 'font-semibold text-gain'}>
+            Untung {formatRupiah(r.profit)}
+            {r.margin !== null && ` (${formatPercent(r.margin * 100)})`}
           </span>
         </>
       )}
@@ -1289,46 +1496,69 @@ function ProductIncomeLine({ r }: { r: ProductRow }) {
   )
 }
 
-function ProductsTab({ products, returned, period }: { products: ProductRecap[]; returned: ReturnedItem[]; period: string }) {
-  const rows = useMemo(() => {
-    const map = new Map<string, ProductRow>()
-    for (const p of products) {
-      const r = map.get(p.sku) ?? {
-        sku: p.sku, name: p.product_name, variant: p.variant_name, qty: 0, returned: 0, modal: 0, missing: false,
-        items: 0, itemsWithIncome: 0, income: 0, qtyWithIncome: 0, modalWithIncome: 0,
-      }
-      r.qty += Number(p.qty_sold)
-      r.returned += Number(p.qty_returned)
-      r.modal += Number(p.total_modal ?? 0)
-      r.missing ||= p.missing_hpp
-      r.items += Number(p.item_count ?? 0)
-      r.itemsWithIncome += Number(p.items_with_income ?? 0)
-      r.income += Number(p.income ?? 0)
-      r.qtyWithIncome += Number(p.qty_with_income ?? 0)
-      r.modalWithIncome += Number(p.modal_with_income ?? 0)
-      map.set(p.sku, r)
-    }
-    return [...map.values()].sort((a, b) => b.qty - a.qty)
-  }, [products])
-  const withIncome = rows.filter((r) => r.itemsWithIncome > 0)
-  const totalIncome = withIncome.reduce((n, r) => n + r.income, 0)
-  const totalProfit = withIncome.filter((r) => !r.missing).reduce((n, r) => n + r.income - r.modalWithIncome, 0)
+const SORTS: { id: ProductSort; label: string }[] = [
+  { id: 'terlaris', label: 'Terlaris' },
+  { id: 'untung', label: 'Paling untung' },
+  { id: 'rugi', label: 'Rugi dulu' },
+]
+
+function ProductsTab({
+  products,
+  returned,
+  period,
+  sort,
+  setSort,
+}: {
+  products: ProductRecap[]
+  returned: ReturnedItem[]
+  period: string
+  sort: ProductSort
+  setSort: (s: ProductSort) => void
+}) {
+  const all = useMemo(() => productRows(products), [products])
+  const withIncome = all.filter((r) => r.itemsWithIncome > 0)
+  // Tanpa uang masuk asli (laporan PDF), urutan untung/rugi tidak bisa dihitung.
+  const canSort = withIncome.some((r) => r.profit !== null)
+  const rows = useMemo(() => sortProducts(all, canSort ? sort : 'terlaris'), [all, sort, canSort])
   const max = Math.max(1, ...rows.map((r) => r.qty))
   const totalQty = rows.reduce((n, r) => n + r.qty, 0)
   const totalModal = rows.reduce((n, r) => n + r.modal, 0)
+  const totalIncome = withIncome.reduce((n, r) => n + r.income, 0)
+  const totalProfit = withIncome.reduce((n, r) => n + (r.profit ?? 0), 0)
+  const readOnly = useContext(ReadOnlyContext)
 
   return (
     <section className="space-y-4 rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-7">
-      <div>
-        <h2 className="font-display text-xl font-bold tracking-tight">Barang terjual per produk</h2>
-        <p className="mt-1 text-sm text-ink-2">
-          Barang yang sampai & uangnya cair di {period}. Paket grosir dihitung per paket, sama seperti di Shopee.
-        </p>
-        {withIncome.length > 0 && (
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-display text-xl font-bold tracking-tight">Barang terjual per produk</h2>
           <p className="mt-1 text-sm text-ink-2">
-            <strong className="text-ink">Uang masuk</strong> dan <strong className="text-ink">untung</strong> per produk
-            diambil dari laporan Excel Sudah Dilepas (potongan Shopee asli), belum dikurangi biaya iklan, packaging, dll.
+            Barang yang sampai & uangnya cair di {period}. Paket grosir dihitung per paket, sama seperti di Shopee.
           </p>
+          {withIncome.length > 0 && (
+            <p className="mt-1 text-sm text-ink-2">
+              <strong className="text-ink">Uang masuk</strong> dan <strong className="text-ink">untung</strong> per produk
+              diambil dari laporan Excel Sudah Dilepas (potongan Shopee asli), belum dikurangi biaya iklan, packaging, dll.
+            </p>
+          )}
+        </div>
+        {canSort && rows.length > 1 && (
+          <div role="group" aria-label="Urutkan produk" className="flex flex-wrap items-center gap-1 rounded-full bg-tint p-1 ring-1 ring-line">
+            <span className="px-2 text-sm text-ink-2">Urutkan:</span>
+            {SORTS.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                aria-pressed={sort === o.id}
+                onClick={() => setSort(o.id)}
+                className={`min-h-11 rounded-full px-4 text-sm font-semibold transition-colors duration-150 ${
+                  sort === o.id ? (o.id === 'rugi' ? 'bg-loss text-white' : 'bg-ink text-paper') : 'text-ink-2 hover:text-ink'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
         )}
       </div>
       {rows.length === 0 ? (
@@ -1339,7 +1569,15 @@ function ProductsTab({ products, returned, period }: { products: ProductRecap[];
             <div key={r.sku} className="space-y-1.5 border-b border-line py-3">
               <div className="grid grid-cols-[1fr_auto] items-baseline gap-3">
                 <span className="min-w-0">
-                  <span className="line-clamp-2 font-semibold">{r.name}</span>
+                  <span className="line-clamp-2 font-semibold">
+                    {r.name}
+                    {r.status === 'rugi' && (
+                      <span className="ml-2 inline-block rounded-full bg-loss-tint px-2 py-0.5 align-middle text-xs font-bold text-loss">RUGI</span>
+                    )}
+                    {r.status === 'tipis' && (
+                      <span className="ml-2 inline-block rounded-full bg-sun-tint px-2 py-0.5 align-middle text-xs font-bold text-warn">TIPIS</span>
+                    )}
+                  </span>
                   {r.variant && <span className="block text-sm text-ink-2">{r.variant}</span>}
                 </span>
                 <span className="whitespace-nowrap font-bold num">{formatNumber(r.qty)} barang</span>
@@ -1359,6 +1597,16 @@ function ProductsTab({ products, returned, period }: { products: ProductRecap[];
                 {r.returned > 0 && ` · ${formatNumber(r.returned)} diretur`}
               </p>
               {r.itemsWithIncome > 0 && <ProductIncomeLine r={r} />}
+              {r.status === 'rugi' && (
+                <p className="text-sm text-warn">
+                  Modal lebih besar dari uang yang masuk untuk produk ini.{' '}
+                  {!readOnly && (
+                    <button type="button" className={linkClass} onClick={() => navigate('simulasi')}>
+                      Cek harga jual di Simulasi
+                    </button>
+                  )}
+                </p>
+              )}
             </div>
           ))}
           <div className="flex flex-wrap justify-between gap-2 pt-3 font-bold num">
@@ -1371,6 +1619,12 @@ function ProductsTab({ products, returned, period }: { products: ProductRecap[];
             <p className="pt-1 text-right text-sm num text-ink-2">
               Uang masuk {formatRupiah(totalIncome)} · Untung {formatRupiah(totalProfit)}
               {withIncome.length < rows.length && ` (${formatNumber(withIncome.length)} dari ${formatNumber(rows.length)} produk)`}
+            </p>
+          )}
+          {canSort && (
+            <p className="pt-2 text-sm text-ink-3">
+              <strong>RUGI</strong> = untung di bawah 0. <strong>TIPIS</strong> = untung di bawah{' '}
+              {formatPercent(THIN_MARGIN * 100)} dari uang masuk.
             </p>
           )}
         </div>

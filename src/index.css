@@ -185,6 +185,11 @@
       animation-name: grow-y;
     }
   }
+  /* Batang mendatar (Bab 2: omzet ke mana saja): selalu tumbuh ke kanan, juga di laptop. */
+  .grow-bar {
+    transform-origin: left;
+    animation: grow-x 620ms cubic-bezier(0.25, 0.8, 0.25, 1) both;
+  }
   /* Panel yang dibuka (status, "Kenapa…?", form upload iklan). */
   .reveal {
     animation: reveal 200ms ease-out both;
@@ -272,6 +277,7 @@
 @media (prefers-reduced-motion: reduce) {
   .stamp-in,
   .grow-split,
+  .grow-bar,
   .print-in > *,
   .print-last,
   .reveal,

@@ -2,6 +2,7 @@
 import type { AdRow, AdsParseResult } from './parsers/ads'
 import type { SettingsPercent, StoreSettingsRow } from './storeSettings'
 import type { IncomeParseResult } from './parsers/income'
+import type { IncomeBreakdownRow } from './recapMath'
 import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
 import { addMonths, monthEnd, wibDay } from './format'
@@ -448,6 +449,26 @@ export async function fetchCreatedItemIncome(storeId: number, from: string, to: 
     return new Map(rows.map((r) => [Number(r.order_item_id), Number(r.income)]))
   } catch {
     return new Map()
+  }
+}
+
+/**
+ * Rincian penghasilan per bulan cair (view income_monthly_breakdown) untuk Bab 2 Rekap.
+ * Kosong kalau SQL 20261022 belum dijalankan: Bab 2 lalu memakai tampilan lama.
+ */
+export async function fetchIncomeBreakdown(storeId: number, from: string, to: string): Promise<IncomeBreakdownRow[]> {
+  try {
+    return check(
+      await supabase
+        .from('income_monthly_breakdown')
+        .select('*')
+        .eq('store_id', storeId)
+        .gte('month', from)
+        .lte('month', to)
+        .order('month'),
+    ) as IncomeBreakdownRow[]
+  } catch {
+    return []
   }
 }
 

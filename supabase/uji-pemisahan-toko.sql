@@ -86,12 +86,13 @@ begin
     ('20261015000000_store_settings.sql',          to_regclass('public.store_settings') is not null),
     ('20261016000000_operations.sql',              to_regclass('public.client_errors') is not null),
     ('20261020000000_income_orders.sql',           to_regclass('public.income_orders') is not null),
-    ('20261021000000_income_per_order_views.sql',  to_regclass('public.order_item_income') is not null)
+    ('20261021000000_income_per_order_views.sql',  to_regclass('public.order_item_income') is not null),
+    ('20261022000000_income_monthly_breakdown.sql', to_regclass('public.income_monthly_breakdown') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261021000000_income_per_order_views.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261022000000_income_monthly_breakdown.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -120,7 +121,7 @@ begin
         ('products (HPP baru)', 'update public.products set hpp = 2000 where store_id = $1'),
         ('income',             'insert into public.income (store_id, released_date, subtotal_pesanan, total_income) values ($1, $2, 5000, 4000)'),
         ('income_adjustments', 'insert into public.income_adjustments (store_id, released_date, description, amount) values ($1, $2, ''uji'', 100)'),
-        ('income_orders',      'insert into public.income_orders (store_id, order_no, line_no, released_date, total_income) values ($1, ''UJI-B'', 1, $2, 4000)'),
+        ('income_orders',      'insert into public.income_orders (store_id, order_no, line_no, product_id, released_date, harga_produk, total_income) values ($1, ''UJI-B'', 1, ''UJI-B'', $2, 5000, 4000)'),
         ('expenses',           'insert into public.expenses (store_id, month, category, amount, note) values ($1, $2, ''packaging'', 100, ''uji'')'),
         ('ad_rows',            'insert into public.ad_rows (report_id, seq, ad_name, spend) values ($3, 1, ''uji'', 100)'),
         ('fee_categories',     'insert into public.fee_categories (store_id, name, admin_pct) values ($1, ''UJI kategori'', 5)'),

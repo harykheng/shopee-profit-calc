@@ -194,8 +194,8 @@ Rekap dibaca seperti cerita, dari atas ke bawah:
 
 | Bab | Isi |
 |---|---|
-| **Bab 1 · Untung bersih** | Kalimat besar, mis. "Agustus 2026, Harel Beauty untung bersih", lalu angkanya besar berwarna hijau (**Rp2,78 juta**), angka tepatnya (Rp2.785.162), stiker status bulan, dan lembar **"Dari setiap Rp100 yang masuk"** (berapa untuk modal, biaya, dan berapa yang jadi untung). Kalau rugi, kalimatnya bilang "rugi" dan angkanya merah. |
-| **Bab 2 · Dari mana angkanya** | Hitungannya (lihat di bawah). |
+| **Bab 1 · Untung bersih** | Kalimat besar, mis. "Agustus 2026, Harel Beauty untung bersih", lalu angkanya besar berwarna hijau (**Rp2,78 juta**), angka tepatnya (Rp2.785.162), stiker status bulan, dan kotak **"Kenapa untungnya segini?"**: maksimal 3 penyebab terbesar, misalnya iklan yang terlalu besar dibanding omzet, produk yang rugi, atau potongan Shopee, masing-masing dengan tautan ke tempat memperbaikinya. Kalau laporan penghasilan belum ada, kotak itu diganti lembar **"Dari setiap Rp100 yang masuk"**. Kalau rugi, kalimatnya bilang "rugi" dan angkanya merah. |
+| **Bab 2 · Dari omzet sampai untung** | Hitungannya, mulai dari omzet (lihat di bawah). |
 | **Bab 3 · Iklan** | Ringkasan iklan bulan yang sama (untung/rugi setelah iklan, iklan yang sebaiknya dimatikan). Hanya muncul kalau melihat satu bulan; kalau belum ada data iklan 1 bulan penuh, ada ajakan untuk upload. |
 | **Bab 4 · Pesanan & produk** | Tab-tab rincian (lihat di bawah). |
 
@@ -204,14 +204,24 @@ Rekap dibaca seperti cerita, dari atas ke bawah:
 
 ### Dari mana angkanya (Bab 2)
 
-Dibaca dari atas ke bawah:
+Di atasnya ada satu batang **"Dari omzet, uangnya ke mana saja"**: berapa persen omzet untuk potongan
+Shopee, modal, iklan, packaging, dan berapa yang jadi untung. Lalu hitungannya, dibaca dari atas ke bawah:
 
 ```
-  Uang masuk dari Shopee      Rp…   (uang yang cair bulan ini, refund sudah dipotong)
++ Omzet                       Rp…   (harga produk yang uangnya cair bulan ini)
+− Refund ke pembeli           Rp…
+− Voucher dari penjual        Rp…
+− Potongan Shopee             Rp…   (biaya admin, Gratis Ongkir XTRA, biaya proses pesanan, …)
++ Kompensasi / penyesuaian    Rp…
+= Uang masuk dari Shopee      Rp…
 − Modal barang terjual        Rp…   (barang selesai × HPP)
 − Biaya                       Rp…   (iklan, packaging, dll.)
 = UNTUNG BERSIH               Rp…
 ```
+
+- Baris yang nilainya Rp0 tidak ditampilkan. Ongkir yang ditanggung toko hanya muncul kalau ada.
+- Dengan laporan **PDF**, omzet sudah dipotong refund dan biaya admin digabung dengan biaya proses
+  pesanan (PDF tidak memisahkannya). Dengan Excel **"Sudah Dilepas"**, semuanya terpisah.
 
 - **Barang terjual** = jumlah pcs/unit yang selesai dan uangnya cair bulan itu.
 - **Barang retur.** Uang barang yang diretur sudah dikembalikan ke pembeli (sudah terpotong di uang
@@ -248,7 +258,7 @@ Yang dicek:
 | Tab | Isi |
 |---|---|
 | **Semua pesanan** | Semua pesanan yang **dibuat** di bulan itu (selesai, masih dikirim, batal) dan **untung** dari pesanan yang sudah selesai. Kalau uang tiap pesanan sudah ada di laporan Excel "Sudah Dilepas", angkanya pasti; kalau belum (laporan PDF, atau uangnya belum cair), ditulis **perkiraan** karena PDF hanya mencatat uang cair per hari. |
-| **Per produk** | Barang terjual dan modal per produk, plus daftar barang retur. Dengan laporan Excel "Sudah Dilepas", tiap produk juga menampilkan **uang masuk** (setelah potongan Shopee asli) dan **untung** sebelum biaya iklan & packaging. Kalau sebagian uangnya belum cair, tertulis dari berapa barang angka itu dihitung. |
+| **Per produk** | Barang terjual dan modal per produk, plus daftar barang retur. Dengan laporan Excel "Sudah Dilepas", tiap produk juga menampilkan **uang masuk** (setelah potongan Shopee asli) dan **untung** sebelum biaya iklan & packaging, dengan label **RUGI** (untung di bawah 0) atau **TIPIS** (di bawah 10% dari uang masuk). Urutannya bisa diganti: **Terlaris**, **Paling untung**, atau **Rugi dulu**. Kalau sebagian uangnya belum cair, tertulis dari berapa barang angka itu dihitung. |
 | **Per bulan** | Muncul kalau melihat beberapa bulan sekaligus. |
 
 ---

@@ -112,6 +112,7 @@ const STORE_TABLES = [
   'order_item_income',
   'income_order_match',
   'income_product_monthly',
+  'income_monthly_breakdown',
   'daily_reconciliation',
   'orders_by_created',
 ]
