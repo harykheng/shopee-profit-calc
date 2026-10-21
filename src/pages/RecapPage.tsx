@@ -8,18 +8,21 @@ import {
   fetchCreatedItems,
   fetchEarlierOrdersCompleted,
   fetchIncomeDays,
+  fetchCreatedItemIncome,
   fetchMonthlyRecap,
   fetchOrdersByCreated,
   fetchProductRecap,
   fetchProducts,
   fetchReconciliation,
   fetchReturnedItems,
+  fetchUnmatchedIncomeOrders,
   fetchSetupProgress,
   fetchStoreSettings,
   type SetupProgress,
   fillMissingHpp,
   recalcHpp,
   type CreatedItem,
+  type UnmatchedIncomeOrder,
 } from '../lib/api'
 import { notifyDataChanged } from '../lib/events'
 import { addMonths, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '../lib/format'
@@ -44,6 +47,8 @@ interface RecapData {
   products: ProductRecap[]
   reconciliation: DailyReconciliation[]
   returned: ReturnedItem[]
+  /** Pesanan yang uangnya cair (Excel "Sudah Dilepas") tapi belum cocok dengan export pesanan. */
+  unmatched: UnmatchedIncomeOrder[]
 }
 
 /** Data untuk tab "Semua pesanan" & penjelasan barang terjual (butuh SQL ke-3). */
@@ -97,29 +102,31 @@ export function RecapPage({
           fetchProductRecap(storeId, from, end),
           fetchReconciliation(storeId, from, end),
           fetchReturnedItems(storeId, from, end),
+          fetchUnmatchedIncomeOrders(storeId, from, end),
         ])
-      let [months, products, reconciliation, returned] = await fetchRecap()
+      let [months, products, reconciliation, returned, unmatched] = await fetchRecap()
       // HPP yang baru diisi di halaman HPP langsung dipakai (barang yang HPP-nya masih kosong saja), tanpa
       // menekan "Hitung ulang HPP". Kalau gagal, Rekap tetap tampil dengan angka yang ada.
       const stale = months.filter((m) => Number(m.items_missing_hpp) > 0).map((m) => m.month)
       if (!readOnly && stale.length > 0) {
         const filled = await fillMissingHpp(storeId, stale).catch(() => 0)
         if (filled > 0) {
-          ;[months, products, reconciliation, returned] = await fetchRecap()
+          ;[months, products, reconciliation, returned, unmatched] = await fetchRecap()
           notifyDataChanged()
         }
       }
-      setData({ months, products, reconciliation, returned })
+      setData({ months, products, reconciliation, returned, unmatched })
     } catch (e) {
       setError(e)
       return
     }
     // Dimuat terpisah: kalau gagal (mis. SQL ke-3 belum dijalankan), untung bersih tetap tampil.
     try {
-      const [groups, withoutCreatedAt, createdItems, earlierCompleted, productList, incomeDays, settingsRow] = await Promise.all([
+      const [groups, withoutCreatedAt, createdItems, itemIncome, earlierCompleted, productList, incomeDays, settingsRow] = await Promise.all([
         fetchOrdersByCreated(storeId, from, end),
         countItemsWithoutCreatedAt(storeId),
         fetchCreatedItems(storeId, from, end),
+        fetchCreatedItemIncome(storeId, from, end),
         fetchEarlierOrdersCompleted(storeId, from, end),
         fetchProducts(storeId),
         fetchIncomeDays(storeId, from),
@@ -136,6 +143,7 @@ export function RecapPage({
             returned_qty: Number(i.returned_qty),
             completed_at: i.completed_at,
             hpp: i.hpp_snapshot !== null ? Number(i.hpp_snapshot) : (hppBySku.get(i.sku) ?? null),
+            income: itemIncome.get(Number(i.id)) ?? null,
           })),
         incomeDays.map((d) => ({
           day: d.released_date,
@@ -523,7 +531,14 @@ function NotaCard({
       {showStatus && (
         <div className={`reveal space-y-4 rounded-3xl border p-5 sm:p-6 ${allFinal ? 'border-gain/30 bg-mintbg' : 'border-sun bg-sun-tint'}`}>
           {statuses.map((s) => (
-            <Checklist key={s.month} month={s.month} status={s.status} showTitle={statuses.length > 1} onRecalc={onRecalc} />
+            <Checklist
+              key={s.month}
+              month={s.month}
+              status={s.status}
+              unmatched={data.unmatched.filter((u) => u.month === s.month)}
+              showTitle={statuses.length > 1}
+              onRecalc={onRecalc}
+            />
           ))}
           <p className="flex gap-2 border-t border-ink/10 pt-3 text-sm text-ink-2">
             <IconInfo size={16} className="mt-0.5 shrink-0 text-accent" />
@@ -905,11 +920,13 @@ function CheckRow({ ok, children }: { ok: boolean; children: ReactNode }) {
 function Checklist({
   month,
   status: s,
+  unmatched,
   showTitle,
   onRecalc,
 }: {
   month: string
   status: MonthStatus
+  unmatched: UnmatchedIncomeOrder[]
   showTitle: boolean
   onRecalc: (month: string) => void
 }) {
@@ -931,6 +948,7 @@ function Checklist({
           </>
         )}
       </CheckRow>
+      {unmatched.length > 0 && <UnmatchedOrders orders={unmatched} />}
       {s.shifted.days.length > 0 && (
         <p className="flex gap-2 pl-8 text-sm text-ink-2">
           <IconInfo size={16} className="mt-0.5 shrink-0 text-accent" />
@@ -978,6 +996,37 @@ function Checklist({
   )
 }
 
+/** Nomor pesanan yang uangnya sudah cair tapi belum cocok dengan export pesanan (dari Excel "Sudah Dilepas"). */
+function UnmatchedOrders({ orders }: { orders: UnmatchedIncomeOrder[] }) {
+  const missing = orders.filter((o) => o.match === 'tidak_ada')
+  const stale = orders.filter((o) => o.match === 'belum_selesai')
+  const list = (os: UnmatchedIncomeOrder[]) => {
+    const shown = os.slice(0, UNMATCHED_SHOWN).map((o) => o.order_no).join(', ')
+    return os.length > UNMATCHED_SHOWN ? `${shown}, dan ${formatNumber(os.length - UNMATCHED_SHOWN)} lainnya` : shown
+  }
+  const sum = (os: UnmatchedIncomeOrder[]) => os.reduce((n, o) => n + Number(o.total_income), 0)
+  return (
+    <div className="space-y-1 pl-8 text-sm text-ink-2">
+      {missing.length > 0 && (
+        <p>
+          <strong className="text-ink">{formatNumber(missing.length)} pesanan</strong> ({formatRupiah(sum(missing))}) sudah
+          cair tapi tidak ada di export pesanan: <span className="num">{list(missing)}</span>. Biasanya pesanan bulan
+          sebelumnya; upload export pesanan dengan rentang tanggal yang lebih lebar.
+        </p>
+      )}
+      {stale.length > 0 && (
+        <p>
+          <strong className="text-ink">{formatNumber(stale.length)} pesanan</strong> ({formatRupiah(sum(stale))}) sudah
+          cair, tapi di export pesanan statusnya belum Selesai: <span className="num">{list(stale)}</span>. Upload ulang
+          export pesanan yang terbaru; datanya tidak akan dobel.
+        </p>
+      )}
+    </div>
+  )
+}
+
+const UNMATCHED_SHOWN = 8
+
 // --- Tab: semua pesanan -----------------------------------------------------------
 
 const GROUP_LABEL: Record<OrdersByCreated['status_group'], string> = {
@@ -1018,6 +1067,8 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
     modal: done.modal + proses.modal,
   }
   const est = orders.estimate
+  // Semua barang memakai uang masuk asli (Excel "Sudah Dilepas"): bukan perkiraan lagi.
+  const allExact = !!est && est.items > 0 && est.exact === est.items
   const pct = (n: number) => (total.qty > 0 ? `${(n / total.qty) * 100}%` : '0%')
 
   return (
@@ -1056,7 +1107,9 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
 
           {est && done.qty > 0 && (
             <div className="space-y-3 rounded-2xl bg-tint p-4 sm:p-5">
-              <p className="font-semibold">Perkiraan untung dari pesanan {period} yang selesai</p>
+              <p className="font-semibold">
+                {allExact ? 'Untung' : 'Perkiraan untung'} dari pesanan {period} yang selesai
+              </p>
               <div className="tear">
                 <NotaLine
                   op="+"
@@ -1078,7 +1131,7 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
                 />
               </div>
               <NotaTotal
-                label="≈ Perkiraan untung"
+                label={allExact ? 'Untung' : '≈ Perkiraan untung'}
                 sub={<span className="text-warn">Belum dikurangi biaya (iklan, packaging, dll.)</span>}
                 amount={formatRupiah(est.profit)}
                 amountSub={<span className="text-ink-3">{formatPercent((est.profit / est.sales) * 100)} dari nilai penjualan</span>}
@@ -1099,10 +1152,27 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
                   Ini angka pasti dari laporan Shopee.
                 </p>
                 <p>
-                  <strong>Perkiraan di sini</strong> = semua pesanan yang <strong>dibuat</strong> di {period} dan sudah
-                  selesai, termasuk yang baru sampai bulan berikutnya. Shopee hanya mencatat uang cair per hari, jadi
-                  potongan untuk tiap pesanan dibagi sesuai nilai penjualannya. Karena itu disebut perkiraan.
+                  <strong>Angka di sini</strong> = semua pesanan yang <strong>dibuat</strong> di {period} dan sudah
+                  selesai, termasuk yang baru sampai bulan berikutnya.
                 </p>
+                {allExact ? (
+                  <p>
+                    Uang masuk tiap pesanan diambil dari laporan penghasilan Excel <strong>Sudah Dilepas</strong>, jadi
+                    potongan Shopee-nya angka asli, bukan perkiraan.
+                  </p>
+                ) : (
+                  <p>
+                    {est.exact > 0 && (
+                      <>
+                        {formatNumber(est.exact)} dari {formatNumber(est.items)} barang memakai uang masuk asli dari
+                        laporan Excel <strong>Sudah Dilepas</strong>.{' '}
+                      </>
+                    )}
+                    Untuk {est.exact > 0 ? 'sisanya' : 'semua barang'}, laporan hanya mencatat uang cair per hari, jadi
+                    potongan tiap pesanan dibagi sesuai nilai penjualannya. Karena itu disebut perkiraan. Upload laporan
+                    penghasilan Excel <strong>Sudah Dilepas</strong> supaya angkanya pasti.
+                  </p>
+                )}
                 {est.averaged > 0 && (
                   <p>
                     {formatNumber(est.averaged)} barang uangnya belum ada di laporan penghasilan yang di-upload, jadi
@@ -1182,19 +1252,67 @@ function OrdersTab({ orders, period }: { orders: OrdersData | { error: unknown }
 
 // --- Tab: per produk -------------------------------------------------------------
 
+interface ProductRow {
+  sku: string
+  name: string
+  variant: string
+  qty: number
+  returned: number
+  modal: number
+  missing: boolean
+  items: number
+  /** Item yang uang masuknya sudah ada di Excel "Sudah Dilepas". */
+  itemsWithIncome: number
+  income: number
+  qtyWithIncome: number
+  modalWithIncome: number
+}
+
+/** Uang masuk asli & untung satu produk (dari barang yang uangnya sudah ada di Excel "Sudah Dilepas"). */
+function ProductIncomeLine({ r }: { r: ProductRow }) {
+  const partial = r.itemsWithIncome < r.items
+  const profit = r.income - r.modalWithIncome
+  return (
+    <p className="text-sm num text-ink-2">
+      Uang masuk {formatRupiah(r.income)}
+      {!r.missing && (
+        <>
+          {' · '}
+          <span className={profit < 0 ? 'font-semibold text-loss' : 'font-semibold text-ink'}>
+            Untung {formatRupiah(profit)}
+            {r.income > 0 && ` (${formatPercent((profit / r.income) * 100)})`}
+          </span>
+        </>
+      )}
+      {partial && ` · dari ${formatNumber(r.qtyWithIncome)} barang yang uangnya sudah ada di laporan`}
+    </p>
+  )
+}
+
 function ProductsTab({ products, returned, period }: { products: ProductRecap[]; returned: ReturnedItem[]; period: string }) {
   const rows = useMemo(() => {
-    const map = new Map<string, { sku: string; name: string; variant: string; qty: number; returned: number; modal: number; missing: boolean }>()
+    const map = new Map<string, ProductRow>()
     for (const p of products) {
-      const r = map.get(p.sku) ?? { sku: p.sku, name: p.product_name, variant: p.variant_name, qty: 0, returned: 0, modal: 0, missing: false }
+      const r = map.get(p.sku) ?? {
+        sku: p.sku, name: p.product_name, variant: p.variant_name, qty: 0, returned: 0, modal: 0, missing: false,
+        items: 0, itemsWithIncome: 0, income: 0, qtyWithIncome: 0, modalWithIncome: 0,
+      }
       r.qty += Number(p.qty_sold)
       r.returned += Number(p.qty_returned)
       r.modal += Number(p.total_modal ?? 0)
       r.missing ||= p.missing_hpp
+      r.items += Number(p.item_count ?? 0)
+      r.itemsWithIncome += Number(p.items_with_income ?? 0)
+      r.income += Number(p.income ?? 0)
+      r.qtyWithIncome += Number(p.qty_with_income ?? 0)
+      r.modalWithIncome += Number(p.modal_with_income ?? 0)
       map.set(p.sku, r)
     }
     return [...map.values()].sort((a, b) => b.qty - a.qty)
   }, [products])
+  const withIncome = rows.filter((r) => r.itemsWithIncome > 0)
+  const totalIncome = withIncome.reduce((n, r) => n + r.income, 0)
+  const totalProfit = withIncome.filter((r) => !r.missing).reduce((n, r) => n + r.income - r.modalWithIncome, 0)
   const max = Math.max(1, ...rows.map((r) => r.qty))
   const totalQty = rows.reduce((n, r) => n + r.qty, 0)
   const totalModal = rows.reduce((n, r) => n + r.modal, 0)
@@ -1206,6 +1324,12 @@ function ProductsTab({ products, returned, period }: { products: ProductRecap[];
         <p className="mt-1 text-sm text-ink-2">
           Barang yang sampai & uangnya cair di {period}. Paket grosir dihitung per paket, sama seperti di Shopee.
         </p>
+        {withIncome.length > 0 && (
+          <p className="mt-1 text-sm text-ink-2">
+            <strong className="text-ink">Uang masuk</strong> dan <strong className="text-ink">untung</strong> per produk
+            diambil dari laporan Excel Sudah Dilepas (potongan Shopee asli), belum dikurangi biaya iklan, packaging, dll.
+          </p>
+        )}
       </div>
       {rows.length === 0 ? (
         <p className="text-ink-2">Belum ada barang terjual di {period}.</p>
@@ -1234,6 +1358,7 @@ function ProductsTab({ products, returned, period }: { products: ProductRecap[];
                 )}
                 {r.returned > 0 && ` · ${formatNumber(r.returned)} diretur`}
               </p>
+              {r.itemsWithIncome > 0 && <ProductIncomeLine r={r} />}
             </div>
           ))}
           <div className="flex flex-wrap justify-between gap-2 pt-3 font-bold num">
@@ -1242,6 +1367,12 @@ function ProductsTab({ products, returned, period }: { products: ProductRecap[];
               {formatNumber(totalQty)} barang · Modal {formatRupiah(totalModal)}
             </span>
           </div>
+          {withIncome.length > 0 && (
+            <p className="pt-1 text-right text-sm num text-ink-2">
+              Uang masuk {formatRupiah(totalIncome)} · Untung {formatRupiah(totalProfit)}
+              {withIncome.length < rows.length && ` (${formatNumber(withIncome.length)} dari ${formatNumber(rows.length)} produk)`}
+            </p>
+          )}
         </div>
       )}
 

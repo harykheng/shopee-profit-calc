@@ -109,6 +109,9 @@ const STORE_TABLES = [
   'store_members',
   'monthly_recap',
   'product_monthly_recap',
+  'order_item_income',
+  'income_order_match',
+  'income_product_monthly',
   'daily_reconciliation',
   'orders_by_created',
 ]

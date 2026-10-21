@@ -41,7 +41,7 @@ describe('estimateProfit', () => {
       days,
     )
     // 500 × 90% + 1000 × ½ (1 dari 2 diretur) × 80% = 850
-    expect(r).toEqual({ sales: 1500, income: 850, fees: 650, modal: 500, profit: 350, missingHpp: 0, averaged: 0 })
+    expect(r).toEqual({ sales: 1500, income: 850, fees: 650, modal: 500, profit: 350, missingHpp: 0, averaged: 0, exact: 0, items: 2 })
   })
 
   it('uses the average fee for days not in the report and counts missing HPP', () => {
@@ -55,5 +55,25 @@ describe('estimateProfit', () => {
 
   it('returns null without any income report', () => {
     expect(estimateProfit([], [])).toBeNull()
+  })
+
+  it('uses the real per-order income when it is known, and estimates the rest', () => {
+    const r = estimateProfit(
+      [
+        { subtotal: 500, qty: 1, returned_qty: 0, completed_at: '2026-07-20T10:00:00+07:00', hpp: 300, income: 410 },
+        { subtotal: 500, qty: 1, returned_qty: 0, completed_at: '2026-07-20T10:00:00+07:00', hpp: 300 },
+      ],
+      days,
+    )
+    // 410 (asli) + 500 × 90% (perkiraan)
+    expect(r).toMatchObject({ income: 860, exact: 1, averaged: 0, items: 2 })
+  })
+
+  it('works from real income alone, without daily income rows', () => {
+    const r = estimateProfit(
+      [{ subtotal: 500, qty: 1, returned_qty: 0, completed_at: '2026-07-20T10:00:00+07:00', hpp: 300, income: 410 }],
+      [],
+    )
+    expect(r).toMatchObject({ income: 410, profit: 110, exact: 1, items: 1 })
   })
 })

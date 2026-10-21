@@ -53,6 +53,11 @@ export interface EstimateItem {
   completed_at: string | null
   /** HPP per unit (terkunci kalau ada, kalau belum pakai HPP saat ini). null = belum diisi. */
   hpp: number | null
+  /**
+   * Uang masuk ASLI untuk item ini (dari Excel "Sudah Dilepas", sudah tanpa bagian yang diretur).
+   * Tidak diisi / null = belum ada, pakai perkiraan dari uang cair per hari.
+   */
+  income?: number | null
 }
 
 export interface DayIncome {
@@ -71,6 +76,10 @@ export interface ProfitEstimate {
   missingHpp: number
   /** Item yang tanggal cairnya belum ada di laporan → pakai rata-rata potongan. */
   averaged: number
+  /** Item yang memakai uang masuk asli per pesanan (bukan perkiraan). */
+  exact: number
+  /** Jumlah item yang dihitung. */
+  items: number
 }
 
 /**
@@ -78,7 +87,8 @@ export interface ProfitEstimate {
  * dari uang cair di hari pesanan itu selesai, sebanding dengan nilai penjualannya:
  * uang masuk ≈ subtotal × (penghasilan hari itu ÷ subtotal hari itu), tanpa bagian yang diretur.
  * Kalau hari itu belum ada di laporan, dipakai rata-rata semua hari yang ada.
- * Mengembalikan null kalau belum ada laporan penghasilan sama sekali.
+ * Item yang punya uang masuk asli (`income`, dari Excel "Sudah Dilepas") memakai angka itu.
+ * Mengembalikan null kalau ada item tanpa uang masuk asli dan belum ada laporan penghasilan sama sekali.
  */
 export function estimateProfit(
   items: EstimateItem[],
@@ -96,25 +106,32 @@ export function estimateProfit(
       sumSub += d.subtotal_pesanan
     }
   }
-  if (sumSub === 0) return null
-  const average = sumInc / sumSub
+  const needsEstimate = items.some((i) => i.income === undefined || i.income === null)
+  if (sumSub === 0 && (needsEstimate || items.length === 0)) return null
+  const average = sumSub > 0 ? sumInc / sumSub : 0
 
   let sales = 0
   let income = 0
   let modal = 0
   let missingHpp = 0
   let averaged = 0
+  let exact = 0
   for (const i of items) {
-    const day = i.completed_at ? wibDay(i.completed_at) : null
-    let r = day ? ratio.get(day) : undefined
-    if (r === undefined) {
-      r = average
-      averaged++
-    }
     sales += i.subtotal
     const netQty = i.qty - i.returned_qty
-    // Uang barang retur dikembalikan ke pembeli, jadi hanya bagian yang tidak diretur yang jadi uang masuk.
-    income += i.qty > 0 ? i.subtotal * (netQty / i.qty) * r : 0
+    if (i.income !== undefined && i.income !== null) {
+      income += i.income
+      exact++
+    } else {
+      const day = i.completed_at ? wibDay(i.completed_at) : null
+      let r = day ? ratio.get(day) : undefined
+      if (r === undefined) {
+        r = average
+        averaged++
+      }
+      // Uang barang retur dikembalikan ke pembeli, jadi hanya bagian yang tidak diretur yang jadi uang masuk.
+      income += i.qty > 0 ? i.subtotal * (netQty / i.qty) * r : 0
+    }
     if (i.hpp === null) {
       // Barang yang seluruhnya diretur juga butuh HPP kalau retur ikut jadi kerugian (returnRecovery < 1).
       if (netQty > 0 || (i.returned_qty > 0 && returnRecovery < 1)) missingHpp++
@@ -125,5 +142,5 @@ export function estimateProfit(
   }
   income = Math.round(income)
   modal = Math.round(modal)
-  return { sales, income, fees: sales - income, modal, profit: income - modal, missingHpp, averaged }
+  return { sales, income, fees: sales - income, modal, profit: income - modal, missingHpp, averaged, exact, items: items.length }
 }

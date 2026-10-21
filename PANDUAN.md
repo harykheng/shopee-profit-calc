@@ -233,7 +233,9 @@ Dibaca dari atas ke bawah:
 Yang dicek:
 1. Laporan penghasilan bulan itu sudah di-upload (Excel "Sudah Dilepas" atau PDF).
 2. Semua uang yang cair sudah ketemu pesanannya. Kalau belum, biasanya export pesanan bulan
-   sebelumnya belum di-upload.
+   sebelumnya belum di-upload. Kalau laporan penghasilannya Excel "Sudah Dilepas", aplikasi menyebut
+   **nomor pesanannya**: yang tidak ada di export pesanan sama sekali, dan yang ada tapi statusnya belum
+   Selesai (upload ulang export pesanan yang terbaru).
 3. Semua barang sudah punya HPP.
 4. Biaya sudah disimpan (boleh Rp0).
 
@@ -245,8 +247,8 @@ Yang dicek:
 
 | Tab | Isi |
 |---|---|
-| **Semua pesanan** | Semua pesanan yang **dibuat** di bulan itu (selesai, masih dikirim, batal) dan **perkiraan untung** dari pesanan yang sudah selesai. Disebut perkiraan karena Shopee mencatat uang cair per hari, bukan per pesanan. |
-| **Per produk** | Barang terjual dan modal per produk, plus daftar barang retur. |
+| **Semua pesanan** | Semua pesanan yang **dibuat** di bulan itu (selesai, masih dikirim, batal) dan **untung** dari pesanan yang sudah selesai. Kalau uang tiap pesanan sudah ada di laporan Excel "Sudah Dilepas", angkanya pasti; kalau belum (laporan PDF, atau uangnya belum cair), ditulis **perkiraan** karena PDF hanya mencatat uang cair per hari. |
+| **Per produk** | Barang terjual dan modal per produk, plus daftar barang retur. Dengan laporan Excel "Sudah Dilepas", tiap produk juga menampilkan **uang masuk** (setelah potongan Shopee asli) dan **untung** sebelum biaya iklan & packaging. Kalau sebagian uangnya belum cair, tertulis dari berapa barang angka itu dihitung. |
 | **Per bulan** | Muncul kalau melihat beberapa bulan sekaligus. |
 
 ---
@@ -372,7 +374,11 @@ Iklan tidak akan bisa memberi untung 5% (atau ROAS yang dibutuhkan di atas 50). 
 
 ### Dari mana angka-angkanya?
 
-- **Potongan Shopee** diambil dari laporan penghasilan periode itu (admin, gratis ongkir XTRA,
+- **Potongan Shopee asli per produk.** Kalau laporan Excel "Sudah Dilepas" sudah di-upload, potongan
+  tiap produk diambil langsung dari laporan itu (dicocokkan lewat Kode Produk di data iklan), minimal 3
+  pesanan per produk di bulan iklan, atau ditambah 3 bulan sebelumnya. Kartu produk menulis "asli dari
+  laporan penghasilan". Pesanan yang di-refund tidak ikut dihitung.
+- **Kalau belum ada potongan asli**, potongan diambil dari laporan penghasilan periode itu (admin, gratis ongkir XTRA,
   biaya proses, voucher). Kalau belum ada, dipakai 3 bulan sebelumnya; kalau tidak ada juga,
   dipakai 15%. Itu **rata-rata seluruh toko**. Kalau kamu sudah mengisi biaya admin tiap produk
   (lihat "Kategori biaya admin" di Simulasi Harga), potongan tiap produk digeser sesuai admin-nya:

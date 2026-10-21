@@ -403,6 +403,7 @@ function wibRange(from: string, to: string) {
 }
 
 export interface CreatedItem {
+  id: number
   sku: string
   status_group: 'selesai' | 'proses' | 'batal'
   qty: number
@@ -418,13 +419,94 @@ export async function fetchCreatedItems(storeId: number, from: string, to: strin
   return fetchAllPages<CreatedItem>((a, b) =>
     supabase
       .from('order_items')
-      .select('sku, status_group, qty, returned_qty, subtotal, completed_at, hpp_snapshot')
+      .select('id, sku, status_group, qty, returned_qty, subtotal, completed_at, hpp_snapshot')
       .eq('store_id', storeId)
       .gte('created_at', start)
       .lt('created_at', end)
       .order('id')
       .range(a, b),
   )
+}
+
+/**
+ * Uang masuk ASLI per item (view order_item_income) untuk pesanan yang DIBUAT di rentang ini.
+ * Kosong kalau Excel "Sudah Dilepas" belum pernah di-upload atau SQL 20261021 belum dijalankan.
+ */
+export async function fetchCreatedItemIncome(storeId: number, from: string, to: string): Promise<Map<number, number>> {
+  const { start, end } = wibRange(from, to)
+  try {
+    const rows = await fetchAllPages<{ order_item_id: number; income: number }>((a, b) =>
+      supabase
+        .from('order_item_income')
+        .select('order_item_id, income')
+        .eq('store_id', storeId)
+        .gte('created_at', start)
+        .lt('created_at', end)
+        .order('order_item_id')
+        .range(a, b),
+    )
+    return new Map(rows.map((r) => [Number(r.order_item_id), Number(r.income)]))
+  } catch {
+    return new Map()
+  }
+}
+
+export interface UnmatchedIncomeOrder {
+  order_no: string
+  month: string
+  released_date: string
+  total_income: number
+  /** tidak_ada = pesanan tidak ada di export; belum_selesai = ada, tapi statusnya belum Selesai (export lama). */
+  match: 'tidak_ada' | 'belum_selesai'
+}
+
+/** Pesanan yang uangnya sudah cair (Excel "Sudah Dilepas") tapi belum cocok dengan export pesanan. */
+export async function fetchUnmatchedIncomeOrders(storeId: number, from: string, to: string): Promise<UnmatchedIncomeOrder[]> {
+  try {
+    return await fetchAllPages<UnmatchedIncomeOrder>((a, b) =>
+      supabase
+        .from('income_order_match')
+        .select('order_no, month, released_date, total_income, match')
+        .eq('store_id', storeId)
+        .neq('match', 'cocok')
+        .gte('month', from)
+        .lte('month', to)
+        .order('released_date')
+        .order('order_no')
+        .range(a, b),
+    )
+  } catch {
+    // View belum ada (SQL 20261021 belum dijalankan): tanpa daftar nomor pesanan, status bulan tetap jalan.
+    return []
+  }
+}
+
+export interface IncomeProductMonth {
+  month: string
+  product_id: string
+  product_name: string
+  lines: number
+  harga_produk: number
+  total_income: number
+}
+
+/** Potongan asli per ID Produk per bulan cair (tanpa pesanan refund). Kosong kalau belum ada data. */
+export async function fetchIncomeProductMonthly(storeId: number, fromMonth: string, toMonth: string): Promise<IncomeProductMonth[]> {
+  try {
+    return await fetchAllPages<IncomeProductMonth>((a, b) =>
+      supabase
+        .from('income_product_monthly')
+        .select('month, product_id, product_name, lines, harga_produk, total_income')
+        .eq('store_id', storeId)
+        .gte('month', fromMonth)
+        .lte('month', toMonth)
+        .order('month')
+        .order('product_id')
+        .range(a, b),
+    )
+  } catch {
+    return []
+  }
 }
 
 /** Item selesai di rentang ini yang pesanannya dibuat SEBELUM rentang ini. */
