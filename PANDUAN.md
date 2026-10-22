@@ -205,7 +205,8 @@ Rekap dibaca seperti cerita, dari atas ke bawah:
 ### Dari mana angkanya (Bab 2)
 
 Di atasnya ada satu batang **"Dari omzet, uangnya ke mana saja"**: berapa persen omzet untuk potongan
-Shopee, modal, iklan, packaging, dan berapa yang jadi untung. Lalu hitungannya, dibaca dari atas ke bawah:
+Shopee, modal, iklan, packaging, dan berapa yang jadi untung. Arahkan kursor (atau ketuk di HP) ke bagian
+batang atau ke nama di bawahnya untuk melihat nominal Rupiahnya. Lalu hitungannya, dibaca dari atas ke bawah:
 
 ```
 + Omzet                       Rp…   (harga produk yang uangnya cair bulan ini)
