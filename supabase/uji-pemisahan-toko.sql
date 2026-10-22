@@ -87,12 +87,13 @@ begin
     ('20261016000000_operations.sql',              to_regclass('public.client_errors') is not null),
     ('20261020000000_income_orders.sql',           to_regclass('public.income_orders') is not null),
     ('20261021000000_income_per_order_views.sql',  to_regclass('public.order_item_income') is not null),
-    ('20261022000000_income_monthly_breakdown.sql', to_regclass('public.income_monthly_breakdown') is not null)
+    ('20261022000000_income_monthly_breakdown.sql', to_regclass('public.income_monthly_breakdown') is not null),
+    ('20261023000000_admin_reset_password.sql',    to_regprocedure('public.admin_reset_password(text, text)') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261022000000_income_monthly_breakdown.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261023000000_admin_reset_password.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 

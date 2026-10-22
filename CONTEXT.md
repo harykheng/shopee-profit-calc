@@ -23,7 +23,9 @@ produk**, iklan mana yang rugi, dan harga/target ROAS yang masih untung. Satu ko
 
 Pemakai **bukan orang teknis**, terutama di **laptop**; HP/iPad harus tetap jalan. Pengelola membuat
 akun & toko manual, memperpanjang langganan lewat SQL, dan jadi kontak bantuan (WhatsApp,
-`VITE_SUPPORT_WA`). Tidak ada halaman admin, daftar sendiri, pembayaran, atau reset password mandiri.
+`VITE_SUPPORT_WA`). Tidak ada halaman admin, daftar sendiri, pembayaran, atau reset password mandiri:
+"Lupa password?" membuka WhatsApp, lalu pengelola menjalankan `admin_reset_password` (OPERASI.md).
+Password asli tidak pernah bisa dibaca (hanya hash bcrypt).
 
 Pertanyaan yang dijawab:
 1. Bulan ini untung berapa, dan kenapa? (Rekap)
@@ -117,6 +119,7 @@ Migration (jalankan berurutan; file baru ditandai):
 | **`20261020000000_income_orders.sql`** | Tabel `income_orders` (penghasilan per pesanan & produk), `income_adjustments.order_no`, RPC `save_income_report`. **Wajib sebelum deploy PR #25** |
 | **`20261021000000_income_per_order_views.sql`** | View `order_item_income`, `income_order_match`, `income_product_monthly`; kolom baru di `product_monthly_recap` |
 | **`20261022000000_income_monthly_breakdown.sql`** | View `income_monthly_breakdown` (Bab 2 Rekap dari omzet) |
+| **`20261023000000_admin_reset_password.sql`** | Fungsi admin `admin_reset_password(email, password)` untuk SQL Editor: ganti password (bcrypt), hapus penanda `password_changed` supaya banner muncul lagi, keluarkan semua sesi. Tidak dipakai aplikasi |
 
 Sumber data per bulan per toko:
 - **Export pesanan** (.xlsx, status **Semua**, rentang lebar) → `order_items`.
@@ -231,7 +234,7 @@ npm run build
 | #21 | Uji pemisahan toko tetap jalan walau ada migration terlewat |
 | #22 | Iklan: retur ikut dikurangi dari ROAS nyata |
 | #23–#24 | Iklan: Cek cepat beberapa hari, HPP sementara |
-| #25 | Penghasilan Excel "Sudah Dilepas" (per pesanan), untung per produk & potongan iklan asli, nomor pesanan di status bulan, Rekap: diagnosa Bab 1, Bab 2 dari omzet, urutan produk untung/rugi. Butuh 3 SQL baru (20261020–22). |
+| #25 | Penghasilan Excel "Sudah Dilepas" (per pesanan), untung per produk & potongan iklan asli, nomor pesanan di status bulan, Rekap: diagnosa Bab 1, Bab 2 dari omzet, urutan produk untung/rugi. Butuh 3 SQL baru (20261020–22). Plus `admin_reset_password` (SQL 20261023) untuk lupa password. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 
