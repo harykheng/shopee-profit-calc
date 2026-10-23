@@ -26,11 +26,12 @@ kuat dari pengalaman umum, **[Tebakan]** = belum ada dasar, harus diuji.
    sendiri, tidak ada pembayaran otomatis; admin membuat akun lewat SQL **[Pasti]**
    (README bagian 8). Jadi 10% klik bisa saja menghasilkan 0 pelanggan kalau balasan chat lambat
    atau harga tidak jelas. Ukur juga: klik → chat benar-benar masuk → bayar.
-4. **Belum ada harga, uji coba, testimonial, atau angka hasil.** `PRODUCT.md`: "No testimonials,
-   metrics or external claims exist; none should be invented." Landing page tanpa harga dan tanpa
-   bukti sosial biasanya kehilangan klik dari orang yang butuh kepastian. Bukti kita yang jujur
+4. **Harga sudah ada (Rp69.000/bulan atau Rp599.000/tahun per toko), tapi belum ada uji coba,
+   testimonial, atau angka hasil.** `PRODUCT.md`: "No testimonials, metrics or external claims
+   exist; none should be invented." Landing page tanpa bukti sosial biasanya kehilangan klik dari
+   orang yang butuh kepastian. Bukti kita yang jujur
    adalah **demo interaktif** (bagian 5) dan cerita **dibuat dan dipakai sendiri untuk 2 toko**.
-   Harga dan uji coba harus kamu putuskan (bagian 3).
+   Uji coba masih harus kamu putuskan (bagian 3).
 5. **Pengunjung kemungkinan besar datang dari HP, tapi produknya paling nyaman di laptop**
    (upload Excel/PDF/CSV dari Seller Centre). Landing page harus jujur soal ini, atau pengunjung
    klik, chat, lalu tidak pernah upload bulan pertama.
@@ -71,6 +72,11 @@ membacanya.
 Belum diriset: aplikasi sejenis di pasaran. **[Tebakan]** bahwa pembeda di atas cukup unik. Cek
 2–3 pesaing sebelum menulis kalimat "satu-satunya".
 
+**Pesaing yang sudah diketahui:** ada yang menjual Rp99.000 sekali bayar (lifetime). Nama dan
+fiturnya belum dicatat: `[ISI nama + apa yang dihitung]`. Sebelum membandingkan di halaman, cek
+apakah alatnya membaca file Shopee asli (pesanan, penghasilan, iklan) dan menyimpan data per bulan,
+atau hanya kalkulator/template yang diisi manual. Jangan menyebut nama pesaing di landing page.
+
 ---
 
 ## 2. Yang boleh dan tidak boleh ditulis
@@ -101,7 +107,7 @@ Tanpa ini, halaman jadi di atas kertas saja. Isi di sini, lalu salin ke teks hal
 
 | # | Keputusan | Isi | Dampak ke klik |
 |---|---|---|---|
-| 1 | Harga per toko per bulan | `[ISI]` | Tinggi. Halaman tanpa harga memaksa orang bertanya dulu. |
+| 1 | Harga per toko | **Rp69.000/bulan** atau **Rp599.000/tahun** (hemat ±28%, setara ±8,7 bulan). Potongan untuk toko kedua dst.: `[ISI]` | Tinggi. Halaman tanpa harga memaksa orang bertanya dulu. |
 | 2 | Uji coba / garansi? (mis. 1 bulan data pertama gratis) | `[ISI]` | Tinggi. Menurunkan rasa risiko klik. |
 | 3 | Nomor WhatsApp admin (format `62…`) | `[ISI]` | Wajib. Sama dengan `VITE_SUPPORT_WA`. |
 | 4 | Janji waktu balas dan waktu akun jadi | `[ISI jam kerja + SLA]` | Tinggi. Tulis hanya yang bisa ditepati. |
@@ -214,8 +220,9 @@ bukti sosial yang kita punya dan benar adanya.
 ### 4.9 Harga dan cara mulai
 
 Isi dari keputusan #1, #2, #4. Tiga langkah: **chat WhatsApp → akun dibuatkan → upload bulan
-pertama.** Tulis jujur bahwa akun dibuat manual, plus janji waktunya (`[ISI]`). Satu harga, satu
-paket; jangan membuat tabel paket kalau paketnya belum ada.
+pertama.** Tulis jujur bahwa akun dibuat manual, plus janji waktunya (`[ISI]`). Satu paket
+(semua fitur), dua cara bayar: **Rp69.000/bulan** atau **Rp599.000/tahun** per toko. Tulis yang
+tahunan sebagai "hemat ±Rp229.000", jangan memberi nama paket lain atau tabel fitur yang berbeda.
 
 ### 4.10 FAQ (akordeon)
 
@@ -231,6 +238,7 @@ Jawaban pendek, pakai kata-kata di PANDUAN. Pertanyaan yang pasti muncul:
 8. `Salah upload ke toko lain?` → cukup satu kalimat, kontak admin untuk dihapus.
 9. `Persen admin tokonya berapa?` → Berbeda tiap kategori dan bisa berubah; kamu isi sekali dari Seller Centre, tidak ada tarif bawaan yang bisa salah.
 10. `Barang retur dihitung rugi?` → Bawaannya barang retur kembali ke stok; bisa diatur kalau returmu biasanya rusak.
+11. `Kenapa langganan, bukan sekali bayar?` → Data tokomu disimpan di server dan dicadangkan tiap hari, dan kalau Shopee mengganti format file, aplikasi diperbarui oleh pengelola. Biaya itu berjalan tiap bulan. **[Pasti]** (README bagian 7 dan 8, OPERASI)
 
 ### 4.11 CTA penutup
 
@@ -447,7 +455,7 @@ trafik dari iklan dingin, targetkan dulu 3–5% dan naikkan lewat perbaikan, jan
 
 ### 9.4 Urutan perbaikan (paling berdampak dulu)
 
-1. Isi **harga dan uji coba** (keputusan #1, #2), lalu cek apakah klik naik.
+1. Isi **uji coba** (keputusan #2; harga sudah diisi), lalu cek apakah klik naik.
 2. **Simulator di atas lipatan atau tepat setelah hero**, bukan di tengah halaman.
 3. Judul hero (A/B/C di 4.2).
 4. Teks tombol: `Chat WhatsApp, tanya cara mulai` vs `Cek iklan tokomu` vs `Coba 1 bulan`.
