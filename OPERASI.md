@@ -70,6 +70,12 @@ update public.stores set active_until = '2027-01-31' where id = 5;              
 update public.stores set active_until = (now() at time zone 'Asia/Jakarta')::date - 1 where id = 5; -- hentikan
 ```
 
+**Uji coba gratis 30 hari:** buat toko seperti biasa, dengan tanggal terakhir = hari ini + 29 (toko
+aktif sampai akhir tanggal itu, WIB; hari pembuatan ikut dihitung). Contoh: dibuat 1 November →
+`'2026-11-30'`. Catat sendiri siapa yang sudah pernah uji coba; aplikasi tidak menandainya. Di hari
+ke-3, tanyakan lewat WhatsApp apakah data bulan lalu sudah di-upload. Setelah 30 hari toko otomatis
+jadi baca saja; kalau pelanggan bayar, perpanjang dengan `update` di atas.
+
 Setelah dihentikan, pelanggan masih bisa **melihat** Rekap (baca saja) tapi tidak bisa mengubah data.
 
 **Lupa password** (pelanggan menekan "Lupa password?" di halaman login → WhatsApp ke kamu):
