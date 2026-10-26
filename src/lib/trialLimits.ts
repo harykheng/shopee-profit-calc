@@ -1,19 +1,20 @@
 /**
- * Batas akun uji coba (stores.trial = true). Aturannya sama dengan migration 20261027000000_trial_limits.sql:
+ * Batas akun uji coba (stores.trial = true). Aturannya sama dengan migration 20261027000000_trial_limits.sql
+ * dan angka di 20261028000000_trial_limits_total.sql:
  *
- * - Data maksimal 2 bulan: bulan laporan penghasilan (tanggal uang cair) dan bulan data iklan.
+ * - Data maksimal 1 bulan: bulan laporan penghasilan (tanggal uang cair) dan bulan data iklan.
  *   Export pesanan tidak dibatasi. Yang benar-benar menolak adalah trigger di database; fungsi di sini
  *   untuk memberi tahu SEBELUM tombol simpan ditekan.
- * - Simulasi maksimal 10 produk per hari (WIB). Satu produk dihitung sekali per hari, baik di Satu
- *   produk maupun di Grup iklan; mengubah harga/ROAS/biaya produk yang sama tidak menambah hitungan.
+ * - Simulasi maksimal 50 produk selama uji coba. Satu produk dihitung sekali, baik di Satu produk maupun
+ *   di Grup iklan; mengubah harga/ROAS/biaya produk yang sama tidak menambah hitungan.
  *
  * Fungsi murni (tanpa Supabase) supaya bisa dites.
  */
 import { formatMonth } from './format'
 import type { IncomeParseResult } from './parsers/income'
 
-export const TRIAL_MONTH_LIMIT = 2
-export const TRIAL_SIMULATION_LIMIT = 10
+export const TRIAL_MONTH_LIMIT = 1
+export const TRIAL_SIMULATION_LIMIT = 50
 
 /** "YYYY-MM-DD" → "YYYY-MM-01". */
 export function monthOf(date: string): string {
@@ -59,7 +60,9 @@ export function trialUploadCheck(used: string[], adding: string[], limit = TRIAL
 /** Kalimat status di halaman Upload untuk toko uji coba. */
 export function trialMonthsNotice(used: string[], limit = TRIAL_MONTH_LIMIT): string {
   const base = `Akun uji coba bisa menyimpan laporan penghasilan dan data iklan untuk ${limit} bulan.`
-  if (used.length === 0) return `${base} Belum ada yang terpakai.`
+  if (used.length === 0) {
+    return `${base} Belum ada yang terpakai. Pilih bulan yang sudah selesai (biasanya bulan lalu): bulan pertama yang disimpan tidak bisa diganti.`
+  }
   const left = limit - used.length
   return `${base} Sudah terpakai: ${monthList(used)}${
     left > 0 ? ` (sisa ${left} bulan)` : '. Upload ulang bulan itu tetap boleh'
@@ -97,7 +100,7 @@ export function groupRowSimKey(rowKey: string): string {
   return `grup-baris:${rowKey}`
 }
 
-/** Kalimat sisa jatah, mis. "Uji coba: 3 dari 10 produk disimulasikan hari ini." */
+/** Kalimat sisa jatah, mis. "Uji coba: 3 dari 50 produk sudah disimulasikan." */
 export function trialSimNotice(used: number, limit = TRIAL_SIMULATION_LIMIT): string {
-  return `Uji coba: ${used} dari ${limit} produk disimulasikan hari ini. Mengubah harga atau ROAS produk yang sama tidak menambah hitungan.`
+  return `Uji coba: ${used} dari ${limit} produk sudah disimulasikan. Mengubah harga atau ROAS produk yang sama tidak menambah hitungan.`
 }

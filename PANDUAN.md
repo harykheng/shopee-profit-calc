@@ -144,12 +144,13 @@ Setelah disimpan muncul ringkasan:
 
 Kalau salah memilih file (misalnya PDF di kotak Excel), aplikasi akan memberi tahu dengan jelas.
 
-**Akun uji coba: data maksimal 2 bulan.** Selama uji coba, laporan penghasilan dan data iklan hanya bisa
-disimpan untuk **2 bulan** (dihitung dari bulan uang cair dan bulan periode iklan). Kotak di atas halaman
-Upload menunjukkan bulan yang sudah terpakai. Upload ulang bulan yang sudah ada selalu boleh. Kalau file
-berisi bulan ke-3, tombol simpan tidak bisa ditekan dan aplikasi menyebut bulannya. Pilih laporan 1 bulan
-saja, atau berlangganan. Export pesanan tidak dibatasi (boleh rentang lebar seperti biasa). Setelah
-berlangganan, batas ini hilang.
+**Akun uji coba: data 1 bulan.** Selama uji coba, laporan penghasilan dan data iklan hanya bisa disimpan
+untuk **1 bulan** (dihitung dari bulan uang cair dan bulan periode iklan). Pilih bulan yang sudah selesai,
+biasanya **bulan lalu**: bulan pertama yang disimpan tidak bisa diganti sendiri (minta bantuan admin
+kalau salah bulan). Kotak di atas halaman Upload menunjukkan bulan yang sudah terpakai. Upload ulang bulan
+itu selalu boleh. Kalau file berisi bulan lain, tombol simpan tidak bisa ditekan dan aplikasi menyebut
+bulannya. Export pesanan tidak dibatasi (boleh rentang lebar seperti biasa). Setelah berlangganan, batas
+ini hilang.
 
 ---
 
@@ -432,12 +433,12 @@ sedangkan Simulasi Harga menghitung **sebelum** terjadi. Potongan Shopee dihitun
 (admin %, Gratis Ongkir XTRA %, dan biaya proses yang tetap per order), jadi lebih tepat untuk
 memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
 
-**Akun uji coba: maksimal 10 produk per hari.** Satu produk dihitung sekali per hari, di Satu produk
-maupun Grup iklan. Mengubah harga, ROAS, atau biaya produk yang sama **tidak** menambah hitungan, dan
-produk yang sudah dicoba hari itu tetap bisa dibuka lagi. Produk yang diketik sendiri dihitung per modal
-(HPP). Sisa jatah tertulis di atas kotak pilih produk. Kalau jatah habis, hasil untuk produk baru tidak
-tampil (di Grup iklan, produk itu tidak ikut dihitung) sampai besok. Setelah berlangganan, batas ini
-hilang.
+**Akun uji coba: maksimal 50 produk.** Selama uji coba, Simulasi Harga bisa dipakai untuk 50 produk
+berbeda, di Satu produk maupun Grup iklan. Satu produk dihitung sekali: mengubah harga, ROAS, atau biaya
+produk yang sama **tidak** menambah hitungan, dan produk yang sudah pernah dicoba tetap bisa dibuka lagi.
+Produk yang diketik sendiri dihitung per modal (HPP). Sisa jatah tertulis di atas kotak pilih produk.
+Kalau jatah habis, hasil untuk produk baru tidak tampil (di Grup iklan, produk itu tidak ikut dihitung).
+Setelah berlangganan, batas ini hilang.
 
 ### Cara pakai
 
@@ -601,7 +602,7 @@ aman.
 Tidak. Pesanan, penghasilan, dan data iklan dikenali dan diperbarui, tidak ditambah lagi.
 
 **Akun uji coba: kenapa laporan bulan lain ditolak?**
-Uji coba bisa menyimpan data 2 bulan dan Simulasi Harga 10 produk per hari (lihat
+Uji coba bisa menyimpan data 1 bulan dan Simulasi Harga untuk 50 produk (lihat
 [Halaman Upload](#4-halaman-upload) dan [Simulasi Harga](#9-halaman-simulasi-harga)). Data yang sudah
 tersimpan tetap aman. Setelah berlangganan, bulan lain bisa langsung di-upload.
 

@@ -107,10 +107,23 @@ update public.stores set active_until = (now() at time zone 'Asia/Jakarta')::dat
 `id` toko terlihat di hasil `select id, name, active_until, trial from public.stores order by id;`.
 Penanda **Uji coba** tidak hilang sendiri; ubah `trial = false` saat pelanggan mulai membayar supaya
 daftar Uji coba di halaman Pengelola hanya berisi yang masih mencoba, **dan supaya batas uji coba
-lepas**. Selama `trial = true` (migration `20261027000000_trial_limits.sql`):
-- laporan penghasilan + data iklan hanya bisa disimpan untuk **2 bulan** (bulan uang cair / periode iklan;
+lepas**. Selama `trial = true` (migration `20261027000000_trial_limits.sql` + angka di
+`20261028000000_trial_limits_total.sql`):
+- laporan penghasilan + data iklan hanya bisa disimpan untuk **1 bulan** (bulan uang cair / periode iklan;
   export pesanan tidak dibatasi; upload ulang bulan yang sama selalu boleh);
-- Simulasi Harga maksimal **10 produk per hari** (WIB).
+- Simulasi Harga maksimal **50 produk selama uji coba** (produk yang sama dihitung sekali).
+
+**Pelanggan uji coba salah bulan** (mis. upload bulan berjalan yang belum selesai): hapus laporan
+penghasilan & iklan bulan itu, lalu minta dia upload bulan yang benar. Export pesanan tidak perlu dihapus.
+
+```sql
+-- ganti 5 dengan id toko, '2026-10-01' dengan bulan yang salah
+delete from public.income             where store_id = 5 and date_trunc('month', released_date) = '2026-10-01';
+delete from public.income_adjustments where store_id = 5 and date_trunc('month', released_date) = '2026-10-01';
+delete from public.income_orders      where store_id = 5 and date_trunc('month', released_date) = '2026-10-01';
+delete from public.ad_reports         where store_id = 5 and '2026-10-01' in (date_trunc('month', period_start), date_trunc('month', period_end));
+select public.trial_months_used(5);   -- harus kosong
+```
 
 Lupa mengubah `trial = false` = pelanggan yang sudah bayar tetap kena batas ini. Kalau pelanggan
 mengeluh "laporan bulan lain ditolak", cek dulu kolom `trial` tokonya. Angka batasnya ada di fungsi

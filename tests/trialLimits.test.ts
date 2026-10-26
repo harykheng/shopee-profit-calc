@@ -31,9 +31,9 @@ const income = (over: Partial<IncomeParseResult> = {}): IncomeParseResult =>
     ...over,
   }) as unknown as IncomeParseResult
 
-// Pesan asli dari trigger trial_month_limit (migration 20261027000000).
+// Pesan asli dari trigger trial_month_limit (migration 20261027000000, batas 1 bulan dari 20261028000000).
 const DB_ERROR =
-  'trial_month_limit: Akun uji coba hanya bisa menyimpan data 2 bulan, sedangkan dengan file ini datanya jadi 3 bulan (Agustus 2026, September 2026, Oktober 2026). File ini tidak disimpan.'
+  'trial_month_limit: Akun uji coba hanya bisa menyimpan data 1 bulan, sedangkan dengan file ini datanya jadi 2 bulan (September 2026, Oktober 2026). File ini tidak disimpan.'
 
 describe('uploadMonths', () => {
   it('bulan uang cair laporan penghasilan + bulan iklan, tanpa dobel, urut', () => {
@@ -64,26 +64,22 @@ describe('uploadMonths', () => {
 })
 
 describe('trialUploadCheck', () => {
-  it('bulan pertama dan kedua boleh', () => {
-    expect(trialUploadCheck([], ['2026-09-01']).over).toBe(false)
-    expect(trialUploadCheck(['2026-09-01'], ['2026-10-01'])).toEqual({
-      months: ['2026-09-01', '2026-10-01'],
-      added: ['2026-10-01'],
-      over: false,
-    })
+  it('bulan pertama boleh', () => {
+    expect(trialUploadCheck([], ['2026-09-01'])).toEqual({ months: ['2026-09-01'], added: ['2026-09-01'], over: false })
   })
 
-  it('upload ulang bulan yang sudah ada selalu boleh, walau jatah penuh', () => {
-    expect(trialUploadCheck(['2026-09-01', '2026-10-01'], ['2026-10-01']).over).toBe(false)
+  it('upload ulang bulan yang sudah ada selalu boleh', () => {
+    expect(trialUploadCheck(['2026-09-01'], ['2026-09-01']).over).toBe(false)
   })
 
-  it('bulan ke-3 ditolak, termasuk satu file yang berisi 3 bulan', () => {
-    expect(trialUploadCheck(['2026-09-01', '2026-10-01'], ['2026-08-01']).over).toBe(true)
-    expect(trialUploadCheck([], ['2026-08-01', '2026-09-01', '2026-10-01']).over).toBe(true)
+  it('bulan kedua ditolak, termasuk satu file yang berisi 2 bulan', () => {
+    expect(trialUploadCheck(['2026-09-01'], ['2026-10-01']).over).toBe(true)
+    expect(trialUploadCheck([], ['2026-09-01', '2026-10-01']).over).toBe(true)
   })
 
-  it('batasnya 2 bulan', () => {
-    expect(TRIAL_MONTH_LIMIT).toBe(2)
+  it('batasnya 1 bulan, dan bisa diatur lewat parameter', () => {
+    expect(TRIAL_MONTH_LIMIT).toBe(1)
+    expect(trialUploadCheck(['2026-09-01'], ['2026-10-01'], 2).over).toBe(false)
   })
 })
 
@@ -95,23 +91,26 @@ describe('pesan untuk pelanggan', () => {
   })
 
   it('status jatah bulan di halaman Upload', () => {
-    expect(trialMonthsNotice([])).toContain('Belum ada yang terpakai.')
-    expect(trialMonthsNotice(['2026-09-01'])).toContain('Sudah terpakai: September 2026 (sisa 1 bulan).')
-    expect(trialMonthsNotice(['2026-09-01', '2026-10-01'])).toContain('Upload ulang bulan itu tetap boleh')
+    const empty = trialMonthsNotice([])
+    expect(empty).toContain('untuk 1 bulan')
+    expect(empty).toContain('bulan pertama yang disimpan tidak bisa diganti')
+    expect(trialMonthsNotice(['2026-09-01'])).toContain('Sudah terpakai: September 2026. Upload ulang bulan itu tetap boleh')
+    expect(trialMonthsNotice(['2026-09-01'], 2)).toContain('(sisa 1 bulan)')
   })
 
   it('pesan sebelum simpan menyebut bulan baru dan yang sudah tersimpan', () => {
-    const used = ['2026-09-01', '2026-10-01']
-    const msg = trialUploadProblem(trialUploadCheck(used, ['2026-08-01']), used)
-    expect(msg).toContain('file ini berisi Agustus 2026')
-    expect(msg).toContain('Yang sudah tersimpan: September 2026 dan Oktober 2026.')
+    const used = ['2026-09-01']
+    const msg = trialUploadProblem(trialUploadCheck(used, ['2026-10-01']), used)
+    expect(msg).toContain('hanya bisa menyimpan data 1 bulan')
+    expect(msg).toContain('file ini berisi Oktober 2026')
+    expect(msg).toContain('Yang sudah tersimpan: September 2026.')
     expect(trialUploadProblem(trialUploadCheck(used, ['2026-09-01']), used)).toBeNull()
   })
 
   it('penolakan database ditampilkan tanpa awalan teknis, dan tidak dilaporkan sebagai error', () => {
     expect(trialLimitMessage('duplicate key')).toBeNull()
     const msg = friendlyError({ message: DB_ERROR, code: 'P0001' })
-    expect(msg.startsWith('Akun uji coba hanya bisa menyimpan data 2 bulan')).toBe(true)
+    expect(msg.startsWith('Akun uji coba hanya bisa menyimpan data 1 bulan')).toBe(true)
     expect(msg).not.toContain('trial_month_limit')
     expect(msg).toContain('Upload ulang bulan yang sudah ada tetap boleh')
     expect(isIgnorable(DB_ERROR)).toBe(true)
@@ -130,6 +129,6 @@ describe('kunci jatah simulasi', () => {
   })
 
   it('kalimat sisa jatah', () => {
-    expect(trialSimNotice(3)).toMatch(/^Uji coba: 3 dari 10 produk/)
+    expect(trialSimNotice(3)).toMatch(/^Uji coba: 3 dari 50 produk sudah disimulasikan/)
   })
 })

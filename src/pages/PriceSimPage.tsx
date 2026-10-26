@@ -222,7 +222,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
         })
       : null
 
-  // Akun uji coba: hasil hanya tampil kalau produk ini masih dapat jatah hari ini.
+  // Akun uji coba: hasil hanya tampil kalau produk ini masih dapat jatah.
   const simKey = !(rawR || rawLadder)
     ? null
     : selected

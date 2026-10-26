@@ -165,7 +165,7 @@ export function AdGroupSim({
   const remove = (key: string) => setRows((r) => r.filter((x) => x.key !== key))
 
   const filled = rows.filter((r) => r.price !== null && r.price > 0 && r.hpp !== null)
-  // Akun uji coba: produk yang tidak dapat jatah hari ini tidak ikut dihitung.
+  // Akun uji coba: produk yang tidak dapat jatah lagi tidak ikut dihitung.
   const sim = useTrialSimulation(storeId, trial, filled.map(simKeyOf))
   const complete = filled.filter((r) => sim.statusOf(simKeyOf(r)) === 'ok')
   const anyBlocked = filled.some((r) => sim.statusOf(simKeyOf(r)) === 'blocked')
@@ -458,7 +458,7 @@ function GroupRowCard({
           {row.price === null || row.price <= 0 || row.hpp === null
             ? 'Isi harga jual dan HPP supaya ikut dihitung.'
             : gate === 'blocked'
-              ? 'Tidak ikut dihitung: jatah simulasi uji coba hari ini sudah habis.'
+              ? 'Tidak ikut dihitung: jatah simulasi uji coba sudah habis.'
               : 'Mengecek jatah simulasi uji coba…'}
         </p>
       )}

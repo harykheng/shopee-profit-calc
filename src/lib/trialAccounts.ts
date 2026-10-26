@@ -107,7 +107,7 @@ export function welcomeMessage(input: {
     '',
     `Bisa dipakai sampai ${formatDate(input.activeUntil)}. Setelah login, ganti password di halaman Akun ya.`,
     '',
-    `Selama uji coba, laporan bisa disimpan untuk ${TRIAL_MONTH_LIMIT} bulan (mulai dari bulan lalu ya) dan Simulasi Harga ${TRIAL_SIMULATION_LIMIT} produk per hari.`,
+    `Selama uji coba, laporan bisa disimpan untuk ${TRIAL_MONTH_LIMIT} bulan (pakai bulan lalu ya, bulan pertama yang disimpan tidak bisa diganti) dan Simulasi Harga untuk ${TRIAL_SIMULATION_LIMIT} produk.`,
   ].join('\n')
 }
 

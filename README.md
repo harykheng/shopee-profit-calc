@@ -102,6 +102,11 @@ menghapus data.
 > aplikasi tetap jalan tanpa batas; tanpa deploy, batas data tetap ditegakkan database (pesannya saja
 > yang kurang rapi).
 
+> Sudah setup sebelum 28 Oktober 2026? Jalankan sekali file `20261028000000_trial_limits_total.sql` (aman
+> diulang) **setelah** `20261027000000_trial_limits.sql`. Batas uji coba jadi data **1 bulan** dan Simulasi
+> Harga **50 produk selama uji coba**. Jalankan **sebelum atau bersamaan dengan deploy**: tanpa SQL ini
+> database masih memakai 2 bulan / 10 per hari, sedangkan aplikasi sudah menulis 1 bulan / 50 produk.
+
 > Sudah setup sebelum 22 Oktober 2026? Jalankan sekali file `20261022000000_income_monthly_breakdown.sql`
 > (aman diulang, hanya view baru) **setelah** `20261021000000_income_per_order_views.sql`. Dipakai Bab 2
 > Rekap yang dimulai dari omzet (potongan Shopee per jenis) dan kotak "Kenapa untungnya segini?" di Bab 1.
@@ -352,7 +357,7 @@ membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
    di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
    free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
 2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
-   satu per satu, dari `20260930000000_init.sql` sampai `20261027000000_trial_limits.sql`.
+   satu per satu, dari `20260930000000_init.sql` sampai `20261028000000_trial_limits_total.sql`.
 3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
    hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
 
@@ -519,7 +524,7 @@ aman: seed tidak menambah apa pun.
 ### Sebelum pelanggan pertama
 
 - [ ] Project HitungCuan sudah di paket Pro (backup aktif).
-- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261027000000_trial_limits.sql`
+- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261028000000_trial_limits_total.sql`
       (cek: tabel `store_settings`, `fee_categories`, `client_errors`, `income_orders`, dan view
       `order_item_income` ada).
 - [ ] **Pemantau error:** buka aplikasi, sengaja picu satu error (mis. buka halaman dengan akun yang

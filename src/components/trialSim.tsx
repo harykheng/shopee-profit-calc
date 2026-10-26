@@ -1,4 +1,4 @@
-// Jatah simulasi akun uji coba (10 produk per hari). Toko berbayar: semua langsung "ok", tanpa panggilan ke server.
+// Jatah simulasi akun uji coba (50 produk selama uji coba). Toko berbayar: semua langsung "ok", tanpa panggilan ke server.
 import { useEffect, useRef, useState } from 'react'
 import { claimTrialSimulation } from '../lib/api'
 import { TRIAL_SIMULATION_LIMIT, trialSimNotice } from '../lib/trialLimits'
@@ -22,7 +22,7 @@ export interface TrialSim {
 
 /**
  * Minta izin untuk setiap kunci produk di `keys` (sekali per kunci). Hasil yang ditolak tetap ditolak
- * sampai halaman dibuka ulang; jatahnya kembali besok. Kalau server tidak bisa dihubungi atau SQL-nya
+ * (jatahnya tidak kembali sampai berlangganan). Kalau server tidak bisa dihubungi atau SQL-nya
  * belum dijalankan, simulasi tetap boleh (jangan sampai pelanggan terhalang karena gangguan).
  */
 export function useTrialSimulation(storeId: number | null, trial: boolean, keys: (string | null)[]): TrialSim {
@@ -101,9 +101,8 @@ export function TrialSimNotice({ sim }: { sim: TrialSim }) {
 
 export function TrialSimBlocked({ limit }: { limit: number }) {
   return (
-    <Alert tone="warning" title={`Jatah simulasi uji coba hari ini sudah habis (${limit} produk).`}>
-      Produk yang sudah kamu coba hari ini tetap bisa dibuka lagi. Jatahnya kembali besok, atau berlangganan supaya
-      simulasi tidak dibatasi.
+    <Alert tone="warning" title={`Jatah simulasi uji coba sudah habis (${limit} produk).`}>
+      Produk yang sudah pernah kamu coba tetap bisa dibuka lagi. Berlangganan supaya simulasi tidak dibatasi.
     </Alert>
   )
 }

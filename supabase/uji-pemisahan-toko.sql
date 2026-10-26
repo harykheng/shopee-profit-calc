@@ -93,12 +93,15 @@ begin
     ('20261022000000_income_monthly_breakdown.sql', to_regclass('public.income_monthly_breakdown') is not null),
     ('20261023000000_admin_reset_password.sql',    to_regprocedure('public.admin_reset_password(text, text)') is not null),
     ('20261026000000_platform_admin.sql',          to_regprocedure('public.platform_create_trial(text, text, text, date)') is not null),
-    ('20261027000000_trial_limits.sql',            to_regclass('public.trial_simulations') is not null)
+    ('20261027000000_trial_limits.sql',            to_regclass('public.trial_simulations') is not null),
+    ('20261028000000_trial_limits_total.sql',      exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+                                                     where s.nspname = 'public' and p.proname = 'use_trial_simulation'
+                                                       and p.prosrc like '%count(distinct item_key)%'))
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261027000000_trial_limits.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261028000000_trial_limits_total.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -485,25 +488,34 @@ begin
     end;
     v_uji := v_uji || 'Pengelola: buat akun uji coba (kontrol)'::text;
 
-    -- 2f. Akun uji coba: data bulan ke-3 ditolak, bulan yang sudah ada tetap boleh.
+    -- 2f. Akun uji coba: bulan di atas batas ditolak, bulan yang sudah ada tetap boleh. Mengikuti
+    --     angka di trial_month_limit(), jadi tidak perlu diubah kalau batasnya diganti.
     begin
       reset role;
       execute 'update public.stores set trial = true where id = $1' using sa;
       set local role authenticated;
-      -- Toko A sudah punya data iklan bulan ini; ditambah penghasilan bulan ini dan bulan lalu = 2 bulan.
-      execute 'select inserted from public.upsert_income($1, jsonb_build_array(jsonb_build_object(''released_date'', $2, ''total_income'', 1), jsonb_build_object(''released_date'', $2 - interval ''1 month'', ''total_income'', 1)))'
-        into n using sa, bulan;
+      -- Isi bulan ini, bulan lalu, ... sampai jatah bulan toko A penuh (toko A sudah punya iklan bulan ini).
+      execute 'select public.trial_month_limit()' into m;
+      n := 0;
+      loop
+        execute 'select cardinality(public.trial_months_used($1))' into n2 using sa;
+        exit when n2 >= m;
+        execute 'select inserted from public.upsert_income($1, jsonb_build_array(jsonb_build_object(''released_date'', $2 - make_interval(months => $3::int), ''total_income'', 1)))'
+          into r using sa, bulan, n;
+        n := n + 1;
+      end loop;
       begin
-        execute 'select inserted from public.upsert_income($1, jsonb_build_array(jsonb_build_object(''released_date'', $2 - interval ''2 month'', ''total_income'', 1)))'
-          into n2 using sa, bulan;
+        -- Bulan berikutnya di luar jatah.
+        execute 'select inserted from public.upsert_income($1, jsonb_build_array(jsonb_build_object(''released_date'', $2 - make_interval(months => $3::int + 12), ''total_income'', 1)))'
+          into n2 using sa, bulan, n;
         v_status := v_status || 'GAGAL'::text;
-        v_ket := v_ket || 'bulan ke-3 tersimpan di toko uji coba'::text;
+        v_ket := v_ket || format('bulan ke-%s tersimpan di toko uji coba', m + 1);
       exception when others then
         if sqlerrm like 'trial_month_limit:%' then
           execute 'select inserted + updated from public.upsert_income($1, jsonb_build_array(jsonb_build_object(''released_date'', $2 + 1, ''total_income'', 1)))'
             into n2 using sa, bulan;
           v_status := v_status || case when n2 = 1 then 'LULUS' else 'GAGAL' end;
-          v_ket := v_ket || case when n2 = 1 then 'bulan ke-3 ditolak; bulan yang sudah ada tetap tersimpan'
+          v_ket := v_ket || case when n2 = 1 then format('bulan ke-%s ditolak; bulan yang sudah ada tetap tersimpan', m + 1)
                                  else 'bulan yang sudah ada ikut ditolak' end;
         else
           v_status := v_status || 'CEK'::text;
@@ -517,7 +529,7 @@ begin
       v_status := v_status || 'CEK'::text;
       v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
     end;
-    v_uji := v_uji || 'Uji coba: data maksimal 2 bulan'::text;
+    v_uji := v_uji || 'Uji coba: data maksimal sesuai trial_month_limit()'::text;
 
     -- -------------------------------------------------------------------------
     -- 3. Tanpa login (anon)
