@@ -351,7 +351,16 @@ produk-produk yang diiklankan.
 
 ### Kartu per produk
 
-Tiap produk punya kartu berisi:
+Hasil per produk bisa dilihat dalam dua bentuk. Pilih di tombol **Kartu / Daftar** di sebelah saringan
+label (pilihan diingat di browser ini):
+
+- **Kartu**: satu kartu lengkap per produk.
+- **Daftar**: satu baris per produk berisi label, biaya iklan, terjual, ROAS nyata, dan untung setelah
+  iklan (di HP hanya biaya iklan dan untung setelah iklan; terjual dan ROAS nyata ada di rincian).
+  Cocok untuk membandingkan banyak produk sekaligus. Ketuk baris untuk membuka rinciannya (isi
+  yang sama dengan kartu, termasuk saran).
+
+Tiap kartu berisi:
 
 | Baris | Artinya |
 |---|---|

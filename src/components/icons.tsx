@@ -138,6 +138,23 @@ export const IconAlertCircle = (p: IconProps) => (
   </Svg>
 )
 
+export const IconCards = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+    <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+    <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+    <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+  </Svg>
+)
+
+export const IconRows = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 6h16" />
+    <path d="M4 12h16" />
+    <path d="M4 18h16" />
+  </Svg>
+)
+
 export const IconChevronDown = (p: IconProps) => (
   <Svg {...p}>
     <path d="m6 9 6 6 6-6" />

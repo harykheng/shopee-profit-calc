@@ -247,6 +247,10 @@ Charts stay neutral unless the segment is a status: the Rp100 bar uses `line` (m
 - **Answer first:** Iklan's answer sits between the period select and the summary sheet; Simulasi's between the product
   picker and the input/results grid, updating live.
 - **HPP list:** stacked rows on phones (name, SKU, full-width input, status), four columns from 640px.
+- **Iklan product results:** a Kartu/Daftar switch (pill group like the Rekap tabs, remembered per browser) next to the
+  label filters. Daftar is one sheet of rows: name, sticker, biaya iklan, terjual, ROAS nyata, untung setelah iklan as
+  table columns from 1024px; below that name + chevron, sticker under the name, figures under it: biaya iklan + untung on phones (terjual and ROAS nyata move into the opened details), all 4 from 640px.
+  A row opens the same details as the card, without repeating the figures already in the row.
 
 ## Elevation & Depth
 
