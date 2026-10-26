@@ -102,6 +102,10 @@ menghapus data.
 > aplikasi tetap jalan tanpa batas; tanpa deploy, batas data tetap ditegakkan database (pesannya saja
 > yang kurang rapi).
 
+> Sudah setup sebelum 31 Oktober 2026? Jalankan sekali file `20261031000000_platform_set_subscription.sql`
+> (aman diulang). Isinya fungsi tombol **Jadikan berlangganan** di halaman Pelanggan (hanya pengelola). Boleh
+> sebelum atau sesudah deploy: tanpa SQL ini tombolnya menampilkan pesan gangguan sistem.
+
 > Sudah setup sebelum 30 Oktober 2026? Jalankan sekali file `20261030000000_platform_create_account.sql`
 > (aman diulang) **setelah** `20261029000000_store_name_by_customer.sql`. Isinya fungsi untuk membuat akun yang
 > **langsung berlangganan** dari halaman Pengelola. Jalankan sebelum/bersamaan deploy: tanpa SQL ini akun uji
@@ -367,7 +371,7 @@ membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
    di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
    free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
 2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
-   satu per satu, dari `20260930000000_init.sql` sampai `20261030000000_platform_create_account.sql`.
+   satu per satu, dari `20260930000000_init.sql` sampai `20261031000000_platform_set_subscription.sql`.
 3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
    hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
 
@@ -534,7 +538,7 @@ aman: seed tidak menambah apa pun.
 ### Sebelum pelanggan pertama
 
 - [ ] Project HitungCuan sudah di paket Pro (backup aktif).
-- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261030000000_platform_create_account.sql`
+- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261031000000_platform_set_subscription.sql`
       (cek: tabel `store_settings`, `fee_categories`, `client_errors`, `income_orders`, dan view
       `order_item_income` ada).
 - [ ] **Pemantau error:** buka aplikasi, sengaja picu satu error (mis. buka halaman dengan akun yang

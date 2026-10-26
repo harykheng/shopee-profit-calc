@@ -128,6 +128,7 @@ Migration (jalankan berurutan; file baru ditandai):
 | **`20261021000000_income_per_order_views.sql`** | View `order_item_income`, `income_order_match`, `income_product_monthly`; kolom baru di `product_monthly_recap` |
 | **`20261022000000_income_monthly_breakdown.sql`** | View `income_monthly_breakdown` (Bab 2 Rekap dari omzet) |
 | **`20261023000000_admin_reset_password.sql`** | Fungsi admin `admin_reset_password(email, password)` untuk SQL Editor: ganti password (bcrypt), hapus penanda `password_changed` supaya banner muncul lagi, keluarkan semua sesi. Tidak dipakai aplikasi |
+| **`20261031000000_platform_set_subscription.sql`** | `platform_subscribe_store(store_id, sampai)`: hanya pengelola; `trial = false` + tanggal langganan (tombol **Jadikan berlangganan** di Pelanggan). Boleh sebelum/sesudah deploy |
 | **`20261030000000_platform_create_account.sql`** | `platform_create_account(email, password, nama, sampai, minta_nama, uji_coba)`: memanggil `platform_create_trial` (4 parameter, cek pengelola) lalu mengatur `trial` & `name_pending`. Untuk akun yang langsung berlangganan. Jalankan sebelum/bersamaan deploy |
 | **`20261029000000_store_name_by_customer.sql`** | `stores.name_pending`; `platform_create_trial(…, p_ask_name)` (versi 5 parameter, memanggil versi 4) memasang tanda kalau nama dikosongkan pengelola; `set_store_name()` (security definer, anggota toko, sekali saja). Aplikasi menampilkan jendela "nama tokomu di Shopee" saat login. Boleh sebelum/sesudah deploy |
 | **`20261028000000_trial_limits_total.sql`** | Angka batas uji coba jadi data **1 bulan** dan simulasi **50 produk selama uji coba** (`use_trial_simulation` menghitung produk berbeda sepanjang masa uji coba, catatan lama tidak dihapus). Butuh 20261027; jalankan sebelum/bersamaan deploy |
@@ -255,6 +256,7 @@ npm run build
 | (28 Okt) | Batas uji coba diubah pemilik: data 1 bulan, Simulasi 50 produk selama uji coba. SQL 20261028. Cek cepat iklan dimatikan untuk uji coba (khusus berlangganan; hanya di aplikasi, tanpa SQL). |
 | (29 Okt) | Nama toko boleh dikosongkan di Pengelola: pemilik mengisinya sendiri saat login pertama (sekali). SQL 20261029. |
 | (30 Okt) | Pengelola: halaman awal = Pelanggan (uji coba / berlangganan / berakhir); Buat akun = uji coba atau langsung berlangganan. Pengelola tanpa toko hanya melihat 2 menu itu. SQL 20261030. |
+| (31 Okt) | Pelanggan: tombol **Jadikan berlangganan** di toko uji coba (1 bulan / 1 tahun / tanggal, mulai hari ini). SQL 20261031. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 
@@ -266,7 +268,7 @@ npm run build
   (menganggap penjualan tetap), tabel ongkir per produk (ongkir yang ditanggung toko biasanya Rp0).
 - Batas diagnosa (iklan 10%, modal 70%, tipis 10%) adalah pilihan awal; bisa dijadikan pengaturan toko.
 - Menyimpan grup iklan; membandingkan ROAS nyata grup dengan target grup.
-- Halaman Pengelola: perpanjang tanggal, reset password, dan menandai uji coba → berlangganan masih lewat
-  SQL Editor (sengaja, permintaan pemilik). `platform_create_trial` menulis langsung ke tabel internal
+- Halaman Pengelola: perpanjang tanggal dan reset password masih lewat SQL Editor (sengaja, permintaan
+  pemilik). Uji coba → berlangganan sudah lewat tombol (31 Okt). `platform_create_trial` menulis langsung ke tabel internal
   Supabase (`auth.users`); kalau format tabel itu berubah, uji kontrol di `uji-pemisahan-toko.sql`
   menunjukkan CEK. Alternatifnya Edge Function dengan `auth.admin.createUser`.

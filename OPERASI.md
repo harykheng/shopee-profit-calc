@@ -115,6 +115,10 @@ update public.stores set active_until = (now() at time zone 'Asia/Jakarta')::dat
 ```
 
 `id` toko terlihat di hasil `select id, name, active_until, trial from public.stores order by id;`.
+**Uji coba jadi berlangganan (cara cepat):** halaman Pelanggan → tombol **Jadikan berlangganan** di toko itu →
+pilih 1 bulan / 1 tahun / tanggal sendiri (mulai hari ini). Tanda uji coba hilang dan batasnya lepas saat itu
+juga. Butuh migration `20261031000000_platform_set_subscription.sql`; perintah `update` di atas tetap bisa dipakai.
+
 Penanda **Uji coba** tidak hilang sendiri; ubah `trial = false` saat pelanggan mulai membayar supaya
 daftar Uji coba di halaman Pengelola hanya berisi yang masih mencoba, **dan supaya batas uji coba
 lepas**. Selama `trial = true` (migration `20261027000000_trial_limits.sql` + angka di

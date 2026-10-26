@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Alert, Button, Card, PageTitle, Spinner, Stamp, inputClass, linkClass } from '../components/ui'
+import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react'
+import { Alert, Button, Card, Modal, PageTitle, Spinner, Stamp, inputClass, linkClass } from '../components/ui'
 import { IconCopy, IconWhatsApp } from '../components/icons'
-import { createAccount, fetchCustomers } from '../lib/api'
+import { createAccount, fetchCustomers, subscribeStore } from '../lib/api'
 import { APP_NAME } from '../lib/brand'
 import { adminHint, friendlyError } from '../lib/errors'
 import { formatDate } from '../lib/format'
@@ -59,7 +59,7 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
   const [customers, setCustomers] = useState<CustomerRow[] | null>(null)
   const [listError, setListError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetchCustomers()
       .then((rows) => {
         setCustomers(rows)
@@ -67,6 +67,7 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
       })
       .catch((err) => setListError(errorMessage(err)))
   }, [])
+  useEffect(load, [load])
 
   const counts = customers ? countByGroup(customers) : null
   const summary = customers ? summarizeCustomers(customers) : null
@@ -105,7 +106,7 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
         ) : !customers ? (
           <Spinner />
         ) : (
-          <CustomerList rows={customers} />
+          <CustomerList rows={customers} onChanged={load} />
         )}
       </Card>
     </>
@@ -390,8 +391,10 @@ function sortRows(rows: CustomerRow[], filter: Filter): CustomerRow[] {
   return [...rows].sort((a, b) => (filter === 'ended' ? end(b).localeCompare(end(a)) : end(a).localeCompare(end(b))))
 }
 
-function CustomerList({ rows }: { rows: CustomerRow[] }) {
+function CustomerList({ rows, onChanged }: { rows: CustomerRow[]; onChanged: () => void }) {
   const counts = countByGroup(rows)
+  const [subscribing, setSubscribing] = useState<CustomerRow | null>(null)
+  const [done, setDone] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>(counts.trial > 0 ? 'trial' : counts.paid > 0 ? 'paid' : 'all')
   const shown = useMemo(
     () => sortRows(filter === 'all' ? rows : rows.filter((r) => customerGroup(r) === filter), filter),
@@ -417,23 +420,39 @@ function CustomerList({ rows }: { rows: CustomerRow[] }) {
           </button>
         ))}
       </div>
+      {done && (
+        <div className="mb-4">
+          <Alert tone="success">{done}</Alert>
+        </div>
+      )}
       {shown.length === 0 ? (
         <p className="text-ink-2">{FILTERS.find((f) => f.value === filter)?.empty}</p>
       ) : (
         <ul className="divide-y divide-line">
           {shown.map((r) => (
-            <CustomerItem key={r.store_id} row={r} />
+            <CustomerItem key={r.store_id} row={r} onSubscribe={() => setSubscribing(r)} />
           ))}
         </ul>
       )}
+      {subscribing && (
+        <SubscribeDialog
+          row={subscribing}
+          onClose={() => setSubscribing(null)}
+          onDone={(activeUntil) => {
+            setDone(`${subscribing.store_name} sekarang berlangganan sampai ${formatDate(activeUntil)}. Batas uji coba sudah lepas.`)
+            setSubscribing(null)
+            onChanged()
+          }}
+        />
+      )}
       <p className="mt-4 text-sm text-ink-3">
-        Memperpanjang, menjadikan uji coba berlangganan, atau reset password masih lewat SQL Editor (lihat OPERASI.md).
+        Memperpanjang langganan atau reset password masih lewat SQL Editor (lihat OPERASI.md).
       </p>
     </>
   )
 }
 
-function CustomerItem({ row }: { row: CustomerRow }) {
+function CustomerItem({ row, onSubscribe }: { row: CustomerRow; onSubscribe: () => void }) {
   const status = customerStatus(row.active_until)
   const statusColor = status.state === 'expired' || status.state === 'expiring' ? 'text-warn' : 'text-ink-2'
   return (
@@ -457,7 +476,100 @@ function CustomerItem({ row }: { row: CustomerRow }) {
           )}
         </p>
         <p className="text-ink-3">Login terakhir: {lastLoginLabel(row.last_sign_in_at)}</p>
+        {row.trial && (
+          <Button variant="secondary" onClick={onSubscribe} className="mt-2">
+            Jadikan berlangganan
+          </Button>
+        )}
       </div>
     </li>
+  )
+}
+
+/** Jendela "Jadikan berlangganan": pilih lama langganan (mulai hari ini), lalu simpan. */
+function SubscribeDialog({
+  row,
+  onClose,
+  onDone,
+}: {
+  row: CustomerRow
+  onClose: () => void
+  onDone: (activeUntil: string) => void
+}) {
+  const titleId = useId()
+  const [activeUntil, setActiveUntil] = useState(() => paidEnd(1))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const save = async () => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(activeUntil) || activeUntil < wibToday()) {
+      setError('Tanggal berakhir tidak boleh sebelum hari ini.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await subscribeStore(row.store_id, activeUntil)
+      onDone(activeUntil)
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal labelledBy={titleId} onClose={onClose} dismissible={!busy}>
+      <h2 id={titleId} className="font-display text-2xl font-extrabold tracking-tight">
+        Jadikan {row.store_name} berlangganan
+      </h2>
+      <p className="mt-3 text-ink-2">
+        Batas uji coba langsung lepas. Langganan dihitung mulai hari ini
+        {row.owner_emails.length > 0 && <> ({row.owner_emails.join(', ')})</>}.
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Lama berlangganan">
+        {(
+          [
+            [1, '1 bulan'],
+            [12, '1 tahun'],
+          ] as const
+        ).map(([months, label]) => (
+          <button
+            key={months}
+            type="button"
+            aria-pressed={activeUntil === paidEnd(months)}
+            onClick={() => setActiveUntil(paidEnd(months))}
+            className={`min-h-11 rounded-full border-2 px-4 font-semibold transition-colors ${
+              activeUntil === paidEnd(months) ? 'border-ink bg-ink text-paper' : 'border-control bg-paper text-ink hover:border-ink'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <label className="mt-4 block font-semibold">
+        Berlangganan sampai
+        <input
+          type="date"
+          value={activeUntil}
+          min={wibToday()}
+          onChange={(e) => setActiveUntil(e.target.value)}
+          className={`mt-1.5 font-normal ${inputClass}`}
+        />
+      </label>
+      {error && (
+        <div className="mt-4">
+          <Alert tone="error">{error}</Alert>
+        </div>
+      )}
+      <div className="mt-5 flex flex-col gap-3">
+        <Button onClick={save} disabled={busy}>
+          {busy ? 'Menyimpan…' : activeUntil ? `Jadikan berlangganan sampai ${formatDate(activeUntil)}` : 'Jadikan berlangganan'}
+        </Button>
+        <Button variant="secondary" onClick={onClose} disabled={busy}>
+          Batal
+        </Button>
+      </div>
+    </Modal>
   )
 }

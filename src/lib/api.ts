@@ -771,6 +771,11 @@ export async function createAccount(
   return check(res) as { user_id: string; store_id: number }
 }
 
+/** Pengelola: jadikan toko uji coba berlangganan sampai tanggal itu (SQL 20261031). */
+export async function subscribeStore(storeId: number, activeUntil: string): Promise<void> {
+  check(await supabase.rpc('platform_subscribe_store', { p_store_id: storeId, p_active_until: activeUntil }))
+}
+
 /** Pemilik mengisi nama tokonya (sekali, hanya kalau name_pending). */
 export async function setStoreName(storeId: number, name: string): Promise<void> {
   check(await supabase.rpc('set_store_name', { p_store_id: storeId, p_name: name }))
