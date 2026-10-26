@@ -12,7 +12,8 @@ import {
   type ParsedAdsFile,
   type SavedAdsPeriod,
 } from '../components/adsUpload'
-import { fetchProducts, findAdShopElsewhere, saveIncomeReport, saveOrderItems } from '../lib/api'
+import { fetchProducts, fetchTrialMonthsUsed, findAdShopElsewhere, saveIncomeReport, saveOrderItems } from '../lib/api'
+import { trialMonthsNotice, trialUploadCheck, trialUploadProblem, uploadMonths } from '../lib/trialLimits'
 import { notifyDataChanged } from '../lib/events'
 import { ROUTES, navigate } from '../lib/router'
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from '../lib/format'
@@ -73,6 +74,28 @@ export function UploadPage({
   const adsGroups = allAdsGroups.filter((g) => g.month !== null)
   const adsSkipped = allAdsGroups.length - adsGroups.length
   const adsBlocked = adsProblem(adsGroups)
+
+  // Akun uji coba: bulan laporan penghasilan & iklan yang sudah tersimpan (null = bukan uji coba / belum tahu).
+  const trial = Boolean(store?.trial)
+  const storeKey = store?.id ?? null
+  const [trialUsed, setTrialUsed] = useState<string[] | null>(null)
+  const [trialVersion, setTrialVersion] = useState(0)
+  useEffect(() => {
+    setTrialUsed(null)
+    if (storeKey === null || !trial) return
+    let cancelled = false
+    fetchTrialMonthsUsed(storeKey).then((m) => !cancelled && setTrialUsed(m))
+    return () => {
+      cancelled = true
+    }
+  }, [storeKey, trial, trialVersion])
+  const trialProblem =
+    trialUsed === null
+      ? null
+      : trialUploadProblem(
+          trialUploadCheck(trialUsed, uploadMonths(income?.result, adsGroups.map((g) => g.month))),
+          trialUsed,
+        )
 
   const onOrdersFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -167,7 +190,7 @@ export function UploadPage({
   const hasData = Boolean(orders?.result || income?.result || adsGroups.length > 0)
   const reading = Boolean(orders?.loading || income?.loading || ads?.loading)
   const hasFileErrors = Boolean(orders?.error || income?.error || ads?.files.some((f) => f.error))
-  const canSave = Boolean(store) && hasData && !adsBlocked && !reading && !saving
+  const canSave = Boolean(store) && hasData && !adsBlocked && !trialProblem && !reading && !saving
 
   // File yang sudah dibaca tapi belum disimpan hilang kalau pindah halaman. Tahan semua tautan di dalam
   // aplikasi (menu, logo) dan tanya dulu; menutup / memuat ulang tab memakai peringatan browser.
@@ -233,7 +256,10 @@ export function UploadPage({
       setSaveError(error)
       return false
     } finally {
-      if (savedSomething) notifyDataChanged()
+      if (savedSomething) {
+        notifyDataChanged()
+        setTrialVersion((v) => v + 1)
+      }
       setSaving(false)
     }
   }
@@ -246,6 +272,12 @@ export function UploadPage({
       >
         Upload laporan
       </PageTitle>
+
+      {trialUsed !== null && (
+        <div className="mb-8">
+          <Alert tone="info">{trialMonthsNotice(trialUsed)}</Alert>
+        </div>
+      )}
 
       {multiStore && (
         <div className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-tint px-5 py-4 ring-1 ring-line">
@@ -353,6 +385,11 @@ export function UploadPage({
           {adsBlocked && (
             <div className="mb-4">
               <Alert tone="error">{adsBlocked}</Alert>
+            </div>
+          )}
+          {trialProblem && (
+            <div className="mb-4">
+              <Alert tone="error">{trialProblem}</Alert>
             </div>
           )}
           {saveError ? (

@@ -4,6 +4,7 @@
  * Fungsi murni (tanpa Supabase) supaya bisa dites. Aturan isian sama dengan platform_create_trial()
  * di database (migration 20261026000000); yang benar-benar menolak tetap database.
  */
+import { TRIAL_MONTH_LIMIT, TRIAL_SIMULATION_LIMIT } from './trialLimits'
 import { MIN_PASSWORD_LENGTH } from './password'
 import { subscriptionStatus, wibToday } from './subscription'
 import { formatDate } from './format'
@@ -105,6 +106,8 @@ export function welcomeMessage(input: {
     `Password: ${input.password}`,
     '',
     `Bisa dipakai sampai ${formatDate(input.activeUntil)}. Setelah login, ganti password di halaman Akun ya.`,
+    '',
+    `Selama uji coba, laporan bisa disimpan untuk ${TRIAL_MONTH_LIMIT} bulan (mulai dari bulan lalu ya) dan Simulasi Harga ${TRIAL_SIMULATION_LIMIT} produk per hari.`,
   ].join('\n')
 }
 

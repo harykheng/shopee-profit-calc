@@ -1,4 +1,5 @@
 import { ParseError } from './parsers/common'
+import { trialLimitMessage } from './trialLimits'
 
 /** Pesan untuk pelanggan kalau database belum diperbarui. Detailnya hanya untuk pengelola (lihat adminHint). */
 const SYSTEM_TROUBLE = 'Ada gangguan di sistem kami. Coba lagi sebentar lagi; kalau masih gagal, hubungi pengelola aplikasi.'
@@ -9,6 +10,7 @@ const MISSING_MIGRATIONS: [match: (lower: string) => boolean, file: string][] = 
     (l) => l.includes('platform_create_trial') || l.includes('platform_list_customers') || l.includes('is_platform_admin'),
     '20261026000000_platform_admin.sql',
   ],
+  [(l) => l.includes('use_trial_simulation') || l.includes('trial_months_used'), '20261027000000_trial_limits.sql'],
   [(l) => l.includes('active_until') || l.includes('store_members'), '20261012000000_multi_tenant.sql'],
   [
     (l) => l.includes('save_income_report') || l.includes('income_orders') || (l.includes('income_adjustments') && l.includes('order_no')),
@@ -46,6 +48,8 @@ export function friendlyError(err: unknown): string {
   if (err instanceof ParseError) return err.message
   const message = errorText(err)
   const lower = message.toLowerCase()
+  const trialLimit = trialLimitMessage(message)
+  if (trialLimit) return trialLimit
   if (lower.includes('fee_categories_store_name_key')) return 'Sudah ada kategori dengan nama itu. Pakai nama lain.'
   if (lower.includes('invalid login credentials')) return 'Email atau password salah.'
   if (lower.includes('email not confirmed')) return 'Akun ini belum dikonfirmasi. Hubungi pengelola aplikasi.'

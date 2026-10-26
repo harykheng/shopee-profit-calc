@@ -3,6 +3,8 @@ export interface Store {
   name: string
   /** Langganan berlaku sampai tanggal ini ("YYYY-MM-DD"); null = tidak dibatasi. */
   active_until: string | null
+  /** Toko uji coba (stores.trial): data maks. 2 bulan, simulasi maks. 10 produk per hari. Tidak ada = berbayar. */
+  trial?: boolean
 }
 
 export interface Product {

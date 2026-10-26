@@ -144,6 +144,13 @@ Setelah disimpan muncul ringkasan:
 
 Kalau salah memilih file (misalnya PDF di kotak Excel), aplikasi akan memberi tahu dengan jelas.
 
+**Akun uji coba: data maksimal 2 bulan.** Selama uji coba, laporan penghasilan dan data iklan hanya bisa
+disimpan untuk **2 bulan** (dihitung dari bulan uang cair dan bulan periode iklan). Kotak di atas halaman
+Upload menunjukkan bulan yang sudah terpakai. Upload ulang bulan yang sudah ada selalu boleh. Kalau file
+berisi bulan ke-3, tombol simpan tidak bisa ditekan dan aplikasi menyebut bulannya. Pilih laporan 1 bulan
+saja, atau berlangganan. Export pesanan tidak dibatasi (boleh rentang lebar seperti biasa). Setelah
+berlangganan, batas ini hilang.
+
 ---
 
 ## 5. Halaman HPP
@@ -425,6 +432,13 @@ sedangkan Simulasi Harga menghitung **sebelum** terjadi. Potongan Shopee dihitun
 (admin %, Gratis Ongkir XTRA %, dan biaya proses yang tetap per order), jadi lebih tepat untuk
 memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
 
+**Akun uji coba: maksimal 10 produk per hari.** Satu produk dihitung sekali per hari, di Satu produk
+maupun Grup iklan. Mengubah harga, ROAS, atau biaya produk yang sama **tidak** menambah hitungan, dan
+produk yang sudah dicoba hari itu tetap bisa dibuka lagi. Produk yang diketik sendiri dihitung per modal
+(HPP). Sisa jatah tertulis di atas kotak pilih produk. Kalau jatah habis, hasil untuk produk baru tidak
+tampil (di Grup iklan, produk itu tidak ikut dihitung) sampai besok. Setelah berlangganan, batas ini
+hilang.
+
 ### Cara pakai
 
 1. Buka menu **Simulasi** (judul halamannya "Simulasi Harga"). Nama toko di judul mengikuti pilihan Toko pada menu.
@@ -585,6 +599,11 @@ aman.
 
 **Upload file yang sama dua kali, apakah dobel?**
 Tidak. Pesanan, penghasilan, dan data iklan dikenali dan diperbarui, tidak ditambah lagi.
+
+**Akun uji coba: kenapa laporan bulan lain ditolak?**
+Uji coba bisa menyimpan data 2 bulan dan Simulasi Harga 10 produk per hari (lihat
+[Halaman Upload](#4-halaman-upload) dan [Simulasi Harga](#9-halaman-simulasi-harga)). Data yang sudah
+tersimpan tetap aman. Setelah berlangganan, bulan lain bisa langsung di-upload.
 
 **Kenapa "Barang terjual" di Rekap lebih sedikit dari jumlah barang yang dipesan bulan itu?**
 Rekap hanya menghitung barang yang **selesai dan uangnya cair** di bulan itu. Barang yang batal,

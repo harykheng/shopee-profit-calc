@@ -10,6 +10,8 @@ import { formatMonth, formatNumber, formatPercent, formatRupiah, monthEnd, wibDa
 import { effectiveAdminPct } from '../lib/feeCategories'
 import type { FeeCategory, Product } from '../lib/types'
 import { DEFAULTS, DecimalInput, Field, Result, TOO_THIN, decimal, formatRoas, roundUp2 } from './simShared'
+import { TrialSimBlocked, TrialSimNotice, useTrialSimulation, type SimGate } from '../components/trialSim'
+import { groupRowSimKey, productSimKey } from '../lib/trialLimits'
 
 interface GroupRow {
   key: string
@@ -52,13 +54,18 @@ async function loadSales(storeId: number): Promise<Sales | null> {
 
 let nextKey = 0
 
+/** Kunci jatah simulasi uji coba: produk yang sama di Satu produk dan Grup iklan dihitung sekali. */
+const simKeyOf = (r: GroupRow) => (r.manual ? groupRowSimKey(r.key) : productSimKey(r.name))
+
 export function AdGroupSim({
   storeId,
+  trial,
   products,
   categories,
   targets,
 }: {
   storeId: number | null
+  trial: boolean
   products: Product[] | null
   categories: FeeCategory[]
   targets: Targets
@@ -157,7 +164,11 @@ export function AdGroupSim({
   const update = (key: string, patch: Partial<GroupRow>) => setRows((r) => r.map((x) => (x.key === key ? { ...x, ...patch } : x)))
   const remove = (key: string) => setRows((r) => r.filter((x) => x.key !== key))
 
-  const complete = rows.filter((r) => r.price !== null && r.price > 0 && r.hpp !== null)
+  const filled = rows.filter((r) => r.price !== null && r.price > 0 && r.hpp !== null)
+  // Akun uji coba: produk yang tidak dapat jatah hari ini tidak ikut dihitung.
+  const sim = useTrialSimulation(storeId, trial, filled.map(simKeyOf))
+  const complete = filled.filter((r) => sim.statusOf(simKeyOf(r)) === 'ok')
+  const anyBlocked = filled.some((r) => sim.statusOf(simKeyOf(r)) === 'blocked')
   const group =
     complete.length > 0
       ? simulateAdGroup({
@@ -195,8 +206,15 @@ export function AdGroupSim({
 
   return (
     <>
+      <TrialSimNotice sim={sim} />
+
       {/* Jawabannya dulu. */}
       <div className="mb-8" aria-live="polite">
+        {anyBlocked && (
+          <div className="mb-6">
+            <TrialSimBlocked limit={sim.limit} />
+          </div>
+        )}
         {!group ? (
           <p className="max-w-3xl font-display text-2xl font-bold leading-snug text-ink-2 sm:text-3xl">
             Pilih produk yang mau dijadikan satu grup iklan. Target ROAS grupnya muncul di sini.
@@ -270,6 +288,7 @@ export function AdGroupSim({
                   key={r.key}
                   row={r}
                   result={resultOf(r.key)}
+                  gate={sim.statusOf(simKeyOf(r))}
                   target={target}
                   onChange={(patch) => update(r.key, patch)}
                   onRemove={() => remove(r.key)}
@@ -344,12 +363,15 @@ export function AdGroupSim({
 function GroupRowCard({
   row,
   result,
+  gate,
   target,
   onChange,
   onRemove,
 }: {
   row: GroupRow
   result: { row: ReturnType<typeof simulateAdGroup>['rows'][number]; price: number } | null
+  /** Jatah simulasi uji coba untuk produk ini (toko berbayar selalu 'ok'). */
+  gate: SimGate
   target: number | null
   onChange: (patch: Partial<GroupRow>) => void
   onRemove: () => void
@@ -433,7 +455,11 @@ function GroupRowCard({
       ) : (
         <p className="mt-2 flex items-center gap-1.5 border-t border-rule pt-3 text-sm font-semibold text-warn">
           <IconAlertCircle size={16} className="shrink-0" />
-          Isi harga jual dan HPP supaya ikut dihitung.
+          {row.price === null || row.price <= 0 || row.hpp === null
+            ? 'Isi harga jual dan HPP supaya ikut dihitung.'
+            : gate === 'blocked'
+              ? 'Tidak ikut dihitung: jatah simulasi uji coba hari ini sudah habis.'
+              : 'Mengecek jatah simulasi uji coba…'}
         </p>
       )}
     </li>

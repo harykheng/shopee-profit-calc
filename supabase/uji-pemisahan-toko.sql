@@ -92,12 +92,13 @@ begin
     ('20261021000000_income_per_order_views.sql',  to_regclass('public.order_item_income') is not null),
     ('20261022000000_income_monthly_breakdown.sql', to_regclass('public.income_monthly_breakdown') is not null),
     ('20261023000000_admin_reset_password.sql',    to_regprocedure('public.admin_reset_password(text, text)') is not null),
-    ('20261026000000_platform_admin.sql',          to_regprocedure('public.platform_create_trial(text, text, text, date)') is not null)
+    ('20261026000000_platform_admin.sql',          to_regprocedure('public.platform_create_trial(text, text, text, date)') is not null),
+    ('20261027000000_trial_limits.sql',            to_regclass('public.trial_simulations') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261026000000_platform_admin.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261027000000_trial_limits.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -136,7 +137,8 @@ begin
         ('ad_rows',            'insert into public.ad_rows (report_id, seq, ad_name, spend) values ($3, 1, ''uji'', 100)'),
         ('fee_categories',     'insert into public.fee_categories (store_id, name, admin_pct) values ($1, ''UJI kategori'', 5)'),
         ('store_settings',     'insert into public.store_settings (store_id, ads_target_profit_pct) values ($1, 10)'),
-        ('client_errors',      'insert into public.client_errors (store_id, kind, message, fingerprint) values ($1, ''handled'', ''uji'', ''uji'')')
+        ('client_errors',      'insert into public.client_errors (store_id, kind, message, fingerprint) values ($1, ''handled'', ''uji'', ''uji'')'),
+        ('trial_simulations',  'insert into public.trial_simulations (store_id, day, item_key) values ($1, $2, ''uji'')')
       ) as x (nama, kueri)
     loop
       begin
@@ -201,7 +203,9 @@ begin
     where s.nspname = 'public' and p.prosecdef
       -- Tiga fungsi halaman Pengelola memeriksa is_platform_admin() sendiri; diuji di bagian 2e.
       and p.proname not in ('is_store_member', 'is_store_active', 'client_errors_rate_limit',
-                            'is_platform_admin', 'platform_create_trial', 'platform_list_customers')
+                            'is_platform_admin', 'platform_create_trial', 'platform_list_customers',
+                            -- Memeriksa keanggotaan toko sendiri; diuji di bagian 2c.
+                            'use_trial_simulation')
       and (has_function_privilege('authenticated', p.oid, 'EXECUTE') or has_function_privilege('anon', p.oid, 'EXECUTE'));
     v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
     v_uji := v_uji || 'Struktur: tidak ada fungsi security definer baru yang terbuka'::text;
@@ -346,7 +350,9 @@ begin
         ('Upload iklan ke toko lain (save_ad_report)',
          'select 1 from public.save_ad_report($1, date ''2000-02-01'', date ''2000-02-07'', ''otomatis'', ''uji'', ''[{"ad_name":"uji"}]''::jsonb)'),
         ('Hitung ulang HPP toko lain (recalc_hpp)',
-         'select public.recalc_hpp($1, $5, false)')
+         'select public.recalc_hpp($1, $5, false)'),
+        ('Pakai jatah simulasi toko lain (use_trial_simulation)',
+         'select (public.use_trial_simulation($1, ''uji'') ->> ''used'')::bigint')
       ) as x (nama, kueri)
     loop
       -- Kontrol ke toko A: $1 = toko A, $2 = laporan iklan A, $3 dan $4 = akun sendiri.
@@ -478,6 +484,40 @@ begin
                               else 'gagal membuat akun, halaman Pengelola perlu diperbaiki: ' || sqlstate || ' ' end || sqlerrm);
     end;
     v_uji := v_uji || 'Pengelola: buat akun uji coba (kontrol)'::text;
+
+    -- 2f. Akun uji coba: data bulan ke-3 ditolak, bulan yang sudah ada tetap boleh.
+    begin
+      reset role;
+      execute 'update public.stores set trial = true where id = $1' using sa;
+      set local role authenticated;
+      -- Toko A sudah punya data iklan bulan ini; ditambah penghasilan bulan ini dan bulan lalu = 2 bulan.
+      execute 'select inserted from public.upsert_income($1, jsonb_build_array(jsonb_build_object(''released_date'', $2, ''total_income'', 1), jsonb_build_object(''released_date'', $2 - interval ''1 month'', ''total_income'', 1)))'
+        into n using sa, bulan;
+      begin
+        execute 'select inserted from public.upsert_income($1, jsonb_build_array(jsonb_build_object(''released_date'', $2 - interval ''2 month'', ''total_income'', 1)))'
+          into n2 using sa, bulan;
+        v_status := v_status || 'GAGAL'::text;
+        v_ket := v_ket || 'bulan ke-3 tersimpan di toko uji coba'::text;
+      exception when others then
+        if sqlerrm like 'trial_month_limit:%' then
+          execute 'select inserted + updated from public.upsert_income($1, jsonb_build_array(jsonb_build_object(''released_date'', $2 + 1, ''total_income'', 1)))'
+            into n2 using sa, bulan;
+          v_status := v_status || case when n2 = 1 then 'LULUS' else 'GAGAL' end;
+          v_ket := v_ket || case when n2 = 1 then 'bulan ke-3 ditolak; bulan yang sudah ada tetap tersimpan'
+                                 else 'bulan yang sudah ada ikut ditolak' end;
+        else
+          v_status := v_status || 'CEK'::text;
+          v_ket := v_ket || (sqlstate || ' ' || sqlerrm);
+        end if;
+      end;
+      reset role;
+      execute 'update public.stores set trial = false where id = $1' using sa;
+    exception when others then
+      reset role;
+      v_status := v_status || 'CEK'::text;
+      v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+    end;
+    v_uji := v_uji || 'Uji coba: data maksimal 2 bulan'::text;
 
     -- -------------------------------------------------------------------------
     -- 3. Tanpa login (anon)

@@ -106,7 +106,15 @@ update public.stores set active_until = (now() at time zone 'Asia/Jakarta')::dat
 
 `id` toko terlihat di hasil `select id, name, active_until, trial from public.stores order by id;`.
 Penanda **Uji coba** tidak hilang sendiri; ubah `trial = false` saat pelanggan mulai membayar supaya
-daftar Uji coba di halaman Pengelola hanya berisi yang masih mencoba.
+daftar Uji coba di halaman Pengelola hanya berisi yang masih mencoba, **dan supaya batas uji coba
+lepas**. Selama `trial = true` (migration `20261027000000_trial_limits.sql`):
+- laporan penghasilan + data iklan hanya bisa disimpan untuk **2 bulan** (bulan uang cair / periode iklan;
+  export pesanan tidak dibatasi; upload ulang bulan yang sama selalu boleh);
+- Simulasi Harga maksimal **10 produk per hari** (WIB).
+
+Lupa mengubah `trial = false` = pelanggan yang sudah bayar tetap kena batas ini. Kalau pelanggan
+mengeluh "laporan bulan lain ditolak", cek dulu kolom `trial` tokonya. Angka batasnya ada di fungsi
+`trial_month_limit()` dan `trial_simulation_limit()`; mengubahnya cukup `create or replace` fungsi itu.
 
 Setelah dihentikan, pelanggan masih bisa **melihat** Rekap (baca saja) tapi tidak bisa mengubah data.
 

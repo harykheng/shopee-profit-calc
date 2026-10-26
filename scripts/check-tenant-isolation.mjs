@@ -380,10 +380,12 @@ try {
     ['A melihat daftar pelanggan lewat platform_list_customers', () => A.client.rpc('platform_list_customers')],
     ['A membaca daftar pengelola (platform_admins)', () => A.client.from('platform_admins').select('*').limit(5)],
     ['A menjadikan dirinya pengelola', () => A.client.from('platform_admins').insert({ user_id: A.user.id })],
+    ['A memakai jatah simulasi toko B (use_trial_simulation)', () => A.client.rpc('use_trial_simulation', { p_store_id: storeB.id, p_key: MARK })],
+    ['A membaca jatah simulasi uji coba (trial_simulations)', () => A.client.from('trial_simulations').select('*').limit(5)],
   ]
   for (const [name, run] of platformCalls) {
     const res = await run()
-    if (isMissing(res.error)) skip(name, 'belum ada (migration 20261026000000 belum dijalankan)')
+    if (isMissing(res.error)) skip(name, 'belum ada (migration 20261026000000 / 20261027000000 belum dijalankan)')
     else if (isDenied(res.error)) pass(name, 'ditolak')
     else if (res.error) check(name, `error lain: ${short(res.error)}`)
     else if (Array.isArray(res.data) && res.data.length === 0) pass(name, '0 baris')

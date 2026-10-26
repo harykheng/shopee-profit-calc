@@ -39,7 +39,16 @@ function chunks<T>(items: T[], size = CHUNK): T[][] {
 }
 
 export async function fetchStores(): Promise<Store[]> {
-  return check(await supabase.from('stores').select('id, name, active_until').order('id'))
+  const res = await supabase.from('stores').select('id, name, active_until, trial').order('id')
+  // Kolom trial baru ada setelah 20261026000000_platform_admin.sql; tanpa itu semua toko dianggap berbayar.
+  if (res.error && errorTextOf(res.error).includes('trial')) {
+    return check(await supabase.from('stores').select('id, name, active_until').order('id'))
+  }
+  return check(res)
+}
+
+function errorTextOf(err: unknown): string {
+  return err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : String(err)
 }
 
 /** Sudah sampai mana toko ini mengisi data. Dipakai untuk panduan awal di halaman Rekap. */
@@ -731,4 +740,28 @@ export async function createTrialAccount(form: TrialForm): Promise<{ user_id: st
 export async function fetchCustomers(): Promise<CustomerRow[]> {
   const rows = check(await supabase.rpc('platform_list_customers')) as CustomerRow[]
   return rows.map((r) => ({ ...r, store_id: Number(r.store_id), owner_emails: r.owner_emails ?? [] }))
+}
+
+// --- Batas akun uji coba (migration 20261027000000_trial_limits.sql) -------------------------
+
+/** Bulan ("YYYY-MM-01") yang sudah berisi laporan penghasilan / data iklan. null kalau SQL-nya belum dijalankan. */
+export async function fetchTrialMonthsUsed(storeId: number): Promise<string[] | null> {
+  const res = await supabase.rpc('trial_months_used', { p_store_id: storeId })
+  if (res.error) return null
+  return ((res.data as string[] | null) ?? []).map((d) => d.slice(0, 10))
+}
+
+export interface TrialSimulationStatus {
+  trial: boolean
+  allowed: boolean
+  used: number
+  limit: number
+}
+
+/**
+ * Catat satu simulasi produk (key) untuk toko uji coba, dan apakah hasilnya boleh ditampilkan.
+ * key null = hanya melihat sisa jatah. Toko berbayar selalu boleh.
+ */
+export async function claimTrialSimulation(storeId: number, key: string | null): Promise<TrialSimulationStatus> {
+  return check(await supabase.rpc('use_trial_simulation', { p_store_id: storeId, p_key: key })) as TrialSimulationStatus
 }

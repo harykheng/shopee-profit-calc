@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Button, Card, ErrorBox, NotaTotal, PageTitle, Stamp, inputClass, linkClass } from '../components/ui'
+import { TrialSimBlocked, TrialSimNotice, useTrialSimulation } from '../components/trialSim'
+import { manualSimKey, productSimKey } from '../lib/trialLimits'
+import { Alert, Button, Card, ErrorBox, NotaTotal, PageTitle, Spinner, Stamp, inputClass, linkClass } from '../components/ui'
 import { IconCheck, IconChevronDown, IconSearch } from '../components/icons'
 import { RupiahInput } from '../components/pickers'
 import {
@@ -61,6 +63,8 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
   const [actualRoas, setActualRoas] = useState<number | null>(null)
   const [extraFees, setExtraFees] = useExtraFees(storeId)
   const [mode, setMode] = useState<'satu' | 'grup'>('satu')
+  // Produk terakhir yang dipilih: "Ganti / isi manual" dengan HPP yang sama tetap dihitung produk itu (jatah uji coba).
+  const [simOrigin, setSimOrigin] = useState<{ key: string; hpp: number | null } | null>(null)
 
   // Pilih produk yang sudah di-upload (opsional).
   const [products, setProducts] = useState<Product[] | null>(null)
@@ -84,6 +88,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
     setProducts(null)
     setProductsError(null)
     setSelected(null)
+    setSimOrigin(null)
     setNotes({})
     setAdRoas(null)
     setCategories([])
@@ -114,6 +119,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
     setFeesSaved(false)
     setFeesError(null)
     setHpp(p.hpp === null ? null : Number(p.hpp))
+    setSimOrigin({ key: productSimKey(p.product_name), hpp: p.hpp === null ? null : Number(p.hpp) })
     const effective = effectiveAdminPct(p, categories)
     const cat = p.fee_category_id != null ? (categories.find((c) => c.id === p.fee_category_id) ?? null) : null
     setCategoryId(cat ? cat.id : null)
@@ -188,7 +194,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
   // Biaya tambahan ikut dihitung: yang persen ditambahkan ke % admin, yang rupiah ke biaya per order.
   const extra = extraFeeTotals(extraFees)
   const ready = hpp !== null && price !== null && price > 0 && realisticRoas !== null && realisticRoas > 0
-  const r = ready
+  const rawR = ready
     ? simulatePrice({
         hpp,
         price,
@@ -203,7 +209,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
     : null
 
   // Produk baru: modal sudah ada tapi harga jual belum ditentukan → sarankan harga & target ROAS.
-  const ladder =
+  const rawLadder =
     hpp !== null && hpp > 0 && (price === null || price === 0) && realisticRoas !== null && realisticRoas > 0
       ? priceLadder({
           hpp,
@@ -215,6 +221,21 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
           targets,
         })
       : null
+
+  // Akun uji coba: hasil hanya tampil kalau produk ini masih dapat jatah hari ini.
+  const simKey = !(rawR || rawLadder)
+    ? null
+    : selected
+      ? productSimKey(selected.product_name)
+      : simOrigin && simOrigin.hpp === hpp
+        ? simOrigin.key
+        : hpp !== null
+          ? manualSimKey(hpp)
+          : null
+  const sim = useTrialSimulation(storeId, Boolean(store?.trial), mode === 'satu' ? [simKey] : [])
+  const gate = sim.statusOf(simKey)
+  const r = gate === 'ok' ? rawR : null
+  const ladder = gate === 'ok' ? rawLadder : null
   const recRow = ladder?.rows.find((x) => x.price === ladder.recommended) ?? null
 
   return (
@@ -273,10 +294,17 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
 
       {mode === 'grup' ? (
         <div key="grup" className="page-in">
-          <AdGroupSim storeId={storeId} products={products} categories={categories} targets={targets} />
+          <AdGroupSim
+            storeId={storeId}
+            trial={Boolean(store?.trial)}
+            products={products}
+            categories={categories}
+            targets={targets}
+          />
         </div>
       ) : (
         <div key="satu" className="page-in">
+          <TrialSimNotice sim={sim} />
 
           <Card title="Pilih produk (opsional)" className="mb-6">
             {productsError ? (
@@ -298,7 +326,11 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
 
           {/* Jawabannya dulu, ikut berubah begitu angka diubah. */}
           <div className="mb-8" aria-live="polite">
-            {r && price !== null ? (
+            {gate === 'blocked' ? (
+              <TrialSimBlocked limit={sim.limit} />
+            ) : gate === 'pending' ? (
+              <Spinner label="Mengecek jatah simulasi uji coba…" />
+            ) : r && price !== null ? (
               <>
                 <h2 className="font-display text-3xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">
                   Dijual <span className="num whitespace-nowrap">{formatRupiah(price)}</span>,{' '}
@@ -467,7 +499,7 @@ export function PriceSimPage({ stores, storeId }: { stores: Store[]; storeId: nu
                   targets={targets}
                   onPick={setPrice}
                 />
-              ) : !r ? (
+              ) : !r && gate !== 'ok' ? null : !r ? (
                 <Alert title="Hasilnya muncul di sini.">
                   Rincian per order, ROAS balik modal, dan saran harga jual. Angka diperbarui setelah kamu pindah kolom atau
                   menekan Enter.
