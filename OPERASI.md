@@ -111,7 +111,9 @@ lepas**. Selama `trial = true` (migration `20261027000000_trial_limits.sql` + an
 `20261028000000_trial_limits_total.sql`):
 - laporan penghasilan + data iklan hanya bisa disimpan untuk **1 bulan** (bulan uang cair / periode iklan;
   export pesanan tidak dibatasi; upload ulang bulan yang sama selalu boleh);
-- Simulasi Harga maksimal **50 produk selama uji coba** (produk yang sama dihitung sekali).
+- Simulasi Harga maksimal **50 produk selama uji coba** (produk yang sama dihitung sekali);
+- **Cek cepat** di halaman Iklan tidak tersedia (khusus pelanggan berlangganan; dikunci di aplikasi saja,
+  karena Cek cepat tidak menyimpan apa pun ke database).
 
 **Pelanggan uji coba salah bulan** (mis. upload bulan berjalan yang belum selesai): hapus laporan
 penghasilan & iklan bulan itu, lalu minta dia upload bulan yang benar. Export pesanan tidak perlu dihapus.

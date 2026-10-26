@@ -13,7 +13,7 @@ import {
   type SavedAdsPeriod,
 } from '../components/adsUpload'
 import { fetchProducts, fetchTrialMonthsUsed, findAdShopElsewhere, saveIncomeReport, saveOrderItems } from '../lib/api'
-import { trialMonthsNotice, trialUploadCheck, trialUploadProblem, uploadMonths } from '../lib/trialLimits'
+import { QUICK_CHECK_TRIAL_NOTE, trialMonthsNotice, trialUploadCheck, trialUploadProblem, uploadMonths } from '../lib/trialLimits'
 import { notifyDataChanged } from '../lib/events'
 import { ROUTES, navigate } from '../lib/router'
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from '../lib/format'
@@ -315,11 +315,16 @@ export function UploadPage({
         >
           <p className="mb-3 text-ink-2">
             Seller Centre → Iklan Saya → Download Data, periode <strong className="text-ink">1 bulan penuh</strong>. Tiap
-            periode terdiri dari beberapa file: pilih semuanya sekaligus. Mau cek iklan beberapa hari terakhir?{' '}
-            <a href="#/iklan?cek=1" className={linkClass}>
-              Pakai Cek cepat
-            </a>{' '}
-            (tidak disimpan).
+            periode terdiri dari beberapa file: pilih semuanya sekaligus.{' '}
+            {trial ? null : (
+              <>
+                Mau cek iklan beberapa hari terakhir?{' '}
+                <a href="#/iklan?cek=1" className={linkClass}>
+                  Pakai Cek cepat
+                </a>{' '}
+                (tidak disimpan).
+              </>
+            )}
           </p>
           <AdsHowTo />
           <FileInput
@@ -338,6 +343,7 @@ export function UploadPage({
               problem={adsBlocked}
               elsewhere={adsElsewhere}
               storeName={store?.name}
+              trial={trial}
             />
           ) : null}
         </Card>
@@ -369,11 +375,18 @@ export function UploadPage({
           {adsSkipped > 0 && (
             <div className="mb-4">
               <Alert tone="info">
-                {adsSkipped} periode data iklan bukan 1 bulan penuh, jadi tidak ikut disimpan. Cek di{' '}
-                <a href="#/iklan?cek=1" className={linkClass}>
-                  Cek cepat
-                </a>
-                .
+                {adsSkipped} periode data iklan bukan 1 bulan penuh, jadi tidak ikut disimpan.{' '}
+                {trial ? (
+                  QUICK_CHECK_TRIAL_NOTE
+                ) : (
+                  <>
+                    Cek di{' '}
+                    <a href="#/iklan?cek=1" className={linkClass}>
+                      Cek cepat
+                    </a>
+                    .
+                  </>
+                )}
               </Alert>
             </div>
           )}

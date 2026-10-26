@@ -85,6 +85,9 @@ export function trialLimitMessage(errorMessage: string): string | null {
   return `${errorMessage.slice(i + MONTH_LIMIT_PREFIX.length).trim()} Upload ulang bulan yang sudah ada tetap boleh; untuk bulan lain, berlangganan dulu.`
 }
 
+/** Cek cepat (data iklan beberapa hari, tidak disimpan) tidak tersedia selama uji coba. */
+export const QUICK_CHECK_TRIAL_NOTE = 'Cek cepat khusus untuk pelanggan berlangganan.'
+
 /** Kunci jatah simulasi untuk produk yang sudah ada di data (sama di Satu produk dan Grup iklan). */
 export function productSimKey(productName: string): string {
   return `produk:${productName.trim().toLowerCase()}`

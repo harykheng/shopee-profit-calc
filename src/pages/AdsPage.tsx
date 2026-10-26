@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Alert, Button, Card, ErrorBox, PageTitle, ScrollX, Spinner, Stamp, buttonClass, linkClass, type StampTone } from '../components/ui'
 import { IconAlertCircle, IconCards, IconChevronDown, IconInfo, IconRows, IconSearch, IconUpload } from '../components/icons'
 import { AdsQuickCheck } from './AdsQuickCheck'
+import { QUICK_CHECK_TRIAL_NOTE } from '../lib/trialLimits'
 import { fetchAdReports } from '../lib/api'
 import { MIN_LINES_FOR_ACTUAL_FEE, fullMonthOf, type AdProductResult, type AdVerdict, type AdsAnalysis, type Targets } from '../lib/adsMath'
 import { loadAdsAnalysis, type Loaded, type Period } from '../lib/adsLoad'
@@ -46,7 +47,10 @@ export function AdsPage({
   quickCheck?: boolean
 }) {
   const store = stores.find((s) => s.id === storeId) ?? null
-  const [quickOpen, setQuickOpen] = useState(quickCheck)
+  // Akun uji coba: Cek cepat tidak tersedia (khusus pelanggan berlangganan), termasuk lewat tautan #/iklan?cek=1.
+  const trial = Boolean(store?.trial)
+  const [quickRequested, setQuickOpen] = useState(quickCheck)
+  const quickOpen = quickRequested && !trial
   // Tautan ke Cek cepat saat sudah di halaman Iklan: halaman tidak dimuat ulang, jadi buka dari sini.
   const [lastQuick, setLastQuick] = useState(quickCheck)
   if (quickCheck !== lastQuick) {
@@ -138,10 +142,14 @@ export function AdsPage({
         <section className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-tint px-5 py-3 ring-1 ring-line">
           <p className="min-w-0">
             <span className="font-semibold">Mau cek iklan beberapa hari terakhir?</span>{' '}
-            <span className="text-ink-2">Cek cepat tanpa menyimpan. Data 1 bulan penuh di-upload di halaman Upload.</span>
+            <span className="text-ink-2">
+              {trial
+                ? `${QUICK_CHECK_TRIAL_NOTE} Selama uji coba, upload data iklan 1 bulan penuh di halaman Upload.`
+                : 'Cek cepat tanpa menyimpan. Data 1 bulan penuh di-upload di halaman Upload.'}
+            </span>
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => setQuickOpen(true)} disabled={!store}>
+            <Button onClick={() => setQuickOpen(true)} disabled={!store || trial}>
               <IconSearch size={18} />
               Cek cepat
             </Button>
@@ -162,8 +170,8 @@ export function AdsPage({
       ) : periods.length === 0 ? (
         <Alert title="Belum ada data iklan untuk toko ini.">
           <p>
-            Upload file CSV iklan 1 bulan penuh di halaman Upload, bersama export pesanan dan laporan penghasilan. Untuk
-            cek iklan beberapa hari saja, pakai Cek cepat di atas.
+            Upload file CSV iklan 1 bulan penuh di halaman Upload, bersama export pesanan dan laporan penghasilan.
+            {trial ? null : ' Untuk cek iklan beberapa hari saja, pakai Cek cepat di atas.'}
           </p>
           <a href="#/upload" className={`${buttonClass('primary')} mt-3`}>
             <IconUpload size={18} />

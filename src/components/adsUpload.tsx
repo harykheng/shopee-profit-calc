@@ -1,3 +1,4 @@
+import { QUICK_CHECK_TRIAL_NOTE } from '../lib/trialLimits'
 import type { ReactNode } from 'react'
 import { Alert, ErrorBox, linkClass } from './ui'
 import { IconAlertCircle, IconCheck, IconChevronDown, IconInfo } from './icons'
@@ -123,7 +124,7 @@ export async function saveAdsGroups(storeId: number, groups: AdsFileGroup[]): Pr
 }
 
 /** Apa yang terjadi dengan satu kelompok file di halaman Upload (hanya 1 bulan penuh yang disimpan). */
-function expenseNote(g: AdsFileGroup): { tone: 'info' | 'warning' | 'success'; text: ReactNode } {
+function expenseNote(g: AdsFileGroup, trial: boolean): { tone: 'info' | 'warning' | 'success'; text: ReactNode } {
   if (g.month && g.keseluruhan) {
     return {
       tone: 'success',
@@ -161,11 +162,18 @@ function expenseNote(g: AdsFileGroup): { tone: 'info' | 'warning' | 'success'; t
     text: (
       <>
         <strong>Tidak disimpan:</strong> ini data {periodDays(g.start, g.end)} hari. Halaman Upload hanya menyimpan data 1
-        bulan penuh. Untuk cek iklan beberapa hari, pakai{' '}
-        <a href="#/iklan?cek=1" className={linkClass}>
-          Cek cepat di halaman Iklan
-        </a>
-        .
+        bulan penuh.{' '}
+        {trial ? (
+          QUICK_CHECK_TRIAL_NOTE
+        ) : (
+          <>
+            Untuk cek iklan beberapa hari, pakai{' '}
+            <a href="#/iklan?cek=1" className={linkClass}>
+              Cek cepat di halaman Iklan
+            </a>
+            .
+          </>
+        )}
       </>
     ),
   }
@@ -214,12 +222,15 @@ export function AdsPreview({
   problem,
   elsewhere,
   storeName,
+  trial = false,
 }: {
   files: ParsedAdsFile[]
   groups: AdsFileGroup[]
   problem: string | null
   elsewhere: { shop: string; storeName: string } | null
   storeName: string | undefined
+  /** Toko uji coba: Cek cepat tidak tersedia, jadi tidak ditautkan. */
+  trial?: boolean
 }) {
   const shopNames = new Set(groups.flatMap((g) => g.files.map((r) => r.shopName)).filter(Boolean))
   return (
@@ -240,7 +251,7 @@ export function AdsPreview({
       )}
 
       {groups.map((g) => {
-        const note = expenseNote(g)
+        const note = expenseNote(g, trial)
         return (
           <section key={g.key} className="mt-4 rounded-2xl bg-tint p-4">
             <h3 className="font-semibold">

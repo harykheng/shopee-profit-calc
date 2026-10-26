@@ -250,7 +250,7 @@ npm run build
 
 | (26 Okt) | Halaman Pengelola: buat akun uji coba dari aplikasi, daftar toko + login terakhir. SQL 20261026. |
 | (27 Okt) | Batas uji coba: data 2 bulan (laporan penghasilan & iklan; export pesanan bebas), Simulasi 10 produk/hari (per produk, Satu & Grup berbagi jatah). SQL 20261027. |
-| (28 Okt) | Batas uji coba diubah pemilik: data 1 bulan, Simulasi 50 produk selama uji coba. SQL 20261028. |
+| (28 Okt) | Batas uji coba diubah pemilik: data 1 bulan, Simulasi 50 produk selama uji coba. SQL 20261028. Cek cepat iklan dimatikan untuk uji coba (khusus berlangganan; hanya di aplikasi, tanpa SQL). |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 

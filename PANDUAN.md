@@ -305,6 +305,9 @@ Data 7 hari yang dulu sempat tersimpan tetap ada dan tetap bisa dipilih di **Per
 
 ### Cek cepat (beberapa hari, tidak disimpan)
 
+**Khusus pelanggan berlangganan.** Selama uji coba, tombol **Cek cepat** tidak bisa ditekan; pakai data
+iklan 1 bulan penuh lewat halaman Upload.
+
 Untuk melihat apakah iklan **beberapa hari terakhir** jalan bagus, misalnya setelah memasang iklan
 baru atau mengganti target ROAS.
 
@@ -602,7 +605,8 @@ aman.
 Tidak. Pesanan, penghasilan, dan data iklan dikenali dan diperbarui, tidak ditambah lagi.
 
 **Akun uji coba: kenapa laporan bulan lain ditolak?**
-Uji coba bisa menyimpan data 1 bulan dan Simulasi Harga untuk 50 produk (lihat
+Uji coba bisa menyimpan data 1 bulan dan Simulasi Harga untuk 50 produk; Cek cepat di halaman Iklan
+khusus pelanggan berlangganan (lihat
 [Halaman Upload](#4-halaman-upload) dan [Simulasi Harga](#9-halaman-simulasi-harga)). Data yang sudah
 tersimpan tetap aman. Setelah berlangganan, bulan lain bisa langsung di-upload.
 

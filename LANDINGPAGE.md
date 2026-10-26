@@ -108,7 +108,7 @@ Tanpa ini, halaman jadi di atas kertas saja. Isi di sini, lalu salin ke teks hal
 | # | Keputusan | Isi | Dampak ke klik |
 |---|---|---|---|
 | 1 | Harga per toko | **Rp69.000/bulan** atau **Rp599.000/tahun** (hemat ±28%, setara ±8,7 bulan). Potongan untuk toko kedua dst.: `[ISI]` | Tinggi. Halaman tanpa harga memaksa orang bertanya dulu. |
-| 2 | Uji coba / garansi? | **Gratis 30 hari per toko**, semua fitur dengan batas wajar (data 1 bulan, Simulasi Harga 50 produk; lihat OPERASI.md), tanpa bayar di depan. Satu kali per seller. Setelah habis: mode baca saja, data disimpan `[ISI berapa hari]` | Tinggi. Menurunkan rasa risiko klik. |
+| 2 | Uji coba / garansi? | **Gratis 30 hari per toko**, semua fitur dengan batas wajar (data 1 bulan, Simulasi Harga 50 produk, tanpa Cek cepat iklan; lihat OPERASI.md), tanpa bayar di depan. Satu kali per seller. Setelah habis: mode baca saja, data disimpan `[ISI berapa hari]` | Tinggi. Menurunkan rasa risiko klik. |
 | 3 | Nomor WhatsApp admin (format `62…`) | `[ISI]` | Wajib. Sama dengan `VITE_SUPPORT_WA`. |
 | 4 | Janji waktu balas dan waktu akun jadi | `[ISI jam kerja + SLA]` | Tinggi. Tulis hanya yang bisa ditepati. |
 | 5 | Domain halaman | `studioharel.id`? (app tetap di `app.studioharel.id`) | Sedang |
