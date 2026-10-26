@@ -219,7 +219,7 @@ Charts stay neutral unless the segment is a status: the Rp100 bar uses `line` (m
 - **Shell:** sticky top bar on `canvas` (1px `line` under it, 64px): brand (HitungCuan logo for the HitungCuan deploy,
   only its mark below 640px and between 1024 and 1279px where the nav shares the bar; the app name as text for other
   deploys), store pill select (only when the account has several stores), nav from 1024px (six pills with one sliding
-  `ink` marker), Akun and Keluar icon buttons.
+  `ink` marker), Akun and Keluar icon buttons (plus a key icon for Pengelola, only for operator accounts).
   Below 1024px the nav is a fixed `paper` bottom bar of six cells (icon over short label) with an `ink` pill marker
   behind the active icon; the page reserves room for it plus the safe-area inset.
 - **Password banner:** while the user still has the operator's temporary password, a full-width `sun` strip with `ink`
@@ -299,6 +299,13 @@ pill for buttons, selects, tabs, filters and nav.
 - **Category panel** (Simulasi Harga): an outlined pill "Kategori biaya admin · N kategori" opens it; list of categories
   (name, %, product count, delete), an add row on a `tint` well, then one row per product with a native select.
   Choosing a category fills and locks the product's admin %; "Isi persen sendiri" unlocks it.
+- **Pengelola page** (`#/pengelola`, operator only): page title, then the answer sentence ("2 akun uji coba masih
+  aktif, 1 belum pernah login."), then a "Buat akun uji coba" settings form (password field visible as text with a
+  secondary "Buat acak" pill; date defaults to 30 days). After creating, the form sheet becomes "Akun sudah dibuat":
+  success alert, the WhatsApp text in a `tint` well, primary "Salin teks", link "Kirim lewat WhatsApp", secondary
+  "Buat akun lain". "Semua toko" is a list (not a table) with Uji coba / Semua filter chips; each row has the store
+  name, a neutral "Uji coba" sticker, owner email, status (`warn` text when ≤ 3 days left or read-only, never red)
+  and last login. Visible copy says "pengelola", never "admin".
 - **Failure screens:** a page that fails to render shows one error alert ("Halaman ini mengalami gangguan."): data is
   safe, a primary pill "Muat ulang", and the WhatsApp link to the operator. Server errors shown to customers use the same
   neutral wording and never name SQL, migrations or hosting; operator hints go to the console only.
@@ -306,7 +313,8 @@ pill for buttons, selects, tabs, filters and nav.
 - **Icons:** one hand-drawn line family in `src/components/icons.tsx` (24 viewBox, stroke 2 like the landing, round
   caps) instead of an icon library: the project allows no new runtime dependency without the owner's approval, and one
   stroke style lets the bottom bar, buttons and alerts read as one family. Icons support a word, they do not replace it
-  (Akun and Keluar in the top bar are the two icon-only buttons, with a screen-reader label and a tooltip). The only
+  (Akun and Keluar in the top bar are the icon-only buttons, plus the Pengelola key that only operator accounts see,
+  each with a screen-reader label and a tooltip). The only
   filled icon is the WhatsApp logo on WhatsApp buttons. No emoji, sparkle, star, bolt or robot glyphs, and no unicode
   glyphs as icons (arrows in prose such as "Pesanan Saya → Export" are text, not icons).
 

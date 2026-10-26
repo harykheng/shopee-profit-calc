@@ -177,6 +177,24 @@ export const IconStore = (p: IconProps) => (
   </Svg>
 )
 
+/** Kunci: halaman Pengelola (buat akun uji coba). */
+export const IconKey = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="8" cy="15" r="4" />
+    <path d="m10.85 12.15 8.65-8.65" />
+    <path d="m15.5 7.5 2.5 2.5" />
+    <path d="m18 5 2 2" />
+  </Svg>
+)
+
+/** Salin ke clipboard. */
+export const IconCopy = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="9" y="9" width="12" height="12" rx="2" />
+    <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+  </Svg>
+)
+
 /** Panah kecil "berasal dari" untuk keterangan asal angka. */
 export const IconCornerDownRight = (p: IconProps) => (
   <Svg {...p}>

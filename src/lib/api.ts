@@ -7,6 +7,7 @@ import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
 import { addMonths, monthEnd, wibDay } from './format'
 import { MAX_SHIFT_DAYS } from './monthStatus'
+import type { CustomerRow, TrialForm } from './trialAccounts'
 import type { AdSource } from './shopeeColumns'
 import type {
   AdReport,
@@ -705,4 +706,29 @@ export async function saveAdsExpense(storeId: number, month: string, amount: num
         { onConflict: 'store_id,month,category' },
       ),
   )
+}
+
+// --- Halaman Pengelola ------------------------------------------------------------
+
+/** true kalau akun yang login pengelola. Database belum diperbarui / error lain = false (ikon tidak tampil). */
+export async function fetchIsPlatformAdmin(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('is_platform_admin')
+  return !error && data === true
+}
+
+/** Buat akun uji coba: akun login + toko + masa aktif. Database menolak kalau bukan pengelola. */
+export async function createTrialAccount(form: TrialForm): Promise<{ user_id: string; store_id: number }> {
+  return check(
+    await supabase.rpc('platform_create_trial', {
+      p_email: form.email,
+      p_password: form.password,
+      p_store_name: form.storeName,
+      p_active_until: form.activeUntil,
+    }),
+  ) as { user_id: string; store_id: number }
+}
+
+export async function fetchCustomers(): Promise<CustomerRow[]> {
+  const rows = check(await supabase.rpc('platform_list_customers')) as CustomerRow[]
+  return rows.map((r) => ({ ...r, store_id: Number(r.store_id), owner_emails: r.owner_emails ?? [] }))
 }

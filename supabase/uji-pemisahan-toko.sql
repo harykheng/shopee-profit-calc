@@ -11,7 +11,10 @@
 --      (role `authenticated` + identitas akun di request.jwt.claims). Akun itu dijadikan anggota
 --      toko A saja, lalu mencoba membaca, mengubah, menghapus, dan menulis data toko B DAN data
 --      semua toko pelanggan lain, lewat tabel, view, dan fungsi upload. Juga mencoba
---      memperpanjang langganannya sendiri dan mendaftarkan diri ke toko B.
+--      memperpanjang langganannya sendiri dan mendaftarkan diri ke toko B. Lalu, sebagai akun
+--      biasa, mencoba fungsi halaman Pengelola (membuat akun, melihat daftar pelanggan) dan
+--      menjadikan dirinya pengelola; terakhir, sebagai pengelola, membuat satu akun uji coba
+--      (kontrol: harus berhasil dan lengkap, lalu ikut dibatalkan).
 --   3. Mencoba membaca dan meng-upload tanpa login (role `anon`).
 --   4. Memeriksa struktur: semua tabel di schema public memakai RLS, semua view memakai
 --      security_invoker, dan fungsi admin_* tidak bisa dipanggil dari aplikasi.
@@ -88,12 +91,13 @@ begin
     ('20261020000000_income_orders.sql',           to_regclass('public.income_orders') is not null),
     ('20261021000000_income_per_order_views.sql',  to_regclass('public.order_item_income') is not null),
     ('20261022000000_income_monthly_breakdown.sql', to_regclass('public.income_monthly_breakdown') is not null),
-    ('20261023000000_admin_reset_password.sql',    to_regprocedure('public.admin_reset_password(text, text)') is not null)
+    ('20261023000000_admin_reset_password.sql',    to_regprocedure('public.admin_reset_password(text, text)') is not null),
+    ('20261026000000_platform_admin.sql',          to_regprocedure('public.platform_create_trial(text, text, text, date)') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261023000000_admin_reset_password.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261026000000_platform_admin.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -103,6 +107,11 @@ begin
     insert into public.stores (name, active_until) values ('UJI-PEMISAHAN A', null) returning id into sa;
     insert into public.stores (name, active_until) values ('UJI-PEMISAHAN B', null) returning id into sb;
     insert into public.store_members (store_id, user_id, role) values (sa, a_user, 'owner');
+    -- Akun uji diperlakukan sebagai pelanggan biasa, walau aslinya pengelola (dikembalikan di akhir).
+    begin
+      execute 'delete from public.platform_admins where user_id = $1' using a_user;
+    exception when undefined_table then null;
+    end;
     a_stores := array(select m2.store_id from public.store_members m2 where m2.user_id = a_user);
 
     -- Tiap tabel dilindungi sendiri: tabel yang belum ada (migration terlewat) tidak menghentikan uji.
@@ -190,7 +199,9 @@ begin
     select string_agg(p.proname, ', ' order by p.proname) into daftar
     from pg_proc p join pg_namespace s on s.oid = p.pronamespace
     where s.nspname = 'public' and p.prosecdef
-      and p.proname not in ('is_store_member', 'is_store_active', 'client_errors_rate_limit')
+      -- Tiga fungsi halaman Pengelola memeriksa is_platform_admin() sendiri; diuji di bagian 2e.
+      and p.proname not in ('is_store_member', 'is_store_active', 'client_errors_rate_limit',
+                            'is_platform_admin', 'platform_create_trial', 'platform_list_customers')
       and (has_function_privilege('authenticated', p.oid, 'EXECUTE') or has_function_privilege('anon', p.oid, 'EXECUTE'));
     v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
     v_uji := v_uji || 'Struktur: tidak ada fungsi security definer baru yang terbuka'::text;
@@ -384,7 +395,8 @@ begin
     for r in
       select x.nama, x.kueri from (values
         ('Daftarkan diri ke toko lain', 'insert into public.store_members (store_id, user_id, role) values ($1, $2, ''owner'')'),
-        ('Buat toko sendiri',           'insert into public.stores (name) values (''UJI-PEMISAHAN C'')')
+        ('Buat toko sendiri',           'insert into public.stores (name) values (''UJI-PEMISAHAN C'')'),
+        ('Jadikan diri sendiri pengelola', 'insert into public.platform_admins (user_id) values ($2)')
       ) as x (nama, kueri)
     loop
       begin
@@ -404,6 +416,68 @@ begin
       end;
       v_uji := v_uji || r.nama;
     end loop;
+
+    -- 2e. Halaman Pengelola: pelanggan biasa tidak boleh membuat akun atau melihat daftar pelanggan.
+    begin
+      execute 'select public.is_platform_admin()' into ok_kontrol;
+      v_status := v_status || case when ok_kontrol then 'GAGAL' else 'LULUS' end;
+      v_ket := v_ket || case when ok_kontrol then 'akun biasa dianggap pengelola' else 'tidak (benar)' end;
+    exception when others then
+      v_status := v_status || 'CEK'::text;
+      v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+    end;
+    v_uji := v_uji || 'Bukan pengelola: dianggap pengelola?'::text;
+
+    for r in
+      select x.nama, x.kueri from (values
+        ('Bukan pengelola: buat akun uji coba (platform_create_trial)',
+         'select count(*) from (select public.platform_create_trial(''uji-pemisahan-tolak@contoh.invalid'', ''UjiPemisahan123'', ''UJI-PEMISAHAN D'', current_date + 7)) x'),
+        ('Bukan pengelola: lihat daftar pelanggan (platform_list_customers)',
+         'select count(*) from public.platform_list_customers()')
+      ) as x (nama, kueri)
+    loop
+      begin
+        execute r.kueri into n;
+        v_status := v_status || 'GAGAL'::text;
+        v_ket := v_ket || 'berhasil dipanggil oleh akun biasa'::text;
+        raise exception using errcode = 'UJ001';
+      exception
+        when sqlstate 'UJ001' then null;
+        when insufficient_privilege then
+          v_status := v_status || 'LULUS'::text;
+          v_ket := v_ket || ('ditolak: ' || sqlerrm);
+        when others then
+          v_status := v_status || 'CEK'::text;
+          v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+      end;
+      v_uji := v_uji || r.nama;
+    end loop;
+
+    -- Kontrol: sebagai pengelola, membuat akun uji coba harus berhasil dan lengkap (akun login, identitas
+    -- email, toko uji coba, pemilik). Kalau gagal, kemungkinan format tabel login Supabase berubah.
+    begin
+      reset role;
+      execute 'insert into public.platform_admins (user_id) values ($1) on conflict do nothing' using a_user;
+      set local role authenticated;
+      execute 'select public.platform_create_trial($1, ''UjiPemisahan123'', ''UJI-PEMISAHAN D'', current_date + 7)'
+        into sisa using 'uji-pemisahan-' || substr(md5(random()::text), 1, 8) || '@contoh.invalid';
+      reset role;
+      select count(*) into n from auth.users u
+        where u.id = (sisa ->> 'user_id')::uuid and u.encrypted_password like '$2%' and u.email_confirmed_at is not null;
+      select count(*) into n2 from auth.identities i where i.user_id = (sisa ->> 'user_id')::uuid and i.provider = 'email';
+      select count(*) into m from public.stores s
+        join public.store_members sm on sm.store_id = s.id and sm.user_id = (sisa ->> 'user_id')::uuid and sm.role = 'owner'
+        where s.id = (sisa ->> 'store_id')::bigint and s.trial and s.active_until = current_date + 7;
+      v_status := v_status || case when n = 1 and n2 = 1 and m = 1 then 'LULUS' else 'GAGAL' end;
+      v_ket := v_ket || case when n = 1 and n2 = 1 and m = 1 then 'akun, identitas email, toko, dan pemilik terbentuk'
+                             else format('tidak lengkap: akun %s, identitas %s, toko+pemilik %s', n, n2, m) end;
+    exception when others then
+      reset role;
+      v_status := v_status || 'CEK'::text;
+      v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): '
+                              else 'gagal membuat akun, halaman Pengelola perlu diperbaiki: ' || sqlstate || ' ' end || sqlerrm);
+    end;
+    v_uji := v_uji || 'Pengelola: buat akun uji coba (kontrol)'::text;
 
     -- -------------------------------------------------------------------------
     -- 3. Tanpa login (anon)

@@ -90,6 +90,12 @@ menghapus data.
 > (aman diulang). Isinya fungsi admin `admin_reset_password` untuk SQL Editor (lihat OPERASI.md bagian 2);
 > tidak dipakai aplikasi, jadi tidak ada urutan terhadap deploy.
 
+> Sudah setup sebelum 26 Oktober 2026? Jalankan sekali file `20261026000000_platform_admin.sql` (aman
+> diulang) untuk halaman **Pengelola** (buat akun uji coba dari aplikasi, lihat bagian 8 d). Boleh sebelum
+> atau sesudah deploy: tanpa SQL ini aplikasi tetap jalan, hanya ikon Pengelola yang tidak muncul. Setelah
+> itu jadikan akunmu pengelola, sekali saja:
+> `select public.admin_set_platform_admin('email-kamu@contoh.com');`
+
 > Sudah setup sebelum 22 Oktober 2026? Jalankan sekali file `20261022000000_income_monthly_breakdown.sql`
 > (aman diulang, hanya view baru) **setelah** `20261021000000_income_per_order_views.sql`. Dipakai Bab 2
 > Rekap yang dimulai dari omzet (potongan Shopee per jenis) dan kotak "Kenapa untungnya segini?" di Bab 1.
@@ -340,7 +346,7 @@ membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
    di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
    free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
 2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
-   satu per satu, dari `20260930000000_init.sql` sampai `20261023000000_admin_reset_password.sql`.
+   satu per satu, dari `20260930000000_init.sql` sampai `20261026000000_platform_admin.sql`.
 3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
    hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
 
@@ -359,6 +365,16 @@ Authentication → Sign In / Providers (atau Settings) → matikan **Allow new u
 Tanpa baris di `store_members` orang asing hanya melihat data kosong, tapi tetap matikan.
 
 ### d) Menambah pelanggan
+
+**Cara cepat (disarankan): halaman Pengelola.** Butuh migration `20261026000000_platform_admin.sql` dan
+akunmu dijadikan pengelola sekali (`select public.admin_set_platform_admin('email-kamu@contoh.com');`).
+Setelah itu muncul ikon kunci di kanan atas aplikasi. Isi email, password (atau tekan **Buat acak**), nama
+toko, dan tanggal berakhir (bawaan 30 hari), lalu **Buat akun uji coba**. Akun langsung aktif tanpa
+verifikasi email, tokonya ditandai "Uji coba", dan aplikasi menyiapkan teks WhatsApp berisi alamat
+login, email, dan password. Email yang sudah terdaftar ditolak. Detail di [OPERASI.md](OPERASI.md)
+bagian 2.
+
+**Cara manual (SQL Editor),** misalnya untuk menambah toko kedua ke akun yang sudah ada:
 
 1. Authentication → Users → **Add user → Create new user**: isi email dan password, centang
    **Auto Confirm User**.
@@ -389,7 +405,7 @@ Tanpa baris di `store_members` orang asing hanya melihat data kosong, tapi tetap
    pelanggan sendiri. Kalau Supabase meminta login ulang saat ganti password (pengaturan
    "Secure password change"), aplikasi menyuruh pelanggan keluar lalu masuk lagi.
 
-Lihat semua pelanggan:
+Lihat semua pelanggan (atau buka halaman Pengelola → **Semua toko**):
 
 ```sql
 select s.id, s.name, s.active_until, u.email
@@ -497,7 +513,7 @@ aman: seed tidak menambah apa pun.
 ### Sebelum pelanggan pertama
 
 - [ ] Project HitungCuan sudah di paket Pro (backup aktif).
-- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261023000000_admin_reset_password.sql`
+- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261026000000_platform_admin.sql`
       (cek: tabel `store_settings`, `fee_categories`, `client_errors`, `income_orders`, dan view
       `order_item_income` ada).
 - [ ] **Pemantau error:** buka aplikasi, sengaja picu satu error (mis. buka halaman dengan akun yang
@@ -518,7 +534,10 @@ aman: seed tidak menambah apa pun.
 - [ ] **File asli calon pelanggan sudah diuji** (lihat bagian di bawah).
 - [ ] Signup publik mati, dan tidak ada `service_role` key di variabel hosting atau di git.
 - [ ] **Header keamanan aktif** di domain produksi (perintah `curl` di bagian "Header keamanan").
-- [ ] Sudah berlatih `admin_add_customer`, memperpanjang lewat SQL, dan `admin_reset_password`.
+- [ ] Akunmu sudah pengelola (`admin_set_platform_admin`) dan ikon kunci muncul; akun pelanggan dan
+      akun tes **bukan** pengelola.
+- [ ] Sudah berlatih membuat akun di halaman Pengelola (`admin_add_customer` untuk toko kedua),
+      memperpanjang lewat SQL, dan `admin_reset_password`.
 
 ### Uji pemisahan data antar-toko
 
@@ -537,8 +556,10 @@ role di SQL Editor pada `postgres` (bawaan).
 Skrip membuat dua toko uji, mengisi toko B dengan satu baris di setiap tabel, lalu berpura-pura
 menjadi akun yang login (role `authenticated` + identitas akun, cara yang sama dengan API Supabase)
 dan mencoba membaca, mengubah, menghapus, serta menulis data toko B **dan semua toko pelanggan
-lain**, lewat tabel, view, dan fungsi upload. Juga mencoba tanpa login, dan memeriksa bahwa semua
-tabel memakai RLS, semua view memakai `security_invoker`, dan fungsi `admin_*` tertutup.
+lain**, lewat tabel, view, dan fungsi upload. Juga mencoba fungsi halaman Pengelola sebagai akun biasa
+(harus ditolak), membuat satu akun uji coba sebagai pengelola (harus berhasil, lalu dibatalkan), mencoba
+tanpa login, dan memeriksa bahwa semua tabel memakai RLS, semua view memakai `security_invoker`, dan
+fungsi `admin_*` tertutup.
 
 - **Tidak ada yang tersimpan.** Semua langkah berjalan dalam satu transaksi yang selalu dibatalkan
   di akhir, termasuk percobaan yang ternyata tembus. Kalau SQL Editor memperingatkan "destructive
@@ -556,7 +577,8 @@ seperti browser pelanggan) lalu mencoba membobol toko B.
 
 1. Buat **dua akun tes** dengan cara yang sama seperti pelanggan (bagian d), mis.
    `tes-a@domainmu.id` → "Toko Tes A" dan `tes-b@domainmu.id` → "Toko Tes B". Jangan pakai akun
-   pelanggan sungguhan, dan jangan jadikan kedua akun anggota toko yang sama.
+   pelanggan sungguhan, jangan jadikan kedua akun anggota toko yang sama, dan jangan jadikan
+   pengelola.
 2. Isi toko B dengan data supaya ada yang bisa "dicuri": `npm run sample -- "Toko Tes B"`, login
    sebagai akun B, lalu upload isi folder `sample-store/` (urutannya ada di `BACA-DULU.txt`). Toko
    yang kosong tetap diuji, tapi cek baca per tabel jadi DILEWATI.
