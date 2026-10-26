@@ -151,6 +151,8 @@ kalau salah bulan). Kotak di atas halaman Upload menunjukkan bulan yang sudah te
 itu selalu boleh. Kalau file berisi bulan lain, tombol simpan tidak bisa ditekan dan aplikasi menyebut
 bulannya. Export pesanan tidak dibatasi (boleh rentang lebar seperti biasa). Setelah berlangganan, batas
 ini hilang.
+Saat pertama membuka halaman Upload (selama belum ada bulan tersimpan), layar menggelap dan hanya kotak ini
+yang menyala, sampai kamu menekan **Saya mengerti**. Muncul sekali setiap login.
 
 ---
 

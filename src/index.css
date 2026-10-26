@@ -207,20 +207,12 @@
   .reveal {
     animation: reveal 200ms ease-out both;
   }
-  /* Kotak penting yang perlu dibaca dulu (halaman Upload akun uji coba): cincin kuning berdenyut 2 kali
-     saat muncul. Cincinnya pseudo-element supaya hanya opacity & transform yang bergerak. */
-  .attention {
-    position: relative;
+  /* Sorotan (Spotlight): layar menggelap, lalu kotak yang disorot muncul sedikit membesar. */
+  .spotlight-dim {
+    animation: spotlight-dim 240ms ease-out both;
   }
-  .attention::after {
-    content: '';
-    position: absolute;
-    inset: -5px;
-    border: 3px solid var(--color-sun);
-    border-radius: 21px;
-    pointer-events: none;
-    opacity: 0;
-    animation: attention 1100ms ease-out 300ms 2;
+  .spotlight-lit {
+    animation: spotlight-lit 320ms cubic-bezier(0.3, 0.7, 0.2, 1) 120ms both;
   }
   /* Ganti halaman / tab. */
   .page-in {
@@ -291,18 +283,16 @@
   }
 }
 
-@keyframes attention {
-  0% {
+@keyframes spotlight-dim {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes spotlight-lit {
+  from {
     opacity: 0;
     transform: scale(0.97);
-  }
-  35% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.025);
   }
 }
 
@@ -325,7 +315,8 @@
   .print-last,
   .reveal,
   .page-in,
-  .attention::after {
+  .spotlight-dim,
+  .spotlight-lit {
     animation: none;
   }
   .nav-indicator,

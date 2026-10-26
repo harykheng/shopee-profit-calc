@@ -1,4 +1,5 @@
-import { useEffect, useId, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type ChangeEvent } from 'react'
+import { Spotlight } from '../components/Spotlight'
 import { Alert, Button, Card, ErrorBox, Modal, PageTitle, ScrollX, Spinner, Stamp, linkClass } from '../components/ui'
 import { IconCheck, IconMinus, IconStore, IconUpload } from '../components/icons'
 import {
@@ -89,6 +90,26 @@ export function UploadPage({
       cancelled = true
     }
   }, [storeKey, trial, trialVersion])
+  // Sorotan kotak batas uji coba: sekali per sesi login per toko, selama belum ada bulan tersimpan.
+  const trialBox = useRef<HTMLDivElement>(null)
+  const spotlightKey = storeKey === null ? null : `sorotan-uji-coba:${storeKey}`
+  const [spotlightDone, setSpotlightDone] = useState(false)
+  const spotlightSeen = (() => {
+    if (spotlightDone || !spotlightKey) return true
+    try {
+      return sessionStorage.getItem(spotlightKey) === '1'
+    } catch {
+      return false
+    }
+  })()
+  const closeSpotlight = useCallback(() => {
+    setSpotlightDone(true)
+    try {
+      if (spotlightKey) sessionStorage.setItem(spotlightKey, '1')
+    } catch {
+      // Penyimpanan browser tidak tersedia: sorotan muncul lagi lain kali, tidak apa-apa.
+    }
+  }, [spotlightKey])
   const trialProblem =
     trialUsed === null
       ? null
@@ -273,18 +294,29 @@ export function UploadPage({
         Upload laporan
       </PageTitle>
 
-      {trialUsed !== null && (
-        // Belum ada bulan tersimpan = saat yang menentukan (bulan pertama tidak bisa diganti): kuning + disorot
-        // begitu halaman dibuka. Setelah terisi, cukup info biasa.
-        <div className={`mb-8 ${trialUsed.length === 0 ? 'attention' : ''}`}>
-          <Alert
-            tone={trialUsed.length === 0 ? 'warning' : 'info'}
-            title={trialUsed.length === 0 ? 'Baca dulu sebelum upload' : undefined}
-          >
-            {trialMonthsNotice(trialUsed)}
-          </Alert>
-        </div>
-      )}
+      {trialUsed !== null &&
+        (() => {
+          // Belum ada bulan tersimpan = saat yang menentukan (bulan pertama tidak bisa diganti): kuning, dan
+          // disorot (layar lain gelap) begitu halaman dibuka. Setelah terisi, cukup info biasa.
+          const first = trialUsed.length === 0
+          const box = (
+            <Alert tone={first ? 'warning' : 'info'} title={first ? 'Baca dulu sebelum upload' : undefined}>
+              {trialMonthsNotice(trialUsed)}
+            </Alert>
+          )
+          return (
+            <>
+              <div ref={trialBox} className="mb-8">
+                {box}
+              </div>
+              {first && !spotlightSeen && (
+                <Spotlight target={trialBox} onClose={closeSpotlight}>
+                  {box}
+                </Spotlight>
+              )}
+            </>
+          )
+        })()}
 
       {multiStore && (
         <div className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-tint px-5 py-4 ring-1 ring-line">
