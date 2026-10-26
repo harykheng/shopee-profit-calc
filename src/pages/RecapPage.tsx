@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, useSyncExternalStore, type PointerEvent, type ReactNode } from 'react'
 import { MonthSelect } from '../components/pickers'
-import { Alert, Button, ButtonLink, Card, ErrorBox, Kicker, Modal, NotaTotal, ScrollX, Spinner, Stamp, linkClass } from '../components/ui'
+import { Alert, Button, ButtonLink, Card, ErrorBox, FitLine, Kicker, Modal, NotaTotal, ScrollX, Spinner, Stamp, linkClass } from '../components/ui'
 import { IconAlertCircle, IconArrowRight, IconCheck, IconChevronDown, IconInfo, IconUpload } from '../components/icons'
 import {
   countItemsWithoutCreatedAt,
@@ -26,7 +26,7 @@ import {
   type UnmatchedIncomeOrder,
 } from '../lib/api'
 import { notifyDataChanged } from '../lib/events'
-import { addMonths, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '../lib/format'
+import { addMonths, countUpLabels, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '../lib/format'
 import { monthStatus, monthTodos, type MonthStatus } from '../lib/monthStatus'
 import {
   THIN_MARGIN,
@@ -537,24 +537,30 @@ function NotaCard({
 
   // Angka berputar naik, lalu stiker status ditempel.
   const shownProfit = useCountUp(t.profit)
+  const profitLabels = useMemo(() => countUpLabels(Math.abs(t.profit), formatRupiahShort), [t.profit])
   const loss = t.profit < 0
 
   return (
     <>
       {/* Bab 1: jawabannya, ditulis seperti kalimat (sama dengan kartu rekap di landing). */}
       <section className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:items-stretch lg:gap-12">
-        <div className="min-w-0">
+        <div className="@container min-w-0">
           <Kicker>Bab 1 · Untung bersih</Kicker>
-          <h1 className="mt-3 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-            {period}, {storeName} <span className="hl">{loss ? 'rugi' : 'untung bersih'}</span>
+          {/* Periode, nama toko, dan "untung bersih" masing-masing tidak terbelah ke dua baris (mis. "Sora / Store").
+              Kalau periode atau nama toko lebih panjang dari satu baris, ia turun di dalam kotaknya sendiri.
+              story-fit: di HP 320 px huruf sedikit mengecil supaya "September 2026," tetap satu baris. */}
+          <h1 className="story-fit mt-3 text-balance font-display font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+            <span className="inline-block">{period},</span> <span className="inline-block">{storeName}</span>{' '}
+            <span className="hl whitespace-nowrap">{loss ? 'rugi' : 'untung bersih'}</span>
           </h1>
-          <p
+          <FitLine
+            fitTo={profitLabels}
             className={`num mt-3 font-display text-6xl font-extrabold leading-[0.95] tracking-tighter sm:text-8xl lg:text-[7.5rem] ${
               loss ? 'text-loss' : 'text-gain'
             }`}
           >
             {formatRupiahShort(Math.abs(shownProfit))}
-          </p>
+          </FitLine>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink-2">
             Tepatnya <b className="num text-ink">{formatRupiah(t.profit)}</b>
             {margin !== null && <> ({formatPercent(margin)} dari {breakdown ? 'omzet' : 'uang masuk'})</>}, dari{' '}

@@ -202,7 +202,11 @@ Charts stay neutral unless the segment is a status: the Rp100 bar uses `line` (m
 
 ### Hierarchy
 - **Hero Figure** (800; 3.75rem / 6rem from 640px / 7.5rem from 1024px; 0.95): Rekap Bab 1, short form
-  (`formatRupiahShort`) with the exact amount in the next sentence. `gain` or `loss`.
+  (`formatRupiahShort`) with the exact amount in the next sentence. `gain` or `loss`. Always one line (`FitLine`):
+  those sizes are the ceiling, and the figure shrinks to fit a narrower column instead of breaking "Rp1,85 / juta".
+- **Bab 1 sentence wrapping:** period, store name and "untung bersih" each stay whole (never "Sora / Store" or
+  "September / 2026"); lines are balanced. On columns under ~310px (320px phones) the 2.25rem size shrinks just
+  enough for the longest period ("September 2030,") to fit one line (`.story-fit`, needs an `@container` parent).
 - **Story** (800; 2.25rem / 3rem / 3.75rem): the Bab 1 sentence; Iklan, Simulasi and Grup answers use 1.875rem / 3rem.
 - **Headline** (800; 1.875rem / 2.25rem / 2.75rem, the landing's H2 scale): page titles (`PageTitle`), so the answer
   sentence below them stays the loudest thing on the page.

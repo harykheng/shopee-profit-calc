@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
 import { APP_NAME, hasSupportWhatsApp, isHitungCuan, supportUrl } from '../lib/brand'
 import { adminHint, errorText, friendlyError } from '../lib/errors'
 import { ParseError } from '../lib/parsers/common'
@@ -52,6 +52,71 @@ export function ButtonLink({
  * Pembungkus tabel lebar di atas lembar putih. Kalau isinya lebih lebar dari layar (HP), tampil
  * bayangan di tepi kanan dan petunjuk "geser", supaya jelas masih ada kolom yang tersembunyi.
  */
+/**
+ * Satu baris teks besar yang tidak pernah pecah ke baris kedua (angka jawaban di Rekap Bab 1). Ukuran dari
+ * `className` adalah batas atas; kalau kolomnya lebih sempit, huruf dikecilkan sampai teks terlebar di `fitTo` muat.
+ * Lebar diukur langsung karena angka Parkinsans tidak sama lebar ("4" jauh lebih lebar dari "1").
+ */
+export function FitLine({ children, fitTo, className = '' }: { children: ReactNode; fitTo: string[]; className?: string }) {
+  const ref = useRef<HTMLParagraphElement>(null)
+  const probeRef = useRef<HTMLSpanElement>(null)
+  const key = fitTo.join('\n')
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    const probe = probeRef.current
+    if (!el || !probe) return
+    const labels = key.split('\n')
+    let width = -1
+    let alive = true
+    const fit = () => {
+      if (!alive) return
+      width = el.clientWidth
+      el.style.fontSize = ''
+      const max = parseFloat(getComputedStyle(el).fontSize)
+      let widest = 0
+      for (const label of labels) {
+        probe.textContent = label
+        widest = Math.max(widest, probe.getBoundingClientRect().width)
+      }
+      probe.textContent = ''
+      // Sisa 2%: angka di tengah putaran bisa sedikit lebih lebar dari contoh di `fitTo`.
+      const room = width * 0.98
+      if (room > 0 && widest > room) el.style.fontSize = `${Math.floor((max * room) / widest)}px`
+    }
+    fit()
+    // Huruf asli biasanya selesai dimuat setelah ukuran pertama dihitung dengan huruf cadangan.
+    const fonts = document.fonts
+    void fonts?.ready.then(fit)
+    fonts?.addEventListener('loadingdone', fit)
+    // Lebar kolom berubah (bukan tinggi, yang berubah karena fit sendiri). Lewat requestAnimationFrame supaya tidak
+    // memicu galat "ResizeObserver loop".
+    let frame = 0
+    const ro =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(() => {
+            if (el.clientWidth === width) return
+            cancelAnimationFrame(frame)
+            frame = requestAnimationFrame(fit)
+          })
+    ro?.observe(el)
+    return () => {
+      alive = false
+      cancelAnimationFrame(frame)
+      fonts?.removeEventListener('loadingdone', fit)
+      ro?.disconnect()
+    }
+  }, [key])
+
+  return (
+    <p ref={ref} className={`relative whitespace-nowrap ${className}`}>
+      {children}
+      <span ref={probeRef} aria-hidden="true" className="invisible absolute left-0 top-0 whitespace-nowrap" />
+    </p>
+  )
+}
+
 export function ScrollX({ children, className = '' }: { children: ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const [more, setMore] = useState(false)
