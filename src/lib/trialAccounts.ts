@@ -55,10 +55,29 @@ export function defaultTrialEnd(now: Date = new Date(), days = DEFAULT_TRIAL_DAY
  * Contoh: dibuat 15 Nov, 1 bulan → aktif sampai 14 Des. Tanggal yang tidak ada (31 → Feb) mundur ke akhir bulan.
  */
 export function paidEnd(months: number, now: Date = new Date()): string {
-  const [y, m, d] = wibToday(now).split('-').map(Number)
+  return monthsFrom(wibToday(now), months)
+}
+
+/** N bulan mulai tanggal `start` (ikut dihitung): "2026-11-01" + 1 bulan → "2026-11-30". */
+function monthsFrom(start: string, months: number): string {
+  const [y, m, d] = start.split('-').map(Number)
   const lastDay = new Date(Date.UTC(y, m - 1 + months + 1, 0)).getUTCDate()
   const target = new Date(Date.UTC(y, m - 1 + months, Math.min(d, lastDay))).toISOString().slice(0, 10)
   return addDays(target, -1)
+}
+
+/**
+ * Hari pertama masa perpanjangan: sehari setelah langganan sekarang berakhir kalau masih aktif (sisa hari
+ * tidak hilang), atau hari ini kalau sudah berakhir.
+ */
+export function extensionStart(activeUntil: string | null, now: Date = new Date()): string {
+  const today = wibToday(now)
+  return activeUntil && activeUntil >= today ? addDays(activeUntil, 1) : today
+}
+
+/** Tanggal berakhir baru kalau diperpanjang N bulan. */
+export function extendedEnd(activeUntil: string | null, months: number, now: Date = new Date()): string {
+  return monthsFrom(extensionStart(activeUntil, now), months)
 }
 
 /** Nama toko kalau isian dikosongkan: "Toko budi.santoso" dari "budi.santoso@gmail.com". */

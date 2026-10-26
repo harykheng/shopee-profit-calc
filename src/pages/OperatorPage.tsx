@@ -16,6 +16,8 @@ import {
   generatePassword,
   lastLoginLabel,
   normalizeTrialForm,
+  extendedEnd,
+  extensionStart,
   paidEnd,
   asksStoreName,
   storeNameFromEmail,
@@ -430,29 +432,33 @@ function CustomerList({ rows, onChanged }: { rows: CustomerRow[]; onChanged: () 
       ) : (
         <ul className="divide-y divide-line">
           {shown.map((r) => (
-            <CustomerItem key={r.store_id} row={r} onSubscribe={() => setSubscribing(r)} />
+            <CustomerItem key={r.store_id} row={r} onSubscription={() => setSubscribing(r)} />
           ))}
         </ul>
       )}
       {subscribing && (
-        <SubscribeDialog
+        <SubscriptionDialog
           row={subscribing}
           onClose={() => setSubscribing(null)}
           onDone={(activeUntil) => {
-            setDone(`${subscribing.store_name} sekarang berlangganan sampai ${formatDate(activeUntil)}. Batas uji coba sudah lepas.`)
+            setDone(
+              subscribing.trial
+                ? `${subscribing.store_name} sekarang berlangganan sampai ${formatDate(activeUntil)}. Batas uji coba sudah lepas.`
+                : `Langganan ${subscribing.store_name} diperpanjang sampai ${formatDate(activeUntil)}.`,
+            )
             setSubscribing(null)
             onChanged()
           }}
         />
       )}
       <p className="mt-4 text-sm text-ink-3">
-        Memperpanjang langganan atau reset password masih lewat SQL Editor (lihat OPERASI.md).
+        Reset password dan mengubah nama toko masih lewat SQL Editor (lihat OPERASI.md).
       </p>
     </>
   )
 }
 
-function CustomerItem({ row, onSubscribe }: { row: CustomerRow; onSubscribe: () => void }) {
+function CustomerItem({ row, onSubscription }: { row: CustomerRow; onSubscription: () => void }) {
   const status = customerStatus(row.active_until)
   const statusColor = status.state === 'expired' || status.state === 'expiring' ? 'text-warn' : 'text-ink-2'
   return (
@@ -476,9 +482,10 @@ function CustomerItem({ row, onSubscribe }: { row: CustomerRow; onSubscribe: () 
           )}
         </p>
         <p className="text-ink-3">Login terakhir: {lastLoginLabel(row.last_sign_in_at)}</p>
-        {row.trial && (
-          <Button variant="secondary" onClick={onSubscribe} className="mt-2">
-            Jadikan berlangganan
+        {/* Uji coba → berlangganan; berlangganan dengan tanggal berakhir → perpanjang (toko tanpa batas tidak perlu). */}
+        {(row.trial || row.active_until) && (
+          <Button variant="secondary" onClick={onSubscription} className="mt-2">
+            {row.trial ? 'Jadikan berlangganan' : 'Perpanjang'}
           </Button>
         )}
       </div>
@@ -486,8 +493,11 @@ function CustomerItem({ row, onSubscribe }: { row: CustomerRow; onSubscribe: () 
   )
 }
 
-/** Jendela "Jadikan berlangganan": pilih lama langganan (mulai hari ini), lalu simpan. */
-function SubscribeDialog({
+/**
+ * Jendela "Jadikan berlangganan" (toko uji coba, mulai hari ini) atau "Perpanjang" (toko berlangganan: lanjut dari
+ * tanggal berakhir sekarang kalau masih aktif, atau mulai hari ini kalau sudah berakhir).
+ */
+function SubscriptionDialog({
   row,
   onClose,
   onDone,
@@ -497,7 +507,10 @@ function SubscribeDialog({
   onDone: (activeUntil: string) => void
 }) {
   const titleId = useId()
-  const [activeUntil, setActiveUntil] = useState(() => paidEnd(1))
+  const extend = !row.trial
+  const endAfter = (months: number) => (extend ? extendedEnd(row.active_until, months) : paidEnd(months))
+  const [activeUntil, setActiveUntil] = useState(() => endAfter(1))
+  const stillActive = extend && extensionStart(row.active_until) !== wibToday()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -521,10 +534,14 @@ function SubscribeDialog({
   return (
     <Modal labelledBy={titleId} onClose={onClose} dismissible={!busy}>
       <h2 id={titleId} className="font-display text-2xl font-extrabold tracking-tight">
-        Jadikan {row.store_name} berlangganan
+        {extend ? `Perpanjang ${row.store_name}` : `Jadikan ${row.store_name} berlangganan`}
       </h2>
       <p className="mt-3 text-ink-2">
-        Batas uji coba langsung lepas. Langganan dihitung mulai hari ini
+        {!extend
+          ? 'Batas uji coba langsung lepas. Langganan dihitung mulai hari ini'
+          : stillActive
+            ? `Langganan sekarang sampai ${formatDate(row.active_until!)}. Perpanjangan dihitung setelah tanggal itu, jadi sisa harinya tidak hilang`
+            : `Langganan sudah berakhir ${formatDate(row.active_until!)}. Perpanjangan dihitung mulai hari ini`}
         {row.owner_emails.length > 0 && <> ({row.owner_emails.join(', ')})</>}.
       </p>
       <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Lama berlangganan">
@@ -537,13 +554,13 @@ function SubscribeDialog({
           <button
             key={months}
             type="button"
-            aria-pressed={activeUntil === paidEnd(months)}
-            onClick={() => setActiveUntil(paidEnd(months))}
+            aria-pressed={activeUntil === endAfter(months)}
+            onClick={() => setActiveUntil(endAfter(months))}
             className={`min-h-11 rounded-full border-2 px-4 font-semibold transition-colors ${
-              activeUntil === paidEnd(months) ? 'border-ink bg-ink text-paper' : 'border-control bg-paper text-ink hover:border-ink'
+              activeUntil === endAfter(months) ? 'border-ink bg-ink text-paper' : 'border-control bg-paper text-ink hover:border-ink'
             }`}
           >
-            {label}
+            {extend ? `+${label}` : label}
           </button>
         ))}
       </div>
@@ -564,7 +581,9 @@ function SubscribeDialog({
       )}
       <div className="mt-5 flex flex-col gap-3">
         <Button onClick={save} disabled={busy}>
-          {busy ? 'Menyimpan…' : activeUntil ? `Jadikan berlangganan sampai ${formatDate(activeUntil)}` : 'Jadikan berlangganan'}
+          {busy
+            ? 'Menyimpan…'
+            : `${extend ? 'Perpanjang' : 'Jadikan berlangganan'}${activeUntil ? ` sampai ${formatDate(activeUntil)}` : ''}`}
         </Button>
         <Button variant="secondary" onClick={onClose} disabled={busy}>
           Batal

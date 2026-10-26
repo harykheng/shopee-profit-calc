@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { APP_NAME, hasSupportWhatsApp, isHitungCuan, supportUrl } from '../lib/brand'
 import { adminHint, errorText, friendlyError } from '../lib/errors'
 import { ParseError } from '../lib/parsers/common'
@@ -381,7 +382,9 @@ export function Modal({
     }
   }, [])
 
-  return (
+  // Lewat portal ke <body>: di dalam halaman, pembungkus animasi (.page-in) membuat `fixed` hanya menutupi
+  // kolom halaman, bukan seluruh layar.
+  return createPortal(
     <div
       className="fixed inset-0 z-30 flex items-center justify-center bg-ink/45 p-4"
       onMouseDown={(e) => {
@@ -398,7 +401,8 @@ export function Modal({
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

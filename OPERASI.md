@@ -119,6 +119,10 @@ update public.stores set active_until = (now() at time zone 'Asia/Jakarta')::dat
 pilih 1 bulan / 1 tahun / tanggal sendiri (mulai hari ini). Tanda uji coba hilang dan batasnya lepas saat itu
 juga. Butuh migration `20261031000000_platform_set_subscription.sql`; perintah `update` di atas tetap bisa dipakai.
 
+**Perpanjang (cara cepat):** halaman Pelanggan → tombol **Perpanjang** di toko berlangganan → **+1 bulan** /
+**+1 tahun** / tanggal sendiri. Kalau langganan masih aktif, perpanjangan dihitung setelah tanggal berakhirnya
+(sisa hari tidak hilang); kalau sudah berakhir, mulai hari ini. Toko tanpa batas tanggal tidak punya tombol ini.
+
 Penanda **Uji coba** tidak hilang sendiri; ubah `trial = false` saat pelanggan mulai membayar supaya
 daftar Uji coba di halaman Pengelola hanya berisi yang masih mencoba, **dan supaya batas uji coba
 lepas**. Selama `trial = true` (migration `20261027000000_trial_limits.sql` + angka di

@@ -4,6 +4,8 @@ import {
   countByGroup,
   customerGroup,
   paidEnd,
+  extendedEnd,
+  extensionStart,
   asksStoreName,
   cleanStoreName,
   customerStatus,
@@ -177,6 +179,21 @@ describe('paidEnd', () => {
   it('tanggal yang tidak ada di bulan tujuan mundur ke akhir bulan', () => {
     expect(paidEnd(1, wib('2027-01-31'))).toBe('2027-02-27')
     expect(paidEnd(1, wib('2026-12-15'))).toBe('2027-01-14')
+  })
+})
+
+describe('extendedEnd', () => {
+  it('masih aktif: lanjut dari tanggal berakhir sekarang, sisa hari tidak hilang', () => {
+    expect(extensionStart('2026-11-30', NOW)).toBe('2026-12-01')
+    expect(extendedEnd('2026-11-30', 1, NOW)).toBe('2026-12-31')
+    expect(extendedEnd('2026-11-30', 12, NOW)).toBe('2027-11-30')
+    // Hari terakhir (hari ini) masih aktif.
+    expect(extendedEnd('2026-10-26', 1, NOW)).toBe('2026-11-26')
+  })
+
+  it('sudah berakhir: mulai hari ini', () => {
+    expect(extensionStart('2026-10-01', NOW)).toBe('2026-10-26')
+    expect(extendedEnd('2026-10-01', 1, NOW)).toBe(paidEnd(1, NOW))
   })
 })
 

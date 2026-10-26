@@ -256,7 +256,7 @@ npm run build
 | (28 Okt) | Batas uji coba diubah pemilik: data 1 bulan, Simulasi 50 produk selama uji coba. SQL 20261028. Cek cepat iklan dimatikan untuk uji coba (khusus berlangganan; hanya di aplikasi, tanpa SQL). |
 | (29 Okt) | Nama toko boleh dikosongkan di Pengelola: pemilik mengisinya sendiri saat login pertama (sekali). SQL 20261029. |
 | (30 Okt) | Pengelola: halaman awal = Pelanggan (uji coba / berlangganan / berakhir); Buat akun = uji coba atau langsung berlangganan. Pengelola tanpa toko hanya melihat 2 menu itu. SQL 20261030. |
-| (31 Okt) | Pelanggan: tombol **Jadikan berlangganan** di toko uji coba (1 bulan / 1 tahun / tanggal, mulai hari ini). SQL 20261031. |
+| (31 Okt) | Pelanggan: tombol **Jadikan berlangganan** di toko uji coba (1 bulan / 1 tahun / tanggal, mulai hari ini) dan **Perpanjang** di toko berlangganan (lanjut dari tanggal berakhir kalau masih aktif, `extendedEnd`). SQL 20261031 dipakai keduanya. `Modal` kini lewat portal ke body (lapisan gelap menutup seluruh layar). |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 
@@ -268,7 +268,7 @@ npm run build
   (menganggap penjualan tetap), tabel ongkir per produk (ongkir yang ditanggung toko biasanya Rp0).
 - Batas diagnosa (iklan 10%, modal 70%, tipis 10%) adalah pilihan awal; bisa dijadikan pengaturan toko.
 - Menyimpan grup iklan; membandingkan ROAS nyata grup dengan target grup.
-- Halaman Pengelola: perpanjang tanggal dan reset password masih lewat SQL Editor (sengaja, permintaan
-  pemilik). Uji coba → berlangganan sudah lewat tombol (31 Okt). `platform_create_trial` menulis langsung ke tabel internal
+- Halaman Pengelola: reset password dan mengubah nama toko masih lewat SQL Editor. Uji coba → berlangganan
+  dan perpanjang sudah lewat tombol (31 Okt). `platform_create_trial` menulis langsung ke tabel internal
   Supabase (`auth.users`); kalau format tabel itu berubah, uji kontrol di `uji-pemisahan-toko.sql`
   menunjukkan CEK. Alternatifnya Edge Function dengan `auth.admin.createUser`.
