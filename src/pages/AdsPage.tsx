@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Alert, Button, Card, ErrorBox, PageTitle, ScrollX, Spinner, Stamp, buttonClass, linkClass, type StampTone } from '../components/ui'
-import { IconAlertCircle, IconChevronDown, IconInfo, IconSearch, IconUpload } from '../components/icons'
+import { IconAlertCircle, IconCards, IconChevronDown, IconInfo, IconRows, IconSearch, IconUpload } from '../components/icons'
 import { AdsQuickCheck } from './AdsQuickCheck'
 import { fetchAdReports } from '../lib/api'
 import { MIN_LINES_FOR_ACTUAL_FEE, fullMonthOf, type AdProductResult, type AdVerdict, type AdsAnalysis, type Targets } from '../lib/adsMath'
@@ -228,6 +228,11 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
   const [data, setData] = useState<Loaded | null>(null)
   const [error, setError] = useState<unknown>(null)
   const [filter, setFilter] = useState<AdVerdict | 'semua'>('semua')
+  const [view, setView] = useState<AdsView>(readAdsView)
+  const chooseView = (v: AdsView) => {
+    setView(v)
+    saveAdsView(v)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -311,30 +316,41 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
       </div>
 
       {main.length > 0 && (
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Saring label">
-          <FilterChip active={filter === 'semua'} onClick={() => setFilter('semua')}>
-            Semua ({main.length})
-          </FilterChip>
-          {VERDICT_ORDER.filter((v) => counts.get(v)).map((v) => (
-            <FilterChip key={v} active={filter === v} onClick={() => setFilter(v)}>
-              {VERDICTS[v].label} <span className="num">({counts.get(v)})</span>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Saring label">
+            <FilterChip active={filter === 'semua'} onClick={() => setFilter('semua')}>
+              Semua ({main.length})
             </FilterChip>
-          ))}
+            {VERDICT_ORDER.filter((v) => counts.get(v)).map((v) => (
+              <FilterChip key={v} active={filter === v} onClick={() => setFilter(v)}>
+                {VERDICTS[v].label} <span className="num">({counts.get(v)})</span>
+              </FilterChip>
+            ))}
+          </div>
+          <ViewSwitch view={view} onChange={chooseView} />
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {shown.map((p, i) => (
-          <ProductCard
-            key={p.code}
-            p={p}
-            targets={data.targets}
-            months={data.perMonth ? (productMonths.get(p.code) ?? []) : undefined}
-            stampDelay={Math.min(i, 8) * 60}
-            tilt={i % 2 ? 3 : -3}
-          />
-        ))}
-      </div>
+      {view === 'daftar' ? (
+        <ProductList
+          products={shown}
+          targets={data.targets}
+          monthsOf={data.perMonth ? (code) => productMonths.get(code) ?? [] : undefined}
+        />
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {shown.map((p, i) => (
+            <ProductCard
+              key={p.code}
+              p={p}
+              targets={data.targets}
+              months={data.perMonth ? (productMonths.get(p.code) ?? []) : undefined}
+              stampDelay={Math.min(i, 8) * 60}
+              tilt={i % 2 ? 3 : -3}
+            />
+          ))}
+        </div>
+      )}
 
       {noSales.length > 0 && (filter === 'semua' || filter === 'belum_cukup') && (
         <details className="rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line">
@@ -562,7 +578,6 @@ function ProductCard({
   tilt?: number
 }) {
   const v = VERDICTS[p.verdict]
-  const sold = Math.round(p.netSold)
   return (
     <article className="flex flex-col rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-6">
       <div className="flex items-start justify-between gap-3">
@@ -576,21 +591,43 @@ function ProductCard({
 
       <div className="mt-4 grid grid-cols-3 divide-x divide-line border-y border-line py-2.5 text-center">
         <Mini label="Biaya iklan" value={formatRupiah(p.spend)} />
-        <Mini
-          label="Terjual"
-          value={formatNumber(sold)}
-          detail={
-            p.batalQty > 0 || p.returQty > 0
-              ? `Shopee: ${formatNumber(p.adsSold)} (ada ${[p.batalQty > 0 && 'batal', p.returQty > 0 && 'retur'].filter(Boolean).join(' & ')})`
-              : undefined
-          }
-        />
-        <Mini
-          label="ROAS nyata"
-          value={formatRoas(p.realRoas)}
-          detail={p.shopeeRoas !== null && Math.abs((p.shopeeRoas ?? 0) - (p.realRoas ?? 0)) >= 0.05 ? `Shopee: ${formatRoas(p.shopeeRoas)}` : undefined}
-        />
+        <Mini label="Terjual" value={formatNumber(Math.round(p.netSold))} detail={soldDetail(p)} />
+        <Mini label="ROAS nyata" value={formatRoas(p.realRoas)} detail={roasDetail(p)} />
       </div>
+
+      <ProductDetails p={p} targets={targets} months={months} />
+    </article>
+  )
+}
+
+/** "Shopee: 36 (ada batal & retur)" kalau angka Shopee beda karena pesanan batal/retur. */
+function soldDetail(p: AdProductResult): string | undefined {
+  if (p.batalQty <= 0 && p.returQty <= 0) return undefined
+  const why = [p.batalQty > 0 && 'batal', p.returQty > 0 && 'retur'].filter(Boolean).join(' & ')
+  return `Shopee: ${formatNumber(p.adsSold)} (ada ${why})`
+}
+
+function roasDetail(p: AdProductResult): string | undefined {
+  return p.shopeeRoas !== null && Math.abs((p.shopeeRoas ?? 0) - (p.realRoas ?? 0)) >= 0.05 ? `Shopee: ${formatRoas(p.shopeeRoas)}` : undefined
+}
+
+/**
+ * Isi kartu di bawah angka utama: harga, ROAS balik modal & saran, untung, peringatan, per bulan, dan saran.
+ * `inList`: dipakai di tampilan daftar, yang barisnya sudah menampilkan untung setelah iklan.
+ */
+function ProductDetails({
+  p,
+  targets,
+  months,
+  inList = false,
+}: {
+  p: AdProductResult
+  targets: Targets
+  months?: MonthFigure[]
+  inList?: boolean
+}) {
+  return (
+    <>
 
       {p.price !== null && (
         <div className="mt-3">
@@ -617,14 +654,16 @@ function ProductCard({
             label="Untung per barang (sebelum iklan)"
             value={`${formatRupiah(p.unitProfit)} (${formatPercent((p.margin ?? 0) * 100)})`}
           />
-          <div className="tear pt-2">
-            <Row
-              label="Untung setelah iklan"
-              value={formatRupiah(p.profitAfterAds)}
-              tone={(p.profitAfterAds ?? 0) < 0 ? 'bad' : 'good'}
-              strong
-            />
-          </div>
+          {!inList && (
+            <div className="tear pt-2">
+              <Row
+                label="Untung setelah iklan"
+                value={formatRupiah(p.profitAfterAds)}
+                tone={(p.profitAfterAds ?? 0) < 0 ? 'bad' : 'good'}
+                strong
+              />
+            </div>
+          )}
         </dl>
       )}
 
@@ -677,7 +716,161 @@ function ProductCard({
           Isi HPP
         </Button>
       )}
-    </article>
+    </>
+  )
+}
+
+type AdsView = 'kartu' | 'daftar'
+const VIEW_KEY = 'iklan-tampilan'
+
+/** Pilihan kartu/daftar diingat di browser ini saja; kalau penyimpanan diblokir, kembali ke kartu. */
+function readAdsView(): AdsView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'daftar' ? 'daftar' : 'kartu'
+  } catch {
+    return 'kartu'
+  }
+}
+
+function saveAdsView(view: AdsView) {
+  try {
+    localStorage.setItem(VIEW_KEY, view)
+  } catch {
+    // Mode privat / penyimpanan diblokir: pilihan berlaku sampai halaman ditutup.
+  }
+}
+
+function ViewSwitch({ view, onChange }: { view: AdsView; onChange: (v: AdsView) => void }) {
+  const options: { id: AdsView; label: string; Icon: typeof IconCards }[] = [
+    { id: 'kartu', label: 'Kartu', Icon: IconCards },
+    { id: 'daftar', label: 'Daftar', Icon: IconRows },
+  ]
+  return (
+    <div role="group" aria-label="Tampilan" className="flex w-fit gap-1 rounded-full bg-tint p-1 ring-1 ring-line">
+      {options.map(({ id, label, Icon }) => (
+        <button
+          key={id}
+          type="button"
+          aria-pressed={view === id}
+          onClick={() => onChange(id)}
+          className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 font-semibold transition-colors duration-150 ${
+            view === id ? 'bg-ink text-paper' : 'text-ink-2 hover:text-ink'
+          }`}
+        >
+          <Icon size={18} />
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Kolom tampilan daftar mulai layar lebar: produk, label, 4 angka, panah buka. */
+const LIST_COLS = 'lg:grid-cols-[minmax(0,1fr)_12rem_7rem_4.5rem_5.5rem_9rem_1.25rem]'
+
+/**
+ * Tampilan daftar: satu baris per produk (nama, label, biaya, terjual, ROAS nyata, untung setelah iklan).
+ * Ketuk baris untuk membuka rinciannya (sama dengan isi kartu). Di HP angkanya turun ke bawah nama.
+ */
+function ProductList({
+  products,
+  targets,
+  monthsOf,
+}: {
+  products: AdProductResult[]
+  targets: Targets
+  monthsOf?: (code: string) => MonthFigure[]
+}) {
+  const [open, setOpen] = useState<Set<string>>(() => new Set())
+  const toggle = (code: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(code)) next.add(code)
+      return next
+    })
+  return (
+    <div className="overflow-hidden rounded-3xl bg-paper shadow-sheet ring-1 ring-line">
+      <div aria-hidden="true" className={`hidden gap-x-4 border-b border-line px-6 py-3 text-sm text-ink-3 lg:grid ${LIST_COLS}`}>
+        <span>Produk</span>
+        <span>Label</span>
+        <span className="text-right">Biaya iklan</span>
+        <span className="text-right">Terjual</span>
+        <span className="text-right">ROAS nyata</span>
+        <span className="text-right">Untung setelah iklan</span>
+        <span />
+      </div>
+      <ul className="divide-y divide-line">
+        {products.map((p, i) => {
+          const isOpen = open.has(p.code)
+          const v = VERDICTS[p.verdict]
+          const after = p.profitAfterAds
+          return (
+            <li key={p.code}>
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                onClick={() => toggle(p.code)}
+                className={`grid w-full gap-x-4 gap-y-3 px-5 py-4 text-left transition-colors duration-150 hover:bg-tint/60 sm:px-6 lg:items-center ${LIST_COLS}`}
+              >
+                {/* HP & tablet: nama + panah, label di bawahnya. Layar lebar: semuanya jadi kolom tabel. */}
+                <span className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 lg:contents">
+                  <span className="line-clamp-2 font-semibold leading-snug" title={p.name}>
+                    {p.name}
+                  </span>
+                  <IconChevronDown
+                    size={18}
+                    className={`mt-0.5 text-ink-3 transition-transform duration-150 lg:order-last lg:mt-0 ${isOpen ? 'rotate-180' : ''}`}
+                  />
+                  <span className="justify-self-start">
+                    <Stamp tone={v.tone} delay={Math.min(i, 8) * 60} tilt={i % 2 ? 3 : -3} className="whitespace-nowrap">
+                      {v.label}
+                    </Stamp>
+                  </span>
+                </span>
+                <span className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4 lg:contents">
+                  <ListCell label="Biaya iklan" value={formatRupiah(p.spend)} />
+                  <ListCell label="Terjual" value={formatNumber(Math.round(p.netSold))} detail={soldDetail(p)} />
+                  <ListCell label="ROAS nyata" value={formatRoas(p.realRoas)} detail={roasDetail(p)} />
+                  <ListCell
+                    label="Untung setelah iklan"
+                    value={after === null ? '-' : formatRupiah(after)}
+                    className={after === null ? '' : after < 0 ? 'text-loss' : 'text-gain'}
+                    strong
+                  />
+                </span>
+              </button>
+              {isOpen && (
+                <div className="flex flex-col px-5 pb-5 sm:px-6 lg:pl-6 lg:pr-[calc(1.5rem+1.25rem+1rem)]">
+                  <ProductDetails p={p} targets={targets} months={monthsOf?.(p.code)} inList />
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+function ListCell({
+  label,
+  value,
+  detail,
+  className = '',
+  strong,
+}: {
+  label: string
+  value: string
+  detail?: string
+  className?: string
+  strong?: boolean
+}) {
+  return (
+    <span className="min-w-0 lg:text-right">
+      <span className="block text-xs text-ink-3 lg:sr-only">{label}</span>
+      <span className={`num block ${strong ? 'font-bold' : 'font-semibold'} ${className}`}>{value}</span>
+      {detail && <span className="block text-xs text-ink-3">{detail}</span>}
+    </span>
   )
 }
 
