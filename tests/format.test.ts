@@ -8,6 +8,7 @@ import {
   formatPercent,
   formatRupiah,
   formatRupiahShort,
+  countUpLabels,
   monthEnd,
   periodDays,
 } from '../src/lib/format'
@@ -56,6 +57,19 @@ describe('formatRupiahShort', () => {
     expect(formatRupiahShort(-2785162)).toBe('-Rp2,78 juta')
     expect(formatRupiahShort(950)).toBe('Rp950')
     expect(formatRupiahShort(null)).toBe('-')
+  })
+})
+
+describe('countUpLabels', () => {
+  it('berisi angka akhir dan teks lebih panjang yang lewat saat berputar', () => {
+    const labels = countUpLabels(1_500_000, formatRupiahShort)
+    expect(labels[0]).toBe('Rp1,5 juta')
+    expect(labels).toContain('Rp1,46 juta') // dua desimal, lebih lebar dari angka akhirnya
+    expect(labels.some((l) => / ribu$/.test(l) && l.length === 10)).toBe(true) // "RpXXX ribu"
+    expect(new Set(labels).size).toBe(labels.length)
+  })
+  it('nol hanya satu teks', () => {
+    expect(countUpLabels(0, formatRupiahShort)).toEqual(['Rp0'])
   })
 })
 

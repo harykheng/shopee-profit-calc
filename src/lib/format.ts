@@ -27,6 +27,17 @@ export function formatRupiahShort(value: number | null | undefined): string {
   return formatRupiah(value)
 }
 
+/**
+ * Teks yang bisa tampil saat angka berputar naik dari 0 ke `target` (useCountUp): `target` sendiri plus contoh
+ * nilai di antaranya, tanpa duplikat. Dipakai untuk mengukur teks terlebar sebelum animasi mulai, supaya ukuran
+ * huruf tidak berubah di tengah jalan.
+ */
+export function countUpLabels(target: number, format: (n: number) => string, steps = 48): string[] {
+  const labels = new Set([format(target)])
+  for (let i = 1; i < steps; i++) labels.add(format((target * i) / steps))
+  return [...labels]
+}
+
 export function formatNumber(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '-'
   return NUMBER.format(value)
