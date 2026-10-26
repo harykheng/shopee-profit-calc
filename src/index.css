@@ -132,6 +132,19 @@
   .num {
     font-variant-numeric: tabular-nums;
   }
+  /*
+   * Kalimat Bab 1 di HP: 2,25rem, tapi mengecil sedikit di kolom yang sangat sempit (HP 320 px) supaya periode
+   * terpanjang ("September 2030," = 8,36em) tetap satu baris. Kolom induknya harus `@container`. Peramban tanpa
+   * container query tetap 2,25rem. Mulai 640px diganti sm:text-5xl / lg:text-6xl.
+   */
+  .story-fit {
+    font-size: 2.25rem;
+  }
+  @supports (width: 1cqi) {
+    .story-fit {
+      font-size: min(2.25rem, 100cqi / 8.6);
+    }
+  }
   /* Garis sobek sebelum total. */
   .tear {
     border-top: 2px dashed var(--color-rule);

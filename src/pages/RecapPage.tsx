@@ -544,11 +544,12 @@ function NotaCard({
     <>
       {/* Bab 1: jawabannya, ditulis seperti kalimat (sama dengan kartu rekap di landing). */}
       <section className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:items-stretch lg:gap-12">
-        <div className="min-w-0">
+        <div className="@container min-w-0">
           <Kicker>Bab 1 · Untung bersih</Kicker>
           {/* Periode, nama toko, dan "untung bersih" masing-masing tidak terbelah ke dua baris (mis. "Sora / Store").
-              Kalau periode atau nama toko lebih panjang dari satu baris, ia turun di dalam kotaknya sendiri. */}
-          <h1 className="mt-3 text-balance font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+              Kalau periode atau nama toko lebih panjang dari satu baris, ia turun di dalam kotaknya sendiri.
+              story-fit: di HP 320 px huruf sedikit mengecil supaya "September 2026," tetap satu baris. */}
+          <h1 className="story-fit mt-3 text-balance font-display font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
             <span className="inline-block">{period},</span> <span className="inline-block">{storeName}</span>{' '}
             <span className="hl whitespace-nowrap">{loss ? 'rugi' : 'untung bersih'}</span>
           </h1>
