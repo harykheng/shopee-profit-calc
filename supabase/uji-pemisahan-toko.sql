@@ -99,12 +99,13 @@ begin
                                                        and p.prosrc like '%count(distinct item_key)%')),
     ('20261029000000_store_name_by_customer.sql',  to_regprocedure('public.set_store_name(bigint, text)') is not null),
     ('20261030000000_platform_create_account.sql', to_regprocedure('public.platform_create_account(text, text, text, date, boolean, boolean)') is not null),
-    ('20261031000000_platform_set_subscription.sql', to_regprocedure('public.platform_subscribe_store(bigint, date)') is not null)
+    ('20261031000000_platform_set_subscription.sql', to_regprocedure('public.platform_subscribe_store(bigint, date)') is not null),
+    ('20261101000000_platform_reset_password.sql', to_regprocedure('public.platform_reset_password(text, text)') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261031000000_platform_set_subscription.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261101000000_platform_reset_password.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -210,7 +211,7 @@ begin
       -- Tiga fungsi halaman Pengelola memeriksa is_platform_admin() sendiri; diuji di bagian 2e.
       and p.proname not in ('is_store_member', 'is_store_active', 'client_errors_rate_limit',
                             'is_platform_admin', 'platform_create_trial', 'platform_list_customers',
-                            'platform_create_account', 'platform_subscribe_store',
+                            'platform_create_account', 'platform_subscribe_store', 'platform_reset_password',
                             -- Memeriksa keanggotaan toko sendiri; diuji di bagian 2c.
                             'use_trial_simulation',
                             -- Hanya anggota toko, hanya sekali (name_pending); diuji di bagian 2c dan 2g.
@@ -455,6 +456,8 @@ begin
          'select count(*) from (select public.platform_create_account(''uji-pemisahan-tolak3@contoh.invalid'', ''UjiPemisahan123'', ''UJI-PEMISAHAN G'', current_date + 30, false, false)) x'),
         ('Bukan pengelola: jadikan tokonya sendiri berlangganan (platform_subscribe_store)',
          'select count(*) from (select public.platform_subscribe_store(' || sa || ', date ''2099-12-31'')) x'),
+        ('Bukan pengelola: reset password akunnya sendiri (platform_reset_password)',
+         'select count(*) from (select public.platform_reset_password(''' || a_email || ''', ''UjiPemisahan999'')) x'),
         ('Bukan pengelola: lihat daftar pelanggan (platform_list_customers)',
          'select count(*) from public.platform_list_customers()')
       ) as x (nama, kueri)
@@ -558,6 +561,34 @@ begin
       v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
     end;
     v_uji := v_uji || 'Pengelola: jadikan toko uji coba berlangganan (kontrol)'::text;
+
+    -- Kontrol: pengelola mereset password pelanggan (berhasil), tapi tidak bisa mereset akun pengelola.
+    begin
+      reset role;
+      execute 'insert into public.platform_admins (user_id) values ($1) on conflict do nothing' using a_user;
+      set local role authenticated;
+      daftar := 'uji-pemisahan-' || substr(md5(random()::text), 1, 8) || '@contoh.invalid';
+      execute 'select public.platform_create_trial($1, ''UjiPemisahan123'', ''UJI-PEMISAHAN I'', current_date + 7)' into sisa using daftar;
+      execute 'select public.platform_reset_password($1, ''UjiPemisahanBaru1'')' into kueri using daftar;
+      begin
+        execute 'select public.platform_reset_password($1, ''UjiPemisahanBaru2'')' into kueri using a_email;
+        n2 := 1;  -- akun pengelola ikut tereset: celah
+      exception when insufficient_privilege then
+        n2 := 0;
+      end;
+      reset role;
+      select count(*) into n from auth.users u
+        where u.id = (sisa ->> 'user_id')::uuid
+          and u.encrypted_password = extensions.crypt('UjiPemisahanBaru1', u.encrypted_password);
+      v_status := v_status || case when n = 1 and n2 = 0 then 'LULUS' else 'GAGAL' end;
+      v_ket := v_ket || case when n = 1 and n2 = 0 then 'password pelanggan terganti; akun pengelola ditolak'
+                             else format('password pelanggan terganti: %s, akun pengelola ikut tereset: %s', n, n2) end;
+    exception when others then
+      reset role;
+      v_status := v_status || 'CEK'::text;
+      v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+    end;
+    v_uji := v_uji || 'Pengelola: reset password pelanggan, bukan pengelola (kontrol)'::text;
 
     -- 2f. Akun uji coba: bulan di atas batas ditolak, bulan yang sudah ada tetap boleh. Mengikuti
     --     angka di trial_month_limit(), jadi tidak perlu diubah kalau batasnya diganti.

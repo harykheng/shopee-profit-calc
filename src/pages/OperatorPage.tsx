@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react'
 import { Alert, Button, Card, Modal, PageTitle, Spinner, Stamp, inputClass, linkClass } from '../components/ui'
 import { IconCopy, IconWhatsApp } from '../components/icons'
-import { createAccount, fetchCustomers, subscribeStore } from '../lib/api'
+import { createAccount, fetchCustomers, resetCustomerPassword, subscribeStore } from '../lib/api'
 import { APP_NAME } from '../lib/brand'
 import { adminHint, friendlyError } from '../lib/errors'
 import { formatDate } from '../lib/format'
@@ -14,6 +14,7 @@ import {
   customerStatus,
   defaultTrialEnd,
   generatePassword,
+  resetPasswordMessage,
   lastLoginLabel,
   normalizeTrialForm,
   extendedEnd,
@@ -333,6 +334,22 @@ function CreateTrialCard() {
 }
 
 function CreatedPanel({ email, message, onAnother }: { email: string; message: string; onAnother: () => void }) {
+  return (
+    <>
+      <Alert tone="success" title={`Akun ${email} siap dipakai.`}>
+        Kirim teks di bawah ke pemiliknya. Password ini hanya tampil sekarang; setelah halaman ini ditutup, password tidak
+        bisa dilihat lagi.
+      </Alert>
+      <ShareMessage message={message} />
+      <Button variant="secondary" onClick={onAnother} className="mt-6">
+        Buat akun lain
+      </Button>
+    </>
+  )
+}
+
+/** Teks siap kirim: salin, atau buka WhatsApp untuk memilih kontak. */
+function ShareMessage({ message }: { message: string }) {
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
@@ -346,10 +363,6 @@ function CreatedPanel({ email, message, onAnother }: { email: string; message: s
 
   return (
     <>
-      <Alert tone="success" title={`Akun ${email} siap dipakai.`}>
-        Kirim teks di bawah ke pemiliknya. Password ini hanya tampil sekarang; setelah halaman ini ditutup, password tidak
-        bisa dilihat lagi.
-      </Alert>
       <pre className="mt-4 whitespace-pre-wrap rounded-2xl bg-tint p-4 font-sans text-base leading-relaxed text-ink [overflow-wrap:anywhere]">
         {message}
       </pre>
@@ -371,9 +384,6 @@ function CreatedPanel({ email, message, onAnother }: { email: string; message: s
       <p className="sr-only" aria-live="polite">
         {copied ? 'Teks sudah disalin.' : ''}
       </p>
-      <Button variant="secondary" onClick={onAnother} className="mt-6">
-        Buat akun lain
-      </Button>
     </>
   )
 }
@@ -396,6 +406,7 @@ function sortRows(rows: CustomerRow[], filter: Filter): CustomerRow[] {
 function CustomerList({ rows, onChanged }: { rows: CustomerRow[]; onChanged: () => void }) {
   const counts = countByGroup(rows)
   const [subscribing, setSubscribing] = useState<CustomerRow | null>(null)
+  const [resetting, setResetting] = useState<CustomerRow | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>(counts.trial > 0 ? 'trial' : counts.paid > 0 ? 'paid' : 'all')
   const shown = useMemo(
@@ -432,10 +443,16 @@ function CustomerList({ rows, onChanged }: { rows: CustomerRow[]; onChanged: () 
       ) : (
         <ul className="divide-y divide-line">
           {shown.map((r) => (
-            <CustomerItem key={r.store_id} row={r} onSubscription={() => setSubscribing(r)} />
+            <CustomerItem
+              key={r.store_id}
+              row={r}
+              onSubscription={() => setSubscribing(r)}
+              onResetPassword={() => setResetting(r)}
+            />
           ))}
         </ul>
       )}
+      {resetting && <ResetPasswordDialog row={resetting} onClose={() => setResetting(null)} />}
       {subscribing && (
         <SubscriptionDialog
           row={subscribing}
@@ -452,13 +469,21 @@ function CustomerList({ rows, onChanged }: { rows: CustomerRow[]; onChanged: () 
         />
       )}
       <p className="mt-4 text-sm text-ink-3">
-        Reset password dan mengubah nama toko masih lewat SQL Editor (lihat OPERASI.md).
+        Mengubah nama toko dan reset password akun pengelola masih lewat SQL Editor (lihat OPERASI.md).
       </p>
     </>
   )
 }
 
-function CustomerItem({ row, onSubscription }: { row: CustomerRow; onSubscription: () => void }) {
+function CustomerItem({
+  row,
+  onSubscription,
+  onResetPassword,
+}: {
+  row: CustomerRow
+  onSubscription: () => void
+  onResetPassword: () => void
+}) {
   const status = customerStatus(row.active_until)
   const statusColor = status.state === 'expired' || status.state === 'expiring' ? 'text-warn' : 'text-ink-2'
   return (
@@ -483,11 +508,18 @@ function CustomerItem({ row, onSubscription }: { row: CustomerRow; onSubscriptio
         </p>
         <p className="text-ink-3">Login terakhir: {lastLoginLabel(row.last_sign_in_at)}</p>
         {/* Uji coba → berlangganan; berlangganan dengan tanggal berakhir → perpanjang (toko tanpa batas tidak perlu). */}
-        {(row.trial || row.active_until) && (
-          <Button variant="secondary" onClick={onSubscription} className="mt-2">
-            {row.trial ? 'Jadikan berlangganan' : 'Perpanjang'}
-          </Button>
-        )}
+        <div className="mt-2 flex flex-wrap gap-2 sm:justify-end">
+          {row.owner_emails.length > 0 && (
+            <Button variant="secondary" onClick={onResetPassword}>
+              Reset password
+            </Button>
+          )}
+          {(row.trial || row.active_until) && (
+            <Button variant="secondary" onClick={onSubscription}>
+              {row.trial ? 'Jadikan berlangganan' : 'Perpanjang'}
+            </Button>
+          )}
+        </div>
       </div>
     </li>
   )
@@ -589,6 +621,109 @@ function SubscriptionDialog({
           Batal
         </Button>
       </div>
+    </Modal>
+  )
+}
+
+/**
+ * Jendela "Reset password": password acak baru untuk pemilik toko, lalu teks siap kirim. Akun pengelola ditolak
+ * database (tetap lewat SQL Editor). Pemiliknya keluar dari semua perangkat dan diminta mengganti password lagi.
+ */
+function ResetPasswordDialog({ row, onClose }: { row: CustomerRow; onClose: () => void }) {
+  const titleId = useId()
+  const [email, setEmail] = useState(row.owner_emails[0] ?? '')
+  const [password, setPassword] = useState(() => generatePassword())
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const save = async () => {
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password minimal ${MIN_PASSWORD_LENGTH} karakter.`)
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await resetCustomerPassword(email, password)
+      setMessage(resetPasswordMessage({ appName: APP_NAME, loginUrl: `${window.location.origin}/`, email, password }))
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal labelledBy={titleId} onClose={onClose} dismissible={!busy}>
+      <h2 id={titleId} className="font-display text-2xl font-extrabold tracking-tight">
+        Reset password {row.store_name}
+      </h2>
+      {message ? (
+        <>
+          <div className="mt-4">
+            <Alert tone="success" title="Password sudah diganti.">
+              Pemiliknya sudah dikeluarkan dari semua perangkat. Kirim teks ini; password hanya tampil sekarang.
+            </Alert>
+          </div>
+          <ShareMessage message={message} />
+          <Button variant="secondary" onClick={onClose} className="mt-6 w-full">
+            Selesai
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="mt-3 text-ink-2">
+            Password lama langsung tidak berlaku dan pemiliknya keluar dari semua perangkat. Setelah login, ia diminta
+            mengganti password lagi.
+          </p>
+          {row.owner_emails.length > 1 ? (
+            <label className="mt-4 block font-semibold">
+              Akun
+              <select value={email} onChange={(e) => setEmail(e.target.value)} className={`mt-1.5 font-normal ${inputClass}`}>
+                {row.owner_emails.map((e) => (
+                  <option key={e} value={e}>
+                    {e}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <p className="mt-4 font-semibold [overflow-wrap:anywhere]">{email}</p>
+          )}
+          <label htmlFor="reset-password" className="mt-4 block font-semibold">
+            Password baru
+          </label>
+          <div className="mt-1.5 flex gap-2">
+            <input
+              id="reset-password"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`num min-w-0 flex-1 font-normal ${inputClass}`}
+            />
+            <Button variant="secondary" onClick={() => setPassword(generatePassword())} className="shrink-0">
+              Buat acak
+            </Button>
+          </div>
+          {error && (
+            <div className="mt-4">
+              <Alert tone="error">{error}</Alert>
+            </div>
+          )}
+          <div className="mt-5 flex flex-col gap-3">
+            <Button onClick={save} disabled={busy || !email}>
+              {busy ? 'Menyimpan…' : 'Reset password'}
+            </Button>
+            <Button variant="secondary" onClick={onClose} disabled={busy}>
+              Batal
+            </Button>
+          </div>
+        </>
+      )}
     </Modal>
   )
 }

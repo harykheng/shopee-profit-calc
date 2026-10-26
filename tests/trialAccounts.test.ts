@@ -4,6 +4,7 @@ import {
   countByGroup,
   customerGroup,
   paidEnd,
+  resetPasswordMessage,
   extendedEnd,
   extensionStart,
   asksStoreName,
@@ -241,5 +242,15 @@ describe('nama toko diisi pemilik', () => {
     expect(validateStoreName('   ')).toBe('Isi nama tokomu.')
     expect(validateStoreName('x'.repeat(101))).toMatch(/terlalu panjang/)
     expect(validateStoreName('Toko Cantik')).toBeNull()
+  })
+})
+
+describe('resetPasswordMessage', () => {
+  it('memuat email dan password baru, mengingatkan ganti password', () => {
+    const text = resetPasswordMessage({ appName: 'HitungCuan', loginUrl: 'https://app.contoh.id/', email: 'budi@gmail.com', password: 'Baru12345' })
+    expect(text).toContain('Password HitungCuan kamu sudah direset.')
+    expect(text).toContain('Email: budi@gmail.com')
+    expect(text).toContain('Password baru: Baru12345')
+    expect(text).toContain('ganti password')
   })
 })

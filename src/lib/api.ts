@@ -776,6 +776,11 @@ export async function subscribeStore(storeId: number, activeUntil: string): Prom
   check(await supabase.rpc('platform_subscribe_store', { p_store_id: storeId, p_active_until: activeUntil }))
 }
 
+/** Pengelola: reset password pemilik toko (bukan akun pengelola). SQL 20261101. */
+export async function resetCustomerPassword(email: string, password: string): Promise<void> {
+  check(await supabase.rpc('platform_reset_password', { p_email: email, p_new_password: password }))
+}
+
 /** Pemilik mengisi nama tokonya (sekali, hanya kalau name_pending). */
 export async function setStoreName(storeId: number, name: string): Promise<void> {
   check(await supabase.rpc('set_store_name', { p_store_id: storeId, p_name: name }))

@@ -153,6 +153,11 @@ Setelah dihentikan, pelanggan masih bisa **melihat** Rekap (baca saja) tapi tida
 
 **Lupa password** (pelanggan menekan "Lupa password?" di halaman login → WhatsApp ke kamu):
 
+**Cara cepat:** halaman Pelanggan → tombol **Reset password** di toko itu → password acak sudah terisi → **Reset
+password** → salin teks atau kirim lewat WhatsApp. Sama persis dengan perintah SQL di bawah (password diganti,
+banner "ganti password" muncul lagi, keluar dari semua perangkat). Akun **pengelola** sengaja tidak bisa direset
+dari aplikasi; untuk itu tetap pakai SQL di bawah. Butuh migration `20261101000000_platform_reset_password.sql`.
+
 ```sql
 select public.admin_reset_password('pelanggan@email.com', 'PasswordBaru123');
 ```

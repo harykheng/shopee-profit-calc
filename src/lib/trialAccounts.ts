@@ -172,6 +172,19 @@ export function welcomeMessage(input: {
   ].join('\n')
 }
 
+/** Teks WhatsApp setelah pengelola mereset password pelanggan. */
+export function resetPasswordMessage(input: { appName: string; loginUrl: string; email: string; password: string }): string {
+  return [
+    `Halo! Password ${input.appName} kamu sudah direset.`,
+    '',
+    `Buka: ${input.loginUrl}`,
+    `Email: ${input.email}`,
+    `Password baru: ${input.password}`,
+    '',
+    'Setelah login, ganti password di halaman Akun ya.',
+  ].join('\n')
+}
+
 /** Satu baris dari platform_list_customers(). */
 export interface CustomerRow {
   store_id: number
