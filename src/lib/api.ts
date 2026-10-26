@@ -39,12 +39,15 @@ function chunks<T>(items: T[], size = CHUNK): T[][] {
 }
 
 export async function fetchStores(): Promise<Store[]> {
-  const res = await supabase.from('stores').select('id, name, active_until, trial').order('id')
-  // Kolom trial baru ada setelah 20261026000000_platform_admin.sql; tanpa itu semua toko dianggap berbayar.
-  if (res.error && errorTextOf(res.error).includes('trial')) {
-    return check(await supabase.from('stores').select('id, name, active_until').order('id'))
+  // Kolom baru menyusul migration-nya (trial: 20261026, name_pending: 20261029). Kalau belum dijalankan,
+  // coba lagi tanpa kolom itu: toko dianggap berbayar / namanya sudah terisi.
+  const columns = ['trial', 'name_pending']
+  for (;;) {
+    const res = await supabase.from('stores').select(['id', 'name', 'active_until', ...columns].join(', ')).order('id')
+    const missing = res.error ? columns.findIndex((c) => errorTextOf(res.error).includes(c)) : -1
+    if (missing < 0) return check(res) as unknown as Store[]
+    columns.splice(missing, 1)
   }
-  return check(res)
 }
 
 function errorTextOf(err: unknown): string {
@@ -726,15 +729,29 @@ export async function fetchIsPlatformAdmin(): Promise<boolean> {
 }
 
 /** Buat akun uji coba: akun login + toko + masa aktif. Database menolak kalau bukan pengelola. */
-export async function createTrialAccount(form: TrialForm): Promise<{ user_id: string; store_id: number }> {
-  return check(
-    await supabase.rpc('platform_create_trial', {
-      p_email: form.email,
-      p_password: form.password,
-      p_store_name: form.storeName,
-      p_active_until: form.activeUntil,
-    }),
-  ) as { user_id: string; store_id: number }
+export async function createTrialAccount(
+  form: TrialForm,
+  askName = false,
+): Promise<{ user_id: string; store_id: number; name_pending?: boolean }> {
+  const args = {
+    p_email: form.email,
+    p_password: form.password,
+    p_store_name: form.storeName,
+    p_active_until: form.activeUntil,
+  }
+  if (askName) {
+    const res = await supabase.rpc('platform_create_trial', { ...args, p_ask_name: true })
+    // Tanpa SQL 20261029 versi 5 parameter belum ada: buat akun seperti dulu (nama dari email).
+    if (!res.error || !/p_ask_name|could not find the function/i.test(errorTextOf(res.error))) {
+      return check(res) as { user_id: string; store_id: number; name_pending?: boolean }
+    }
+  }
+  return check(await supabase.rpc('platform_create_trial', args)) as { user_id: string; store_id: number }
+}
+
+/** Pemilik mengisi nama tokonya (sekali, hanya kalau name_pending). */
+export async function setStoreName(storeId: number, name: string): Promise<void> {
+  check(await supabase.rpc('set_store_name', { p_store_id: storeId, p_name: name }))
 }
 
 export async function fetchCustomers(): Promise<CustomerRow[]> {

@@ -65,6 +65,24 @@ export interface TrialForm {
   activeUntil: string
 }
 
+/** Nama toko dikosongkan pengelola: pemilik akun mengisinya sendiri saat login pertama. */
+export function asksStoreName(form: TrialForm): boolean {
+  return form.storeName.trim() === ''
+}
+
+/** Nama toko yang diketik pemilik (spasi dirapikan, sama seperti set_store_name di database). */
+export function cleanStoreName(name: string): string {
+  return name.trim().replace(/\s+/g, ' ')
+}
+
+/** Pesan kesalahan nama toko, atau null kalau sudah benar. */
+export function validateStoreName(name: string): string | null {
+  const clean = cleanStoreName(name)
+  if (clean === '') return 'Isi nama tokomu.'
+  if (clean.length > 100) return 'Nama toko terlalu panjang (maksimal 100 karakter).'
+  return null
+}
+
 /** Isian yang dikirim ke database (email dirapikan, nama toko terisi). */
 export function normalizeTrialForm(form: TrialForm): TrialForm {
   const email = form.email.trim().toLowerCase()

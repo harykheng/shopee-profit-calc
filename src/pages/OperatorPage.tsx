@@ -14,6 +14,7 @@ import {
   generatePassword,
   lastLoginLabel,
   normalizeTrialForm,
+  asksStoreName,
   storeNameFromEmail,
   summarizeCustomers,
   trialErrorMessage,
@@ -100,7 +101,7 @@ function CreateTrialCard({ onCreated }: { onCreated: () => void }) {
     const clean = normalizeTrialForm(form)
     setBusy(true)
     try {
-      await createTrialAccount(clean)
+      await createTrialAccount(clean, asksStoreName(form))
       setCreated({
         email: clean.email,
         message: welcomeMessage({
@@ -184,11 +185,14 @@ function CreateTrialCard({ onCreated }: { onCreated: () => void }) {
             type="text"
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}
-            placeholder={storeNameFromEmail(email) || 'Toko Contoh'}
+            placeholder="Boleh dikosongkan"
             maxLength={100}
             className={`mt-1.5 font-normal ${inputClass}`}
           />
-          <span className="mt-1 block text-sm font-normal text-ink-3">Kosongkan untuk memakai nama dari email.</span>
+          <span className="mt-1 block text-sm font-normal text-ink-3">
+            Kosongkan: pemilik akun mengisi nama tokonya sendiri saat pertama login (sementara tertulis{' '}
+            {storeNameFromEmail(email) || 'nama dari email'}).
+          </span>
         </label>
 
         <label className="mt-4 block font-semibold">

@@ -128,6 +128,7 @@ Migration (jalankan berurutan; file baru ditandai):
 | **`20261021000000_income_per_order_views.sql`** | View `order_item_income`, `income_order_match`, `income_product_monthly`; kolom baru di `product_monthly_recap` |
 | **`20261022000000_income_monthly_breakdown.sql`** | View `income_monthly_breakdown` (Bab 2 Rekap dari omzet) |
 | **`20261023000000_admin_reset_password.sql`** | Fungsi admin `admin_reset_password(email, password)` untuk SQL Editor: ganti password (bcrypt), hapus penanda `password_changed` supaya banner muncul lagi, keluarkan semua sesi. Tidak dipakai aplikasi |
+| **`20261029000000_store_name_by_customer.sql`** | `stores.name_pending`; `platform_create_trial(…, p_ask_name)` (versi 5 parameter, memanggil versi 4) memasang tanda kalau nama dikosongkan pengelola; `set_store_name()` (security definer, anggota toko, sekali saja). Aplikasi menampilkan jendela "nama tokomu di Shopee" saat login. Boleh sebelum/sesudah deploy |
 | **`20261028000000_trial_limits_total.sql`** | Angka batas uji coba jadi data **1 bulan** dan simulasi **50 produk selama uji coba** (`use_trial_simulation` menghitung produk berbeda sepanjang masa uji coba, catatan lama tidak dihapus). Butuh 20261027; jalankan sebelum/bersamaan deploy |
 | **`20261027000000_trial_limits.sql`** | Batas toko uji coba (`stores.trial`): trigger per perintah di `income`, `income_adjustments`, `income_orders`, `ad_reports` menolak kalau bulan data (uang cair / periode iklan) > 2 (`trial_months_used`, `trial_month_limit()`); tabel `trial_simulations` + RPC `use_trial_simulation` (security definer, cek anggota) untuk 10 produk simulasi/hari (`trial_simulation_limit()`). Ekspor/hapus admin ikut. Butuh 20261026; boleh sebelum/sesudah deploy |
 | **`20261026000000_platform_admin.sql`** | Halaman Pengelola: tabel `platform_admins`, `stores.trial` & `stores.created_at`, `is_platform_admin()`, `platform_create_trial()` (tulis langsung ke `auth.users` + `auth.identities`, lalu toko + pemilik), `platform_list_customers()`, `admin_set_platform_admin()` (SQL Editor). Boleh sebelum/sesudah deploy (tanpa SQL ini ikon tidak muncul) |
@@ -251,6 +252,7 @@ npm run build
 | (26 Okt) | Halaman Pengelola: buat akun uji coba dari aplikasi, daftar toko + login terakhir. SQL 20261026. |
 | (27 Okt) | Batas uji coba: data 2 bulan (laporan penghasilan & iklan; export pesanan bebas), Simulasi 10 produk/hari (per produk, Satu & Grup berbagi jatah). SQL 20261027. |
 | (28 Okt) | Batas uji coba diubah pemilik: data 1 bulan, Simulasi 50 produk selama uji coba. SQL 20261028. Cek cepat iklan dimatikan untuk uji coba (khusus berlangganan; hanya di aplikasi, tanpa SQL). |
+| (29 Okt) | Nama toko boleh dikosongkan di Pengelola: pemilik mengisinya sendiri saat login pertama (sekali). SQL 20261029. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 

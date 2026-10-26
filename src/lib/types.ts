@@ -5,6 +5,8 @@ export interface Store {
   active_until: string | null
   /** Toko uji coba (stores.trial): data maks. 2 bulan, simulasi maks. 10 produk per hari. Tidak ada = berbayar. */
   trial?: boolean
+  /** Nama toko belum diisi pemiliknya (dibuat dari halaman Pengelola tanpa nama): tampilkan jendela isi nama. */
+  name_pending?: boolean
 }
 
 export interface Product {

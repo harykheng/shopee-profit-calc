@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDays,
+  asksStoreName,
+  cleanStoreName,
   customerStatus,
   defaultTrialEnd,
   generatePassword,
@@ -8,6 +10,7 @@ import {
   normalizeTrialForm,
   storeNameFromEmail,
   summarizeCustomers,
+  validateStoreName,
   validateTrialForm,
   welcomeMessage,
   type CustomerRow,
@@ -157,5 +160,22 @@ describe('trialErrorMessage', () => {
     expect(trialErrorMessage({ code: '42501', message: 'Hanya pengelola yang bisa membuat akun.' }, fallback, noHint)).toMatch(/Hanya pengelola/)
     expect(trialErrorMessage({ code: 'XX000', message: 'internal' }, fallback, noHint)).toBe('umum')
     expect(trialErrorMessage({ code: 'PGRST202', message: 'x' }, fallback, () => 'jalankan SQL')).toBe('jalankan SQL')
+  })
+})
+
+describe('nama toko diisi pemilik', () => {
+  it('nama dikosongkan pengelola = pemilik mengisi sendiri', () => {
+    const form = { email: 'budi@gmail.com', password: 'Rahasia123', storeName: '  ', activeUntil: '2026-11-09' }
+    expect(asksStoreName(form)).toBe(true)
+    expect(asksStoreName({ ...form, storeName: 'Toko Budi' })).toBe(false)
+    // Sementara tetap tersimpan nama dari email (kolom nama wajib di database).
+    expect(normalizeTrialForm(form).storeName).toBe('Toko budi')
+  })
+
+  it('nama dari pemilik dirapikan dan dicek', () => {
+    expect(cleanStoreName('  Toko   Cantik  Official ')).toBe('Toko Cantik Official')
+    expect(validateStoreName('   ')).toBe('Isi nama tokomu.')
+    expect(validateStoreName('x'.repeat(101))).toMatch(/terlalu panjang/)
+    expect(validateStoreName('Toko Cantik')).toBeNull()
   })
 })

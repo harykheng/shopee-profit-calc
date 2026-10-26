@@ -70,7 +70,11 @@ pengelola). Isi:
   perpanjang tokonya lewat SQL di bawah.
 - **Password**: sudah terisi acak (10 huruf & angka yang tidak mirip, mudah diketik). **Buat acak**
   untuk yang lain, atau ketik sendiri (minimal 8 karakter).
-- **Nama toko**: boleh dikosongkan, diisi "Toko " + bagian depan email.
+- **Nama toko**: boleh dikosongkan. Saat pertama login, pemilik akun diminta mengisi nama tokonya di Shopee
+  (jendela yang tidak bisa dilewati, hanya bisa diisi sekali). Sampai itu, di daftar tertulis "Toko " +
+  bagian depan email. Butuh migration `20261029000000_store_name_by_customer.sql`; tanpa itu nama dari
+  email dipakai seterusnya seperti dulu. Pelanggan salah ketik nama:
+  `update public.stores set name = 'Nama Benar' where id = 5;`
 - **Bisa dipakai sampai**: bawaan **30 hari** (hari ini ikut dihitung, jadi dibuat 1 November → aktif
   sampai akhir 30 November WIB). Setelah itu toko otomatis jadi baca saja.
 

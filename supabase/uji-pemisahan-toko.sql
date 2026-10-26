@@ -96,12 +96,13 @@ begin
     ('20261027000000_trial_limits.sql',            to_regclass('public.trial_simulations') is not null),
     ('20261028000000_trial_limits_total.sql',      exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
                                                      where s.nspname = 'public' and p.proname = 'use_trial_simulation'
-                                                       and p.prosrc like '%count(distinct item_key)%'))
+                                                       and p.prosrc like '%count(distinct item_key)%')),
+    ('20261029000000_store_name_by_customer.sql',  to_regprocedure('public.set_store_name(bigint, text)') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261028000000_trial_limits_total.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261029000000_store_name_by_customer.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -208,7 +209,9 @@ begin
       and p.proname not in ('is_store_member', 'is_store_active', 'client_errors_rate_limit',
                             'is_platform_admin', 'platform_create_trial', 'platform_list_customers',
                             -- Memeriksa keanggotaan toko sendiri; diuji di bagian 2c.
-                            'use_trial_simulation')
+                            'use_trial_simulation',
+                            -- Hanya anggota toko, hanya sekali (name_pending); diuji di bagian 2c dan 2g.
+                            'set_store_name')
       and (has_function_privilege('authenticated', p.oid, 'EXECUTE') or has_function_privilege('anon', p.oid, 'EXECUTE'));
     v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
     v_uji := v_uji || 'Struktur: tidak ada fungsi security definer baru yang terbuka'::text;
@@ -355,7 +358,9 @@ begin
         ('Hitung ulang HPP toko lain (recalc_hpp)',
          'select public.recalc_hpp($1, $5, false)'),
         ('Pakai jatah simulasi toko lain (use_trial_simulation)',
-         'select (public.use_trial_simulation($1, ''uji'') ->> ''used'')::bigint')
+         'select (public.use_trial_simulation($1, ''uji'') ->> ''used'')::bigint'),
+        ('Isi nama toko lain (set_store_name)',
+         'select public.set_store_name($1, ''UJI-PEMISAHAN NAMA'')::bigint')
       ) as x (nama, kueri)
     loop
       -- Kontrol ke toko A: $1 = toko A, $2 = laporan iklan A, $3 dan $4 = akun sendiri.
@@ -441,6 +446,8 @@ begin
       select x.nama, x.kueri from (values
         ('Bukan pengelola: buat akun uji coba (platform_create_trial)',
          'select count(*) from (select public.platform_create_trial(''uji-pemisahan-tolak@contoh.invalid'', ''UjiPemisahan123'', ''UJI-PEMISAHAN D'', current_date + 7)) x'),
+        ('Bukan pengelola: buat akun uji coba tanpa nama toko (platform_create_trial, 5 parameter)',
+         'select count(*) from (select public.platform_create_trial(''uji-pemisahan-tolak2@contoh.invalid'', ''UjiPemisahan123'', ''UJI-PEMISAHAN E'', current_date + 7, true)) x'),
         ('Bukan pengelola: lihat daftar pelanggan (platform_list_customers)',
          'select count(*) from public.platform_list_customers()')
       ) as x (nama, kueri)
@@ -488,6 +495,25 @@ begin
     end;
     v_uji := v_uji || 'Pengelola: buat akun uji coba (kontrol)'::text;
 
+    -- Kontrol: akun uji coba yang nama tokonya diisi pelanggan sendiri (versi 5 parameter).
+    begin
+      reset role;
+      execute 'insert into public.platform_admins (user_id) values ($1) on conflict do nothing' using a_user;
+      set local role authenticated;
+      execute 'select public.platform_create_trial($1, ''UjiPemisahan123'', ''UJI-PEMISAHAN F'', current_date + 7, true)'
+        into sisa using 'uji-pemisahan-' || substr(md5(random()::text), 1, 8) || '@contoh.invalid';
+      reset role;
+      select count(*) into m from public.stores s
+        where s.id = (sisa ->> 'store_id')::bigint and s.trial and s.name_pending;
+      v_status := v_status || case when m = 1 then 'LULUS' else 'GAGAL' end;
+      v_ket := v_ket || case when m = 1 then 'toko uji coba terbentuk dengan tanda "nama belum diisi"' else 'tanda nama belum diisi tidak terpasang' end;
+    exception when others then
+      reset role;
+      v_status := v_status || 'CEK'::text;
+      v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+    end;
+    v_uji := v_uji || 'Pengelola: buat akun uji coba, nama diisi pelanggan (kontrol)'::text;
+
     -- 2f. Akun uji coba: bulan di atas batas ditolak, bulan yang sudah ada tetap boleh. Mengikuti
     --     angka di trial_month_limit(), jadi tidak perlu diubah kalau batasnya diganti.
     begin
@@ -530,6 +556,25 @@ begin
       v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
     end;
     v_uji := v_uji || 'Uji coba: data maksimal sesuai trial_month_limit()'::text;
+
+    -- 2g. Nama toko diisi pemilik: hanya sekali, hanya kalau name_pending.
+    begin
+      reset role;
+      execute 'update public.stores set name_pending = true where id = $1' using sa;
+      set local role authenticated;
+      execute 'select public.set_store_name($1, ''  UJI-PEMISAHAN   A2 '')' into n using sa;
+      execute 'select public.set_store_name($1, ''UJI-PEMISAHAN A3'')' into n2 using sa;
+      reset role;
+      select count(*) into m from public.stores where id = sa and name = 'UJI-PEMISAHAN A2' and not name_pending;
+      v_status := v_status || case when n = 1 and n2 = 0 and m = 1 then 'LULUS' else 'GAGAL' end;
+      v_ket := v_ket || case when n = 1 and n2 = 0 and m = 1 then 'nama tersimpan (spasi dirapikan); percobaan kedua tidak mengubah apa pun'
+                             else format('pertama %s, kedua %s, nama benar %s', n, n2, m) end;
+    exception when others then
+      reset role;
+      v_status := v_status || 'CEK'::text;
+      v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+    end;
+    v_uji := v_uji || 'Pemilik mengisi nama toko sekali saja (set_store_name)'::text;
 
     -- -------------------------------------------------------------------------
     -- 3. Tanpa login (anon)

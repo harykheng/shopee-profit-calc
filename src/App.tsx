@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js'
 import { Alert, Brand, Card, ErrorBox, Spinner, Stamp, SupportLink, WhatsAppButton, linkClass } from './components/ui'
 import { MonthlyReminderCard } from './components/MonthlyReminder'
 import { SupportButton } from './components/SupportButton'
+import { StoreNameModal } from './components/StoreNameModal'
 import { APP_NAME, hasSupportWhatsApp, isHitungCuan } from './lib/brand'
 import { formatDate } from './lib/format'
 import { expiryNotice, subscriptionStatus } from './lib/subscription'
@@ -215,6 +216,23 @@ function MainApp({ user }: { user: User }) {
 
   return (
     <div className="min-h-screen pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+      {/* Toko dibuat tanpa nama (halaman Pengelola): pemiliknya mengisi dulu sebelum memakai aplikasi. */}
+      {selectedStore?.name_pending && (
+        <StoreNameModal
+          key={selectedStore.id}
+          storeId={selectedStore.id}
+          onSaved={(name) =>
+            // Muat ulang dari database (nama bisa saja sudah diisi di perangkat lain); kalau gagal, pakai yang diketik.
+            fetchStores()
+              .then(setStores)
+              .catch(() =>
+                setStores((list) =>
+                  (list ?? []).map((s) => (s.id === selectedStore.id ? { ...s, name, name_pending: false } : s)),
+                ),
+              )
+          }
+        />
+      )}
       <SupportButton
         context={{
           email,

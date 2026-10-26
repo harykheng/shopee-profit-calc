@@ -674,6 +674,10 @@ disimpan**. File dibaca langsung di browser.
 
 Buka lewat ikon orang di pojok kanan atas.
 
+**Login pertama: nama toko.** Kalau akunmu dibuat tanpa nama toko, aplikasi menanyakan **nama tokomu di
+Shopee** saat pertama login. Tulis persis seperti di Seller Centre: nama ini dicocokkan dengan laporan
+yang kamu upload. Hanya bisa diisi sekali; kalau salah, hubungi admin.
+
 ### Pengaturan hitungan (per toko)
 
 Tiga angka yang sebelumnya sama untuk semua toko. Sekarang tiap toko boleh punya sendiri:
