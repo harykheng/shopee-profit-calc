@@ -749,6 +749,28 @@ export async function createTrialAccount(
   return check(await supabase.rpc('platform_create_trial', args)) as { user_id: string; store_id: number }
 }
 
+/**
+ * Buat akun dari halaman Pengelola: uji coba atau langsung berlangganan (SQL 20261030).
+ * Tanpa SQL itu, akun uji coba tetap bisa dibuat lewat cara lama; akun berlangganan tidak.
+ */
+export async function createAccount(
+  form: TrialForm,
+  opts: { askName: boolean; trial: boolean },
+): Promise<{ user_id: string; store_id: number }> {
+  const res = await supabase.rpc('platform_create_account', {
+    p_email: form.email,
+    p_password: form.password,
+    p_store_name: form.storeName,
+    p_active_until: form.activeUntil,
+    p_ask_name: opts.askName,
+    p_trial: opts.trial,
+  })
+  if (res.error && opts.trial && /platform_create_account|could not find the function/i.test(errorTextOf(res.error))) {
+    return createTrialAccount(form, opts.askName)
+  }
+  return check(res) as { user_id: string; store_id: number }
+}
+
 /** Pemilik mengisi nama tokonya (sekali, hanya kalau name_pending). */
 export async function setStoreName(storeId: number, name: string): Promise<void> {
   check(await supabase.rpc('set_store_name', { p_store_id: storeId, p_name: name }))

@@ -20,19 +20,22 @@ import { RecapPage } from './pages/RecapPage'
 import { AdsPage } from './pages/AdsPage'
 import { AccountPage } from './pages/AccountPage'
 import { PriceSimPage } from './pages/PriceSimPage'
-import { OperatorPage } from './pages/OperatorPage'
+import { CustomersPage, OperatorPage } from './pages/OperatorPage'
 import { ROUTES, readHash, type Route } from './lib/router'
 import { useActiveIndicator } from './components/motion'
-import { IconCalculator, IconChevronDown, IconKey, IconLogout, IconMegaphone, IconReceipt, IconStore, IconTag, IconUpload, IconUser, IconWallet } from './components/icons'
+import { IconCalculator, IconChevronDown, IconKey, IconLogout, IconMegaphone, IconReceipt, IconStore, IconTag, IconUpload, IconUser, IconUsers, IconWallet } from './components/icons'
 
 // Hasil dulu (Rekap, Iklan, Simulasi), lalu input bulanan (Upload, HPP, Biaya).
 const NAV_ORDER: Route[] = ['rekap', 'iklan', 'simulasi', 'upload', 'hpp', 'biaya']
+/** Menu pengelola yang tidak punya toko sendiri. */
+const OPERATOR_NAV: Route[] = ['pelanggan', 'pengelola']
 
 const NAV_ICONS: Record<Route, typeof IconUpload> = {
   rekap: IconReceipt,
   iklan: IconMegaphone,
   simulasi: IconCalculator,
   akun: IconUser,
+  pelanggan: IconUsers,
   pengelola: IconKey,
   upload: IconUpload,
   hpp: IconTag,
@@ -179,7 +182,18 @@ function MainApp({ user }: { user: User }) {
   // Layar penuh menggantikan semua halaman: belum punya toko, atau langganan toko terpilih habis.
   const expired = subscription.state === 'expired' && selectedStore !== null
   // Menu disembunyikan kalau belum punya toko, atau langganan habis (saat itu hanya Rekap, baca saja).
-  const blocked = stores !== null && (stores.length === 0 || expired)
+  // Pengelola tanpa toko sendiri: hanya menu Pelanggan & Buat akun, halaman toko tidak dipakai.
+  const operatorOnly = isOperator === true && stores !== null && stores.length === 0
+  const navItems = operatorOnly ? OPERATOR_NAV : NAV_ORDER
+  const homeRoute: Route = isOperator ? 'pelanggan' : 'rekap'
+  const blocked = stores !== null && ((stores.length === 0 && !operatorOnly) || expired)
+
+  // Halaman awal pengelola = daftar pelanggan. Halaman toko dialihkan ke sana kalau pengelola tidak punya toko.
+  useEffect(() => {
+    if (!isOperator) return
+    const emptyHash = window.location.hash.replace(/^#\/?/, '') === ''
+    if (emptyHash || (operatorOnly && NAV_ORDER.includes(route))) window.location.replace('#/pelanggan')
+  }, [isOperator, operatorOnly, route])
   const notice = expiryNotice(subscription)
 
   // Nama toko selalu tampil setelah logo: pemilih kalau tokonya lebih dari satu, label biasa kalau cuma satu.
@@ -258,7 +272,10 @@ function MainApp({ user }: { user: User }) {
           </div>
         )}
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
-          <a href="#/rekap" aria-label={`${APP_NAME}, ke Rekap`} className="inline-flex min-h-11 shrink-0 items-center rounded-md">
+          <a
+            href={`#/${homeRoute}`}
+            aria-label={`${APP_NAME}, ke ${isOperator ? 'daftar pelanggan' : 'Rekap'}`}
+            className="inline-flex min-h-11 shrink-0 items-center rounded-md">
             {/* Logo HitungCuan menyusut jadi tandanya saja di HP dan di 1024-1279px (menu ikut di bar atas), supaya
                 nama toko tetap terbaca. */}
             {isHitungCuan ? (
@@ -276,7 +293,7 @@ function MainApp({ user }: { user: User }) {
               <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-ink" style={topIndicator} />
             )}
             <ul className="flex gap-1">
-              {NAV_ORDER.map((r) => (
+              {navItems.map((r) => (
                 <li key={r}>
                   <NavLink route={r} current={route === r} variant="top" />
                 </li>
@@ -284,13 +301,13 @@ function MainApp({ user }: { user: User }) {
             </ul>
           </nav>
           <div className={`ml-auto flex shrink-0 items-center gap-1 ${blocked ? '' : 'lg:ml-1'}`}>
-            {isOperator && (
+            {isOperator && !operatorOnly && (
               <a
-                href="#/pengelola"
-                aria-current={route === 'pengelola' ? 'page' : undefined}
-                title="Pengelola: buat akun uji coba"
+                href="#/pelanggan"
+                aria-current={route === 'pelanggan' || route === 'pengelola' ? 'page' : undefined}
+                title="Pengelola: pelanggan & buat akun"
                 className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
-                  route === 'pengelola' ? 'bg-ink text-paper' : 'text-ink-2 hover:bg-tint hover:text-ink'
+                  route === 'pelanggan' || route === 'pengelola' ? 'bg-ink text-paper' : 'text-ink-2 hover:bg-tint hover:text-ink'
                 }`}
               >
                 <IconKey size={19} />
@@ -331,8 +348,8 @@ function MainApp({ user }: { user: User }) {
         {barIndicator && (
           <span aria-hidden="true" className="nav-indicator absolute rounded-full bg-ink" style={barIndicator} />
         )}
-        <ul className="mx-auto grid max-w-2xl grid-cols-6 px-1">
-          {NAV_ORDER.map((r) => (
+        <ul className={`mx-auto grid max-w-2xl px-1 ${operatorOnly ? 'grid-cols-2' : 'grid-cols-6'}`}>
+          {navItems.map((r) => (
             <li key={r}>
               <NavLink route={r} current={route === r} variant="bottom" />
             </li>
@@ -341,10 +358,18 @@ function MainApp({ user }: { user: User }) {
       </nav>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-        {route === 'pengelola' ? (
+        {route === 'pengelola' || route === 'pelanggan' ? (
           // Tidak bergantung pada toko: pengelola bisa saja tidak punya toko sendiri.
-          <div className="page-in">
-            {isOperator === null ? <Spinner /> : isOperator ? <OperatorPage /> : <NotOperatorScreen />}
+          <div key={route} className="page-in">
+            {isOperator === null ? (
+              <Spinner />
+            ) : !isOperator ? (
+              <NotOperatorScreen />
+            ) : route === 'pelanggan' ? (
+              <CustomersPage showTabs={!operatorOnly} />
+            ) : (
+              <OperatorPage showTabs={!operatorOnly} />
+            )}
           </div>
         ) : route === 'akun' ? (
           <div className="page-in">

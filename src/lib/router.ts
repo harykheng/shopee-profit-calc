@@ -1,5 +1,5 @@
 // Navigasi sederhana berbasis hash: "#/hpp?kosong=1".
-export type Route = 'upload' | 'hpp' | 'biaya' | 'rekap' | 'iklan' | 'simulasi' | 'akun' | 'pengelola'
+export type Route = 'upload' | 'hpp' | 'biaya' | 'rekap' | 'iklan' | 'simulasi' | 'akun' | 'pelanggan' | 'pengelola'
 
 /** `short`: label pendek untuk layar kecil (supaya menu tetap muat). */
 export const ROUTES: { route: Route; label: string; short?: string }[] = [
@@ -11,8 +11,9 @@ export const ROUTES: { route: Route; label: string; short?: string }[] = [
   { route: 'simulasi', label: 'Simulasi Harga', short: 'Simulasi' },
   // Tidak ada di menu utama; dibuka dari ikon akun di header dan banner ganti password.
   { route: 'akun', label: 'Akun' },
-  // Hanya untuk pengelola (is_platform_admin): ikon di header, buat akun uji coba & daftar pelanggan.
-  { route: 'pengelola', label: 'Pengelola' },
+  // Hanya untuk pengelola (is_platform_admin): halaman awal pengelola = daftar pelanggan; buat akun di "pengelola".
+  { route: 'pelanggan', label: 'Pelanggan' },
+  { route: 'pengelola', label: 'Buat akun' },
 ]
 
 export function readHash(): { route: Route; params: URLSearchParams } {

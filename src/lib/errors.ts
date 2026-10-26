@@ -6,6 +6,7 @@ const SYSTEM_TROUBLE = 'Ada gangguan di sistem kami. Coba lagi sebentar lagi; ka
 
 /** Error karena migration belum dijalankan: [kata kunci, nama file SQL]. */
 const MISSING_MIGRATIONS: [match: (lower: string) => boolean, file: string][] = [
+  [(l) => l.includes('platform_create_account'), '20261030000000_platform_create_account.sql'],
   [
     (l) => l.includes('platform_create_trial') || l.includes('platform_list_customers') || l.includes('is_platform_admin'),
     '20261026000000_platform_admin.sql',

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Alert, Button, Card, PageTitle, Spinner, Stamp, inputClass, linkClass } from '../components/ui'
 import { IconCopy, IconWhatsApp } from '../components/icons'
-import { createTrialAccount, fetchCustomers } from '../lib/api'
+import { createAccount, fetchCustomers } from '../lib/api'
 import { APP_NAME } from '../lib/brand'
 import { adminHint, friendlyError } from '../lib/errors'
 import { formatDate } from '../lib/format'
@@ -9,32 +9,57 @@ import { MIN_PASSWORD_LENGTH } from '../lib/password'
 import { wibToday } from '../lib/subscription'
 import {
   DEFAULT_TRIAL_DAYS,
+  countByGroup,
+  customerGroup,
   customerStatus,
   defaultTrialEnd,
   generatePassword,
   lastLoginLabel,
   normalizeTrialForm,
+  paidEnd,
   asksStoreName,
   storeNameFromEmail,
   summarizeCustomers,
   trialErrorMessage,
   validateTrialForm,
   welcomeMessage,
+  type CustomerGroup,
   type CustomerRow,
 } from '../lib/trialAccounts'
 
 const errorMessage = (err: unknown) => trialErrorMessage(err, friendlyError, adminHint)
 
+/** Pindah antara daftar pelanggan dan formulir buat akun (untuk pengelola yang juga punya toko sendiri). */
+function OperatorTabs({ current }: { current: 'pelanggan' | 'pengelola' }) {
+  const tab = (route: 'pelanggan' | 'pengelola', label: string) => (
+    <a
+      href={`#/${route}`}
+      aria-current={current === route ? 'page' : undefined}
+      className={`inline-flex min-h-11 items-center rounded-full px-5 font-semibold transition-colors ${
+        current === route ? 'bg-ink text-paper' : 'text-ink-2 hover:text-ink'
+      }`}
+    >
+      {label}
+    </a>
+  )
+  return (
+    <nav aria-label="Pengelola" className="mb-8 flex w-fit max-w-full flex-wrap gap-1 rounded-full bg-tint p-1 ring-1 ring-line">
+      {tab('pelanggan', 'Pelanggan')}
+      {tab('pengelola', 'Buat akun')}
+    </nav>
+  )
+}
+
 /**
- * Halaman Pengelola: buat akun uji coba (email, password, tanggal berakhir) dan daftar semua toko.
+ * Halaman awal pengelola: semua toko, dikelompokkan uji coba / berlangganan / berakhir.
  * Hanya tampil untuk akun di platform_admins; database tetap menolak akun lain.
  * Isi toko pelanggan (pesanan, untung, HPP) sengaja tidak ada di sini.
  */
-export function OperatorPage() {
+export function CustomersPage({ showTabs }: { showTabs: boolean }) {
   const [customers, setCustomers] = useState<CustomerRow[] | null>(null)
   const [listError, setListError] = useState<string | null>(null)
 
-  const load = useCallback(() => {
+  useEffect(() => {
     fetchCustomers()
       .then((rows) => {
         setCustomers(rows)
@@ -43,34 +68,38 @@ export function OperatorPage() {
       .catch((err) => setListError(errorMessage(err)))
   }, [])
 
-  useEffect(load, [load])
-
+  const counts = customers ? countByGroup(customers) : null
   const summary = customers ? summarizeCustomers(customers) : null
 
   return (
     <>
-      <PageTitle subtitle="Buat akun uji coba dan lihat semua toko. Isi toko pelanggan (pesanan, untung, HPP) tidak terlihat di sini.">
-        Pengelola
+      <PageTitle subtitle="Siapa yang sedang uji coba, siapa yang sudah berlangganan. Isi toko pelanggan (pesanan, untung, HPP) tidak terlihat di sini.">
+        Pelanggan
       </PageTitle>
+      {showTabs && <OperatorTabs current="pelanggan" />}
 
-      {summary && (
-        <p className="mb-8 max-w-[40ch] font-display text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">
-          {summary.activeTrials === 0 ? (
-            'Belum ada akun uji coba yang aktif.'
-          ) : (
-            <>
-              <span className="hl">{summary.activeTrials} akun uji coba</span> masih aktif
-              {summary.neverLoggedIn > 0 ? `, ${summary.neverLoggedIn} belum pernah login.` : '.'}
-            </>
+      {counts && summary && (
+        <div className="mb-8">
+          <p className="max-w-[40ch] font-display text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">
+            <span className="hl">{counts.paid} berlangganan</span>, {counts.trial} sedang uji coba.
+          </p>
+          {(summary.neverLoggedIn > 0 || counts.ended > 0) && (
+            <p className="mt-2 text-lg text-ink-2">
+              {[
+                summary.neverLoggedIn > 0 ? `${summary.neverLoggedIn} akun uji coba belum pernah login` : null,
+                counts.ended > 0 ? `${counts.ended} toko sudah berakhir (baca saja)` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              .
+            </p>
           )}
-        </p>
+        </div>
       )}
 
-      <CreateTrialCard onCreated={load} />
-
-      <Card title="Semua toko" className="max-w-4xl">
+      <Card className="max-w-4xl">
         {listError ? (
-          <Alert tone="error" title="Daftar toko gagal dimuat.">
+          <Alert tone="error" title="Daftar pelanggan gagal dimuat.">
             {listError}
           </Alert>
         ) : !customers ? (
@@ -83,7 +112,23 @@ export function OperatorPage() {
   )
 }
 
-function CreateTrialCard({ onCreated }: { onCreated: () => void }) {
+/** Formulir buat akun: uji coba atau langsung berlangganan. */
+export function OperatorPage({ showTabs }: { showTabs: boolean }) {
+  return (
+    <>
+      <PageTitle subtitle="Buat akun uji coba atau akun yang langsung berlangganan. Teks login siap dikirim lewat WhatsApp.">
+        Buat akun
+      </PageTitle>
+      {showTabs && <OperatorTabs current="pengelola" />}
+      <CreateTrialCard />
+    </>
+  )
+}
+
+type AccountKind = 'trial' | 'paid'
+
+function CreateTrialCard() {
+  const [kind, setKindState] = useState<AccountKind>('trial')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState(() => generatePassword())
   const [storeName, setStoreName] = useState('')
@@ -91,6 +136,13 @@ function CreateTrialCard({ onCreated }: { onCreated: () => void }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<{ email: string; message: string } | null>(null)
+  const trial = kind === 'trial'
+
+  const setKind = (k: AccountKind) => {
+    setKindState(k)
+    setActiveUntil(k === 'trial' ? defaultTrialEnd() : paidEnd(1))
+    setError(null)
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -101,7 +153,7 @@ function CreateTrialCard({ onCreated }: { onCreated: () => void }) {
     const clean = normalizeTrialForm(form)
     setBusy(true)
     try {
-      await createTrialAccount(clean, asksStoreName(form))
+      await createAccount(clean, { askName: asksStoreName(form), trial })
       setCreated({
         email: clean.email,
         message: welcomeMessage({
@@ -110,9 +162,9 @@ function CreateTrialCard({ onCreated }: { onCreated: () => void }) {
           email: clean.email,
           password: clean.password,
           activeUntil: clean.activeUntil,
+          trial,
         }),
       })
-      onCreated()
     } catch (err) {
       setError(errorMessage(err))
     } finally {
@@ -125,7 +177,7 @@ function CreateTrialCard({ onCreated }: { onCreated: () => void }) {
     setEmail('')
     setStoreName('')
     setPassword(generatePassword())
-    setActiveUntil(defaultTrialEnd())
+    setActiveUntil(trial ? defaultTrialEnd() : paidEnd(1))
     setError(null)
   }
 
@@ -138,9 +190,38 @@ function CreateTrialCard({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <Card title="Buat akun uji coba" className="mb-8 max-w-xl">
+    <Card className="mb-8 max-w-xl">
       <form onSubmit={submit} noValidate>
-        <label className="block font-semibold">
+        <fieldset>
+          <legend className="font-semibold">Jenis akun</legend>
+          <div className="mt-1.5 flex w-fit max-w-full flex-wrap gap-1 rounded-full bg-tint p-1 ring-1 ring-line">
+            {(
+              [
+                ['trial', `Uji coba ${DEFAULT_TRIAL_DAYS} hari`],
+                ['paid', 'Langsung berlangganan'],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={kind === k}
+                onClick={() => setKind(k)}
+                className={`min-h-11 rounded-full px-4 font-semibold transition-colors ${
+                  kind === k ? 'bg-ink text-paper' : 'text-ink-2 hover:text-ink'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <span className="mt-1 block text-sm text-ink-3">
+            {trial
+              ? 'Dengan batas uji coba: data 1 bulan, Simulasi Harga 50 produk, tanpa Cek cepat iklan.'
+              : 'Tanpa batas uji coba. Pakai untuk pelanggan yang sudah membayar.'}
+          </span>
+        </fieldset>
+
+        <label className="mt-4 block font-semibold">
           Email
           <input
             type="email"
@@ -205,13 +286,37 @@ function CreateTrialCard({ onCreated }: { onCreated: () => void }) {
             className={`mt-1.5 font-normal ${inputClass}`}
           />
           <span className="mt-1 block text-sm font-normal text-ink-3">
-            Bawaan {DEFAULT_TRIAL_DAYS} hari, hari ini ikut dihitung. Setelah tanggal ini tokonya jadi baca saja: data
-            tetap bisa dilihat, upload dan perubahan dimatikan.
+            {trial ? `Bawaan ${DEFAULT_TRIAL_DAYS} hari, hari ini ikut dihitung.` : 'Hari ini ikut dihitung.'} Setelah
+            tanggal ini tokonya jadi baca saja: data tetap bisa dilihat, upload dan perubahan dimatikan.
           </span>
         </label>
+        {!trial && (
+          <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Lama berlangganan">
+            {(
+              [
+                [1, '1 bulan'],
+                [12, '1 tahun'],
+              ] as const
+            ).map(([months, label]) => (
+              <button
+                key={months}
+                type="button"
+                aria-pressed={activeUntil === paidEnd(months)}
+                onClick={() => setActiveUntil(paidEnd(months))}
+                className={`min-h-11 rounded-full border-2 px-4 font-semibold transition-colors ${
+                  activeUntil === paidEnd(months)
+                    ? 'border-ink bg-ink text-paper'
+                    : 'border-control bg-paper text-ink hover:border-ink'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <Button type="submit" disabled={busy} className="mt-6">
-          {busy ? 'Membuat akun…' : 'Buat akun uji coba'}
+          {busy ? 'Membuat akun…' : trial ? 'Buat akun uji coba' : 'Buat akun berlangganan'}
         </Button>
 
         {error && (
@@ -270,36 +375,50 @@ function CreatedPanel({ email, message, onAnother }: { email: string; message: s
   )
 }
 
-type Filter = 'trial' | 'all'
+type Filter = CustomerGroup | 'all'
+
+const FILTERS: { value: Filter; label: string; empty: string }[] = [
+  { value: 'trial', label: 'Uji coba', empty: 'Tidak ada akun uji coba yang aktif. Buat di tab Buat akun.' },
+  { value: 'paid', label: 'Berlangganan', empty: 'Belum ada pelanggan berlangganan yang aktif.' },
+  { value: 'ended', label: 'Berakhir', empty: 'Belum ada toko yang berakhir.' },
+  { value: 'all', label: 'Semua', empty: 'Belum ada toko.' },
+]
+
+/** Yang paling perlu diurus di atas: aktif → yang paling cepat berakhir; berakhir → yang paling baru berakhir. */
+function sortRows(rows: CustomerRow[], filter: Filter): CustomerRow[] {
+  const end = (r: CustomerRow) => r.active_until ?? '9999-12-31'
+  return [...rows].sort((a, b) => (filter === 'ended' ? end(b).localeCompare(end(a)) : end(a).localeCompare(end(b))))
+}
 
 function CustomerList({ rows }: { rows: CustomerRow[] }) {
-  const trialCount = rows.filter((r) => r.trial).length
-  const [filter, setFilter] = useState<Filter>(trialCount > 0 ? 'trial' : 'all')
-  const shown = useMemo(() => (filter === 'trial' ? rows.filter((r) => r.trial) : rows), [rows, filter])
-
-  if (rows.length === 0) return <p className="text-ink-2">Belum ada toko.</p>
-
-  const chip = (value: Filter, label: string) => (
-    <button
-      type="button"
-      onClick={() => setFilter(value)}
-      aria-pressed={filter === value}
-      className={`min-h-11 rounded-full border-2 px-4 font-semibold transition-colors ${
-        filter === value ? 'border-ink bg-ink text-paper' : 'border-control bg-paper text-ink hover:border-ink'
-      }`}
-    >
-      {label}
-    </button>
+  const counts = countByGroup(rows)
+  const [filter, setFilter] = useState<Filter>(counts.trial > 0 ? 'trial' : counts.paid > 0 ? 'paid' : 'all')
+  const shown = useMemo(
+    () => sortRows(filter === 'all' ? rows : rows.filter((r) => customerGroup(r) === filter), filter),
+    [rows, filter],
   )
+
+  if (rows.length === 0) return <p className="text-ink-2">Belum ada toko. Buat akun pertama di tab Buat akun.</p>
 
   return (
     <>
       <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Tampilkan">
-        {chip('trial', `Uji coba (${trialCount})`)}
-        {chip('all', `Semua (${rows.length})`)}
+        {FILTERS.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            onClick={() => setFilter(f.value)}
+            aria-pressed={filter === f.value}
+            className={`min-h-11 rounded-full border-2 px-4 font-semibold transition-colors ${
+              filter === f.value ? 'border-ink bg-ink text-paper' : 'border-control bg-paper text-ink hover:border-ink'
+            }`}
+          >
+            {f.label} ({f.value === 'all' ? rows.length : counts[f.value]})
+          </button>
+        ))}
       </div>
       {shown.length === 0 ? (
-        <p className="text-ink-2">Belum ada akun uji coba. Buat lewat formulir di atas.</p>
+        <p className="text-ink-2">{FILTERS.find((f) => f.value === filter)?.empty}</p>
       ) : (
         <ul className="divide-y divide-line">
           {shown.map((r) => (
@@ -308,7 +427,7 @@ function CustomerList({ rows }: { rows: CustomerRow[] }) {
         </ul>
       )}
       <p className="mt-4 text-sm text-ink-3">
-        Memperpanjang, mengubah tanggal, atau reset password masih lewat SQL Editor (lihat OPERASI.md).
+        Memperpanjang, menjadikan uji coba berlangganan, atau reset password masih lewat SQL Editor (lihat OPERASI.md).
       </p>
     </>
   )
@@ -322,11 +441,9 @@ function CustomerItem({ row }: { row: CustomerRow }) {
       <div className="min-w-0">
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="font-semibold [overflow-wrap:anywhere]">{row.store_name}</span>
-          {row.trial && (
-            <Stamp tone="neutral" size="xs" tilt={false}>
-              Uji coba
-            </Stamp>
-          )}
+          <Stamp tone={row.trial ? 'neutral' : 'gain'} size="xs" tilt={false}>
+            {row.trial ? 'Uji coba' : 'Berlangganan'}
+          </Stamp>
         </p>
         <p className="text-ink-2 [overflow-wrap:anywhere]">
           {row.owner_emails.length ? row.owner_emails.join(', ') : 'Belum ada akun yang terhubung'}

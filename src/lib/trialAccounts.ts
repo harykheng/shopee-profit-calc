@@ -50,6 +50,17 @@ export function defaultTrialEnd(now: Date = new Date(), days = DEFAULT_TRIAL_DAY
   return addDays(wibToday(now), days - 1)
 }
 
+/**
+ * Tanggal berakhir akun berlangganan: N bulan dari hari ini (WIB), hari ini ikut dihitung.
+ * Contoh: dibuat 15 Nov, 1 bulan → aktif sampai 14 Des. Tanggal yang tidak ada (31 → Feb) mundur ke akhir bulan.
+ */
+export function paidEnd(months: number, now: Date = new Date()): string {
+  const [y, m, d] = wibToday(now).split('-').map(Number)
+  const lastDay = new Date(Date.UTC(y, m - 1 + months + 1, 0)).getUTCDate()
+  const target = new Date(Date.UTC(y, m - 1 + months, Math.min(d, lastDay))).toISOString().slice(0, 10)
+  return addDays(target, -1)
+}
+
 /** Nama toko kalau isian dikosongkan: "Toko budi.santoso" dari "budi.santoso@gmail.com". */
 export function storeNameFromEmail(email: string): string {
   const local = email.trim().split('@')[0]?.trim() ?? ''
@@ -115,7 +126,20 @@ export function welcomeMessage(input: {
   email: string
   password: string
   activeUntil: string
+  /** false = akun langsung berlangganan (tanpa kalimat batas uji coba). Bawaan: uji coba. */
+  trial?: boolean
 }): string {
+  if (input.trial === false) {
+    return [
+      `Halo! Akun ${input.appName} kamu sudah aktif.`,
+      '',
+      `Buka: ${input.loginUrl}`,
+      `Email: ${input.email}`,
+      `Password: ${input.password}`,
+      '',
+      `Langganan aktif sampai ${formatDate(input.activeUntil)}. Setelah login, ganti password di halaman Akun ya.`,
+    ].join('\n')
+  }
   return [
     `Halo! Akun uji coba ${input.appName} kamu sudah siap.`,
     '',
@@ -167,6 +191,25 @@ export function lastLoginLabel(lastSignInAt: string | null, now: Date = new Date
   if (days === 1) return 'Kemarin'
   if (days < 60) return `${days} hari lalu`
   return formatDate(lastSignInAt)
+}
+
+/**
+ * Kelompok di dashboard pengelola:
+ * - trial : uji coba yang masih aktif
+ * - paid  : berlangganan yang masih aktif (termasuk toko tanpa batas tanggal)
+ * - ended : sudah berakhir (baca saja), uji coba maupun berlangganan
+ */
+export type CustomerGroup = 'trial' | 'paid' | 'ended'
+
+export function customerGroup(row: CustomerRow, now: Date = new Date()): CustomerGroup {
+  if (customerStatus(row.active_until, now).state === 'expired') return 'ended'
+  return row.trial ? 'trial' : 'paid'
+}
+
+export function countByGroup(rows: CustomerRow[], now: Date = new Date()): Record<CustomerGroup, number> {
+  const out: Record<CustomerGroup, number> = { trial: 0, paid: 0, ended: 0 }
+  for (const r of rows) out[customerGroup(r, now)]++
+  return out
 }
 
 /** Ringkasan untuk kalimat jawaban di atas halaman. */

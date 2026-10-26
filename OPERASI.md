@@ -63,8 +63,14 @@ select public.admin_purge_client_errors(90);
 
 ## 2. Menambah, memperpanjang, menghentikan pelanggan
 
-**Akun uji coba baru: halaman Pengelola** (ikon kunci di kanan atas aplikasi, hanya terlihat oleh akun
-pengelola). Isi:
+**Halaman pengelola.** Akun pengelola langsung membuka **Pelanggan** (daftar semua toko, dikelompokkan
+**Uji coba** / **Berlangganan** / **Berakhir**, plus email pemilik, sisa hari, dan login terakhir). Pengelola
+tanpa toko sendiri hanya melihat menu **Pelanggan** dan **Buat akun**; pengelola yang juga punya toko tetap
+melihat menu toko, dan membuka Pelanggan lewat ikon kunci di kanan atas.
+
+**Akun baru: Buat akun.** Pilih **Jenis akun**: **Uji coba 30 hari** (dengan batas uji coba) atau **Langsung
+berlangganan** (tanpa batas; tombol **1 bulan** / **1 tahun** mengisi tanggal berakhir). Akun berlangganan butuh
+migration `20261030000000_platform_create_account.sql`. Isi:
 
 - **Email** calon pelanggan. Email yang sudah terdaftar ditolak (mis. orang yang dulu pernah uji coba);
   perpanjang tokonya lewat SQL di bawah.

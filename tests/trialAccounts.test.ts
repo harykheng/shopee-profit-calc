@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDays,
+  countByGroup,
+  customerGroup,
+  paidEnd,
   asksStoreName,
   cleanStoreName,
   customerStatus,
@@ -148,6 +151,50 @@ describe('summarizeCustomers', () => {
         NOW,
       ),
     ).toEqual({ total: 5, activeTrials: 2, neverLoggedIn: 1 })
+  })
+
+  it('dashboard: uji coba aktif, berlangganan aktif (termasuk tanpa batas), dan yang sudah berakhir', () => {
+    const rows = [
+      row({}),
+      row({ active_until: '2026-10-01' }),
+      row({ trial: false }),
+      row({ trial: false, active_until: null }),
+      row({ trial: false, active_until: '2026-10-25' }),
+    ]
+    expect(rows.map((r) => customerGroup(r, NOW))).toEqual(['trial', 'ended', 'paid', 'paid', 'ended'])
+    expect(countByGroup(rows, NOW)).toEqual({ trial: 1, paid: 2, ended: 2 })
+    // Hari terakhir masih aktif.
+    expect(customerGroup(row({ active_until: '2026-10-26' }), NOW)).toBe('trial')
+  })
+})
+
+describe('paidEnd', () => {
+  it('N bulan dari hari ini, hari ini ikut dihitung', () => {
+    expect(paidEnd(1, NOW)).toBe('2026-11-25')
+    expect(paidEnd(12, NOW)).toBe('2027-10-25')
+  })
+
+  it('tanggal yang tidak ada di bulan tujuan mundur ke akhir bulan', () => {
+    expect(paidEnd(1, wib('2027-01-31'))).toBe('2027-02-27')
+    expect(paidEnd(1, wib('2026-12-15'))).toBe('2027-01-14')
+  })
+})
+
+describe('welcomeMessage akun berlangganan', () => {
+  it('tanpa kalimat batas uji coba', () => {
+    const text = welcomeMessage({
+      appName: 'HitungCuan',
+      loginUrl: 'https://app.contoh.id/',
+      email: 'budi@gmail.com',
+      password: 'Rahasia123',
+      activeUntil: '2026-11-25',
+      trial: false,
+    })
+    expect(text).toContain('Akun HitungCuan kamu sudah aktif.')
+    expect(text).toContain('Langganan aktif sampai')
+    expect(text).toContain('Password: Rahasia123')
+    expect(text).not.toContain('uji coba')
+    expect(text).not.toContain('50 produk')
   })
 })
 

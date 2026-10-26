@@ -97,12 +97,13 @@ begin
     ('20261028000000_trial_limits_total.sql',      exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
                                                      where s.nspname = 'public' and p.proname = 'use_trial_simulation'
                                                        and p.prosrc like '%count(distinct item_key)%')),
-    ('20261029000000_store_name_by_customer.sql',  to_regprocedure('public.set_store_name(bigint, text)') is not null)
+    ('20261029000000_store_name_by_customer.sql',  to_regprocedure('public.set_store_name(bigint, text)') is not null),
+    ('20261030000000_platform_create_account.sql', to_regprocedure('public.platform_create_account(text, text, text, date, boolean, boolean)') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261029000000_store_name_by_customer.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261030000000_platform_create_account.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -208,6 +209,7 @@ begin
       -- Tiga fungsi halaman Pengelola memeriksa is_platform_admin() sendiri; diuji di bagian 2e.
       and p.proname not in ('is_store_member', 'is_store_active', 'client_errors_rate_limit',
                             'is_platform_admin', 'platform_create_trial', 'platform_list_customers',
+                            'platform_create_account',
                             -- Memeriksa keanggotaan toko sendiri; diuji di bagian 2c.
                             'use_trial_simulation',
                             -- Hanya anggota toko, hanya sekali (name_pending); diuji di bagian 2c dan 2g.
@@ -448,6 +450,8 @@ begin
          'select count(*) from (select public.platform_create_trial(''uji-pemisahan-tolak@contoh.invalid'', ''UjiPemisahan123'', ''UJI-PEMISAHAN D'', current_date + 7)) x'),
         ('Bukan pengelola: buat akun uji coba tanpa nama toko (platform_create_trial, 5 parameter)',
          'select count(*) from (select public.platform_create_trial(''uji-pemisahan-tolak2@contoh.invalid'', ''UjiPemisahan123'', ''UJI-PEMISAHAN E'', current_date + 7, true)) x'),
+        ('Bukan pengelola: buat akun berlangganan (platform_create_account)',
+         'select count(*) from (select public.platform_create_account(''uji-pemisahan-tolak3@contoh.invalid'', ''UjiPemisahan123'', ''UJI-PEMISAHAN G'', current_date + 30, false, false)) x'),
         ('Bukan pengelola: lihat daftar pelanggan (platform_list_customers)',
          'select count(*) from public.platform_list_customers()')
       ) as x (nama, kueri)
@@ -513,6 +517,26 @@ begin
       v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
     end;
     v_uji := v_uji || 'Pengelola: buat akun uji coba, nama diisi pelanggan (kontrol)'::text;
+
+    -- Kontrol: akun yang langsung berlangganan (bukan uji coba).
+    begin
+      reset role;
+      execute 'insert into public.platform_admins (user_id) values ($1) on conflict do nothing' using a_user;
+      set local role authenticated;
+      execute 'select public.platform_create_account($1, ''UjiPemisahan123'', ''UJI-PEMISAHAN H'', current_date + 30, false, false)'
+        into sisa using 'uji-pemisahan-' || substr(md5(random()::text), 1, 8) || '@contoh.invalid';
+      reset role;
+      select count(*) into m from public.stores s
+        join public.store_members sm on sm.store_id = s.id and sm.role = 'owner'
+        where s.id = (sisa ->> 'store_id')::bigint and not s.trial and not s.name_pending and s.active_until = current_date + 30;
+      v_status := v_status || case when m = 1 then 'LULUS' else 'GAGAL' end;
+      v_ket := v_ket || case when m = 1 then 'toko berlangganan (bukan uji coba) dan pemiliknya terbentuk' else 'toko tidak lengkap atau masih ditandai uji coba' end;
+    exception when others then
+      reset role;
+      v_status := v_status || 'CEK'::text;
+      v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+    end;
+    v_uji := v_uji || 'Pengelola: buat akun langsung berlangganan (kontrol)'::text;
 
     -- 2f. Akun uji coba: bulan di atas batas ditolak, bulan yang sudah ada tetap boleh. Mengikuti
     --     angka di trial_month_limit(), jadi tidak perlu diubah kalau batasnya diganti.
