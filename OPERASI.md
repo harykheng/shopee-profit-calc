@@ -1,8 +1,9 @@
 # Operasi harian (untuk pengelola)
 
 Panduan ini untuk kamu sebagai pengelola HitungCuan: memantau error, mengekspor data, menghapus data,
-dan menghentikan pelanggan. Semua dijalankan di **Supabase → SQL Editor** (role `postgres`). Fungsi
-admin di bawah **tidak bisa dipanggil dari aplikasi**; sudah diuji bahwa pelanggan ditolak.
+dan menghentikan pelanggan. Membuat akun uji coba lewat halaman **Pengelola** di aplikasi (bagian 2);
+sisanya di **Supabase → SQL Editor** (role `postgres`). Fungsi `admin_*` di bawah **tidak bisa dipanggil
+dari aplikasi**, dan fungsi halaman Pengelola menolak semua akun selain pengelola; keduanya sudah diuji.
 
 Prasyarat: semua migration sudah dijalankan sampai `20261016000000_operations.sql`.
 
@@ -62,19 +63,50 @@ select public.admin_purge_client_errors(90);
 
 ## 2. Menambah, memperpanjang, menghentikan pelanggan
 
-Lihat README bagian 8 (d) dan (e). Singkatnya:
+**Akun uji coba baru: halaman Pengelola** (ikon kunci di kanan atas aplikasi, hanya terlihat oleh akun
+pengelola). Isi:
+
+- **Email** calon pelanggan. Email yang sudah terdaftar ditolak (mis. orang yang dulu pernah uji coba);
+  perpanjang tokonya lewat SQL di bawah.
+- **Password**: sudah terisi acak (10 huruf & angka yang tidak mirip, mudah diketik). **Buat acak**
+  untuk yang lain, atau ketik sendiri (minimal 8 karakter).
+- **Nama toko**: boleh dikosongkan, diisi "Toko " + bagian depan email.
+- **Bisa dipakai sampai**: bawaan **30 hari** (hari ini ikut dihitung, jadi dibuat 1 November → aktif
+  sampai akhir 30 November WIB). Setelah itu toko otomatis jadi baca saja.
+
+Tekan **Buat akun uji coba**. Akun langsung aktif (tanpa verifikasi email), toko ditandai **Uji coba**,
+lalu muncul teks siap kirim: alamat login, email, password, dan tanggal berakhir. **Salin teks** atau
+**Kirim lewat WhatsApp** (memilih kontak di WhatsApp). Password hanya tampil saat itu; setelah halaman
+ditutup tidak bisa dilihat lagi (pakai `admin_reset_password` di bawah kalau hilang). Pelanggan melihat
+banner kuning "ganti password" sampai ia menggantinya sendiri.
+
+Di bawahnya, **Semua toko** menampilkan per toko: email pemilik, status (Aktif sisa X hari / Baca saja),
+dan **login terakhir**. Isi toko (pesanan, untung, HPP) tidak terlihat di sini. Pakai untuk follow up:
+di hari ke-3, tanya lewat WhatsApp peserta yang masih "Belum pernah login" atau belum upload data bulan
+lalu. Status jadi kuning saat sisa ≤ 3 hari.
+
+Halaman Pengelola butuh migration `20261026000000_platform_admin.sql`. Menjadikan / mencabut pengelola:
 
 ```sql
-select public.admin_add_customer('pelanggan@email.com', 'Nama Toko', '2026-12-31');
+select public.admin_set_platform_admin('email-kamu@contoh.com');          -- jadikan pengelola
+select public.admin_set_platform_admin('email-kamu@contoh.com', false);   -- cabut
+```
+
+Jadikan pengelola **hanya akunmu sendiri**: pengelola bisa membuat akun dan melihat email semua pelanggan.
+
+**Lewat SQL Editor** (perpanjang, hentikan, toko kedua untuk akun yang sudah ada). Lihat README bagian 8
+(d) dan (e). Singkatnya:
+
+```sql
+select public.admin_add_customer('pelanggan@email.com', 'Nama Toko', '2026-12-31');            -- toko untuk akun yang sudah ada
 update public.stores set active_until = '2027-01-31' where id = 5;                              -- perpanjang
+update public.stores set active_until = '2027-01-31', trial = false where id = 5;               -- uji coba jadi berlangganan
 update public.stores set active_until = (now() at time zone 'Asia/Jakarta')::date - 1 where id = 5; -- hentikan
 ```
 
-**Uji coba gratis 30 hari:** buat toko seperti biasa, dengan tanggal terakhir = hari ini + 29 (toko
-aktif sampai akhir tanggal itu, WIB; hari pembuatan ikut dihitung). Contoh: dibuat 1 November →
-`'2026-11-30'`. Catat sendiri siapa yang sudah pernah uji coba; aplikasi tidak menandainya. Di hari
-ke-3, tanyakan lewat WhatsApp apakah data bulan lalu sudah di-upload. Setelah 30 hari toko otomatis
-jadi baca saja; kalau pelanggan bayar, perpanjang dengan `update` di atas.
+`id` toko terlihat di hasil `select id, name, active_until, trial from public.stores order by id;`.
+Penanda **Uji coba** tidak hilang sendiri; ubah `trial = false` saat pelanggan mulai membayar supaya
+daftar Uji coba di halaman Pengelola hanya berisi yang masih mencoba.
 
 Setelah dihentikan, pelanggan masih bisa **melihat** Rekap (baca saja) tapi tidak bisa mengubah data.
 
@@ -213,6 +245,7 @@ bertanya, dan jangan memulihkan cadangan lama tanpa memeriksa apakah ada toko ya
 |---|---|
 | Tiap pagi | Cek `client_error_summary` (bagian 1) |
 | Awal bulan | Lihat siapa yang belum mengunggah data bulan lalu (kartu pengingat di aplikasi menolong pelanggan; kamu bisa mengingatkan lewat WhatsApp) |
-| Sebelum langganan habis | Hubungi pelanggan; banner pengingat di aplikasi muncul 7 hari sebelumnya |
+| Tiap beberapa hari | Halaman Pengelola → **Uji coba**: tanya lewat WhatsApp yang masih "Belum pernah login" |
+| Sebelum langganan habis | Hubungi pelanggan (status kuning di halaman Pengelola saat sisa ≤ 3 hari); banner pengingat di aplikasi muncul 7 hari sebelumnya |
 | Sebulan sekali | `select public.admin_purge_client_errors(90);` dan tinjau akun yatim |
 | Setiap migration baru | Jalankan berurutan, lalu jalankan `supabase/uji-pemisahan-toko.sql` di SQL Editor (harus `0 gagal, 0 perlu dicek`; tidak mengubah data). Cek `client_error_summary` beberapa jam kemudian |

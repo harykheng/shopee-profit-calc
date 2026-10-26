@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { Alert, Brand, Card, ErrorBox, Spinner, Stamp, SupportLink, WhatsAppButton } from './components/ui'
+import { Alert, Brand, Card, ErrorBox, Spinner, Stamp, SupportLink, WhatsAppButton, linkClass } from './components/ui'
 import { MonthlyReminderCard } from './components/MonthlyReminder'
 import { SupportButton } from './components/SupportButton'
 import { APP_NAME, hasSupportWhatsApp, isHitungCuan } from './lib/brand'
@@ -8,7 +8,7 @@ import { formatDate } from './lib/format'
 import { expiryNotice, subscriptionStatus } from './lib/subscription'
 import { needsPasswordChange } from './lib/password'
 import { setErrorContext } from './lib/reportError'
-import { fetchStores } from './lib/api'
+import { fetchIsPlatformAdmin, fetchStores } from './lib/api'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import type { Store } from './lib/types'
 import { LoginPage } from './pages/LoginPage'
@@ -19,9 +19,10 @@ import { RecapPage } from './pages/RecapPage'
 import { AdsPage } from './pages/AdsPage'
 import { AccountPage } from './pages/AccountPage'
 import { PriceSimPage } from './pages/PriceSimPage'
+import { OperatorPage } from './pages/OperatorPage'
 import { ROUTES, readHash, type Route } from './lib/router'
 import { useActiveIndicator } from './components/motion'
-import { IconCalculator, IconChevronDown, IconLogout, IconMegaphone, IconReceipt, IconStore, IconTag, IconUpload, IconUser, IconWallet } from './components/icons'
+import { IconCalculator, IconChevronDown, IconKey, IconLogout, IconMegaphone, IconReceipt, IconStore, IconTag, IconUpload, IconUser, IconWallet } from './components/icons'
 
 // Hasil dulu (Rekap, Iklan, Simulasi), lalu input bulanan (Upload, HPP, Biaya).
 const NAV_ORDER: Route[] = ['rekap', 'iklan', 'simulasi', 'upload', 'hpp', 'biaya']
@@ -31,6 +32,7 @@ const NAV_ICONS: Record<Route, typeof IconUpload> = {
   iklan: IconMegaphone,
   simulasi: IconCalculator,
   akun: IconUser,
+  pengelola: IconKey,
   upload: IconUpload,
   hpp: IconTag,
   biaya: IconWallet,
@@ -142,6 +144,12 @@ function MainApp({ user }: { user: User }) {
   const [stores, setStores] = useState<Store[] | null>(null)
   const [storesError, setStoresError] = useState<unknown>(null)
   const [storeId, setStoreIdState] = useState<number | null>(loadStoreId)
+  // null = belum dicek. Hanya menentukan tampil/tidaknya ikon Pengelola; database tetap menolak akun lain.
+  const [isOperator, setIsOperator] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    fetchIsPlatformAdmin().then(setIsOperator)
+  }, [])
 
   useEffect(() => {
     const onHash = () => setLocation(readHash())
@@ -258,6 +266,19 @@ function MainApp({ user }: { user: User }) {
             </ul>
           </nav>
           <div className={`ml-auto flex shrink-0 items-center gap-1 ${blocked ? '' : 'lg:ml-1'}`}>
+            {isOperator && (
+              <a
+                href="#/pengelola"
+                aria-current={route === 'pengelola' ? 'page' : undefined}
+                title="Pengelola: buat akun uji coba"
+                className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
+                  route === 'pengelola' ? 'bg-ink text-paper' : 'text-ink-2 hover:bg-tint hover:text-ink'
+                }`}
+              >
+                <IconKey size={19} />
+                <span className="sr-only">Pengelola</span>
+              </a>
+            )}
             <a
               href="#/akun"
               aria-current={route === 'akun' ? 'page' : undefined}
@@ -302,7 +323,12 @@ function MainApp({ user }: { user: User }) {
       </nav>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-        {route === 'akun' ? (
+        {route === 'pengelola' ? (
+          // Tidak bergantung pada toko: pengelola bisa saja tidak punya toko sendiri.
+          <div className="page-in">
+            {isOperator === null ? <Spinner /> : isOperator ? <OperatorPage /> : <NotOperatorScreen />}
+          </div>
+        ) : route === 'akun' ? (
           <div className="page-in">
             <AccountPage email={email} mustChange={mustChangePassword} stores={stores} storeId={storeId} readOnly={expired} />
           </div>
@@ -353,6 +379,22 @@ function MainApp({ user }: { user: User }) {
           </>
         )}
       </main>
+    </div>
+  )
+}
+
+/** Alamat #/pengelola dibuka akun biasa. */
+function NotOperatorScreen() {
+  return (
+    <div className="mx-auto max-w-xl py-4 sm:py-10">
+      <Card>
+        <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight">Halaman ini khusus pengelola.</h1>
+        <p className="mt-3 text-lg leading-relaxed text-ink-2">
+          <a href="#/rekap" className={linkClass}>
+            Kembali ke Rekap
+          </a>
+        </p>
+      </Card>
     </div>
   )
 }

@@ -1,8 +1,9 @@
 // Uji pemisahan data antar-toko di project Supabase yang SEDANG JALAN (bukan membaca SQL).
 //
 // Login sebagai dua akun tes (A dan B, masing-masing punya toko sendiri), lalu sebagai A mencoba
-// membaca, mengubah, menghapus, dan menulis data toko B, memanggil fungsi admin, dan memperpanjang
-// langganannya sendiri. Juga mencoba membaca tanpa login. Semua percobaan itu HARUS ditolak atau
+// membaca, mengubah, menghapus, dan menulis data toko B, memanggil fungsi admin dan fungsi halaman
+// Pengelola (membuat akun, daftar pelanggan), dan memperpanjang langganannya sendiri. Akun A dan B harus
+// akun tes biasa, BUKAN pengelola. Juga mencoba membaca tanpa login. Semua percobaan itu HARUS ditolak atau
 // kosong. Hasil: tabel LULUS / GAGAL / CEK / DILEWATI, kode keluar 1 kalau ada yang GAGAL atau CEK.
 //
 // Pakai dua akun TES (bukan pelanggan sungguhan). Skrip ini menulis satu baris penanda ke toko B
@@ -346,6 +347,7 @@ try {
     ['admin_list_orphan_users', {}],
     ['admin_purge_client_errors', { p_days: 36500 }],
     ['admin_add_customer', { p_email: `${MARK}@contoh.invalid`, p_store_name: MARK, p_active_until: null }],
+    ['admin_set_platform_admin', { p_email: `${MARK}@contoh.invalid`, p_admin: false }],
   ]
   for (const [fn, args] of adminCalls) {
     const name = `A memanggil fungsi admin ${fn}`
@@ -353,6 +355,39 @@ try {
     if (res.error?.code === 'PGRST202') pass(name, 'tidak terlihat oleh pelanggan')
     else if (isDenied(res.error)) pass(name, 'ditolak')
     else fail(name, res.error ? `fungsinya BERJALAN: ${short(res.error)}` : 'BOCOR: fungsinya berjalan')
+  }
+
+  // --- 5b. Halaman Pengelola: akun biasa tidak boleh membuat akun atau melihat pelanggan ---
+  {
+    const name = 'A dianggap pengelola (is_platform_admin)'
+    const res = await A.client.rpc('is_platform_admin')
+    if (isMissing(res.error)) skip(name, 'fungsi belum ada (migration 20261026000000 belum dijalankan)')
+    else if (res.error) check(name, `error lain: ${short(res.error)}`)
+    else if (res.data === true) check(name, 'akun tes A adalah pengelola; pakai akun tes yang bukan pengelola')
+    else pass(name, 'tidak')
+  }
+  const platformCalls = [
+    [
+      'A membuat akun lewat platform_create_trial',
+      () =>
+        A.client.rpc('platform_create_trial', {
+          p_email: `${MARK}-bocor@contoh.invalid`,
+          p_password: 'UjiPemisahan123',
+          p_store_name: MARK,
+          p_active_until: todayWib,
+        }),
+    ],
+    ['A melihat daftar pelanggan lewat platform_list_customers', () => A.client.rpc('platform_list_customers')],
+    ['A membaca daftar pengelola (platform_admins)', () => A.client.from('platform_admins').select('*').limit(5)],
+    ['A menjadikan dirinya pengelola', () => A.client.from('platform_admins').insert({ user_id: A.user.id })],
+  ]
+  for (const [name, run] of platformCalls) {
+    const res = await run()
+    if (isMissing(res.error)) skip(name, 'belum ada (migration 20261026000000 belum dijalankan)')
+    else if (isDenied(res.error)) pass(name, 'ditolak')
+    else if (res.error) check(name, `error lain: ${short(res.error)}`)
+    else if (Array.isArray(res.data) && res.data.length === 0) pass(name, '0 baris')
+    else fail(name, 'BOCOR: berhasil dipanggil akun biasa')
   }
 
   // --- 6. Tanpa login ---------------------------------------------------------------
@@ -370,6 +405,17 @@ try {
     const res = await anon.rpc('upsert_income', { p_store_id: storeB.id, p_rows: [{ released_date: CANARY_MONTH, total_income: 0 }] })
     if (res.error) pass(name, 'ditolak')
     else fail(name, 'BOCOR: berhasil tanpa login (sudah dibersihkan)')
+  }
+  {
+    const name = 'Tanpa login membuat akun (platform_create_trial)'
+    const res = await anon.rpc('platform_create_trial', {
+      p_email: `${MARK}-anon@contoh.invalid`,
+      p_password: 'UjiPemisahan123',
+      p_store_name: MARK,
+      p_active_until: todayWib,
+    })
+    if (res.error) pass(name, 'ditolak')
+    else fail(name, 'BOCOR: akun berhasil dibuat tanpa login')
   }
 } finally {
   await cleanup(true)
