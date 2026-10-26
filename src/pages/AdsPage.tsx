@@ -628,6 +628,19 @@ function ProductDetails({
 }) {
   return (
     <>
+      {inList && (
+        // Di HP baris daftar hanya berisi biaya & untung; terjual dan ROAS nyata tampil di sini.
+        <div className="space-y-1.5 border-b border-line pb-3 pt-1 sm:hidden">
+          <dl>
+            <Row label="Terjual" value={formatNumber(Math.round(p.netSold))} />
+          </dl>
+          {soldDetail(p) && <p className="text-sm text-ink-3">{soldDetail(p)}</p>}
+          <dl>
+            <Row label="ROAS nyata" value={formatRoas(p.realRoas)} />
+          </dl>
+          {roasDetail(p) && <p className="text-sm text-ink-3">{roasDetail(p)}</p>}
+        </div>
+      )}
 
       {p.price !== null && (
         <div className="mt-3">
@@ -829,8 +842,8 @@ function ProductList({
                 </span>
                 <span className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4 lg:contents">
                   <ListCell label="Biaya iklan" value={formatRupiah(p.spend)} />
-                  <ListCell label="Terjual" value={formatNumber(Math.round(p.netSold))} detail={soldDetail(p)} />
-                  <ListCell label="ROAS nyata" value={formatRoas(p.realRoas)} detail={roasDetail(p)} />
+                  <ListCell label="Terjual" value={formatNumber(Math.round(p.netSold))} detail={soldDetail(p)} hideOnPhone />
+                  <ListCell label="ROAS nyata" value={formatRoas(p.realRoas)} detail={roasDetail(p)} hideOnPhone />
                   <ListCell
                     label="Untung setelah iklan"
                     value={after === null ? '-' : formatRupiah(after)}
@@ -858,15 +871,18 @@ function ListCell({
   detail,
   className = '',
   strong,
+  hideOnPhone,
 }: {
   label: string
   value: string
   detail?: string
   className?: string
   strong?: boolean
+  /** Di HP (< 640px) baris hanya menampilkan biaya & untung; angka ini pindah ke rincian. */
+  hideOnPhone?: boolean
 }) {
   return (
-    <span className="min-w-0 lg:text-right">
+    <span className={`min-w-0 lg:text-right ${hideOnPhone ? 'hidden sm:block' : ''}`}>
       <span className="block text-xs text-ink-3 lg:sr-only">{label}</span>
       <span className={`num block ${strong ? 'font-bold' : 'font-semibold'} ${className}`}>{value}</span>
       {detail && <span className="block text-xs text-ink-3">{detail}</span>}

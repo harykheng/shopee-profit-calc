@@ -356,7 +356,8 @@ label (pilihan diingat di browser ini):
 
 - **Kartu**: satu kartu lengkap per produk.
 - **Daftar**: satu baris per produk berisi label, biaya iklan, terjual, ROAS nyata, dan untung setelah
-  iklan. Cocok untuk membandingkan banyak produk sekaligus. Ketuk baris untuk membuka rinciannya (isi
+  iklan (di HP hanya biaya iklan dan untung setelah iklan; terjual dan ROAS nyata ada di rincian).
+  Cocok untuk membandingkan banyak produk sekaligus. Ketuk baris untuk membuka rinciannya (isi
   yang sama dengan kartu, termasuk saran).
 
 Tiap kartu berisi:
