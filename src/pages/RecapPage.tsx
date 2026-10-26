@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, useSyncExternalStore, type PointerEvent, type ReactNode } from 'react'
 import { MonthSelect } from '../components/pickers'
 import { Alert, Button, ButtonLink, Card, ErrorBox, Kicker, Modal, NotaTotal, ScrollX, Spinner, Stamp, linkClass } from '../components/ui'
 import { IconAlertCircle, IconArrowRight, IconCheck, IconChevronDown, IconInfo, IconUpload } from '../components/icons'
@@ -779,7 +779,16 @@ function OmzetLines({ b, adjustments }: { b: IncomeBreakdown; adjustments: numbe
 }
 
 /** Bab 2: satu batang "dari omzet, uangnya ke mana saja". */
+/** Tooltip di atas batang: menempel ke tepi kalau bagiannya dekat ujung, supaya tidak terpotong di HP. */
+function tooltipPosition(centerPct: number) {
+  if (centerPct < 30) return { left: 0 }
+  if (centerPct > 70) return { right: 0 }
+  return { left: `${centerPct}%`, transform: 'translateX(-50%)' }
+}
+
 function OmzetBar({ b, months, modal, profit }: { b: IncomeBreakdown; months: MonthlyRecap[]; modal: number; profit: number }) {
+  // Bagian yang sedang disorot (hover, sentuh, atau fokus keyboard): tampilkan nominalnya.
+  const [active, setActive] = useState<string | null>(null)
   if (b.omzet <= 0) return null
   const sum = (k: 'iklan_shopee' | 'meta_ads' | 'packaging' | 'lain_lain') => months.reduce((n, m) => n + Number(m[k]), 0)
   const segs = [
@@ -800,31 +809,82 @@ function OmzetBar({ b, months, modal, profit }: { b: IncomeBreakdown; months: Mo
     { key: 'untung', label: 'Untung', value: Math.max(profit, 0), color: 'bg-gain' },
   ].filter((sg) => sg.value > 0)
   const pct = (v: number) => formatPercent((v / b.omzet) * 100)
+  // Titik tengah tiap bagian (persen lebar batang), untuk posisi tooltip.
+  const total = segs.reduce((n, sg) => n + sg.value, 0)
+  let acc = 0
+  const centers = new Map(
+    segs.map((sg) => {
+      const c = ((acc + sg.value / 2) / total) * 100
+      acc += sg.value
+      return [sg.key, c] as const
+    }),
+  )
+  const act = segs.find((sg) => sg.key === active) ?? null
+  // Masuk/keluar hanya untuk mouse: di HP, browser mengirim "mouse keluar" tiruan setelah ketukan.
+  const hover = (key: string) => ({
+    onPointerEnter: (e: PointerEvent<HTMLButtonElement>) => {
+      if (e.pointerType === 'mouse') setActive(key)
+    },
+    onFocus: () => setActive(key),
+    onBlur: () => setActive((k) => (k === key ? null : k)),
+    // Sentuh di HP: ketuk untuk tampilkan; ketuk di tempat lain menutupnya (onBlur).
+    onClick: () => setActive(key),
+  })
   return (
-    <figure className="rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-6">
+    <figure
+      className="rounded-3xl bg-paper p-5 shadow-sheet ring-1 ring-line sm:p-6"
+      onPointerLeave={(e) => {
+        if (e.pointerType === 'mouse') setActive(null)
+      }}
+    >
       <figcaption className="font-semibold">
         Dari omzet {formatRupiahShort(b.omzet)}, uangnya ke mana saja
       </figcaption>
-      <div
-        role="img"
-        aria-label={segs.map((sg) => `${sg.label} ${pct(sg.value)}`).join(', ')}
-        className="mt-3 flex h-6 gap-[2px] overflow-hidden rounded-full bg-line"
-      >
-        {segs.map((sg, i) => (
+      <div className="relative mt-3">
+        {act && (
           <div
-            key={sg.key}
-            title={`${sg.label}: ${pct(sg.value)} dari omzet`}
-            style={{ flexGrow: sg.value, animationDelay: `${200 + i * 100}ms` }}
-            className={`grow-bar min-w-[3px] basis-0 ${sg.color}`}
-          />
-        ))}
+            role="status"
+            className="pointer-events-none absolute bottom-full z-10 mb-2 whitespace-nowrap rounded-xl bg-ink px-3 py-2 text-paper shadow-sheet"
+            style={tooltipPosition(centers.get(act.key) ?? 50)}
+          >
+            <span className="num block text-lg font-bold leading-tight">{formatRupiah(act.value)}</span>
+            <span className="mt-0.5 flex items-center gap-1.5 text-sm text-paper/80">
+              <i aria-hidden="true" className={`inline-block h-0.5 w-3 rounded-full ${act.key === 'lain' ? 'bg-paper' : act.color}`} />
+              {act.label} · {pct(act.value)} dari omzet
+            </span>
+          </div>
+        )}
+        <div role="group" aria-label="Pembagian omzet" className="flex h-6 gap-[2px] overflow-hidden rounded-full bg-line">
+          {segs.map((sg, i) => (
+            <button
+              key={sg.key}
+              type="button"
+              aria-label={`${sg.label}: ${formatRupiah(sg.value)}, ${pct(sg.value)} dari omzet`}
+              aria-pressed={active === sg.key}
+              {...hover(sg.key)}
+              style={{ flexGrow: sg.value, animationDelay: `${200 + i * 100}ms` }}
+              className={`grow-bar min-w-[6px] basis-0 cursor-pointer transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink ${sg.color} ${
+                active && active !== sg.key ? 'opacity-35' : ''
+              }`}
+            />
+          ))}
+        </div>
       </div>
-      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink-2">
+      <div className="mt-3 flex flex-wrap gap-x-1 gap-y-1 text-sm text-ink-2">
         {segs.map((sg) => (
-          <span key={sg.key} className="num">
+          <button
+            key={sg.key}
+            type="button"
+            aria-label={`${sg.label}: ${formatRupiah(sg.value)}, ${pct(sg.value)} dari omzet`}
+            aria-pressed={active === sg.key}
+            {...hover(sg.key)}
+            className={`num inline-flex min-h-11 items-center rounded-full px-2 transition-colors duration-150 sm:min-h-8 ${
+              active === sg.key ? 'bg-tint text-ink' : 'hover:text-ink'
+            }`}
+          >
             <i aria-hidden="true" className={`mr-1.5 inline-block h-2.5 w-2.5 rounded-full ${sg.color} ${sg.key === 'lain' ? 'ring-1 ring-rule' : ''}`} />
             {sg.label} {pct(sg.value)}
-          </span>
+          </button>
         ))}
       </div>
       {profit < 0 && (

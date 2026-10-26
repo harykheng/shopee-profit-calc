@@ -78,6 +78,17 @@ jadi baca saja; kalau pelanggan bayar, perpanjang dengan `update` di atas.
 
 Setelah dihentikan, pelanggan masih bisa **melihat** Rekap (baca saja) tapi tidak bisa mengubah data.
 
+**Lupa password** (pelanggan menekan "Lupa password?" di halaman login → WhatsApp ke kamu):
+
+```sql
+select public.admin_reset_password('pelanggan@email.com', 'PasswordBaru123');
+```
+
+Satu perintah ini mengganti password, memunculkan lagi banner "ganti password" untuk pelanggan itu,
+dan mengeluarkannya dari semua perangkat. Kirim password barunya lewat WhatsApp (minimal 8 karakter,
+jangan dipakai ulang untuk pelanggan lain). Password lama **tidak bisa dilihat**: Supabase hanya
+menyimpan hash-nya. Butuh migration `20261023000000_admin_reset_password.sql`.
+
 **Kebijakan yang disarankan** (putuskan dan tulis di syarat layanan): data disimpan **90 hari** sejak
 langganan berakhir, lalu dihapus kalau tidak diperpanjang. Beri tahu pelanggan sebelum menghapus.
 
