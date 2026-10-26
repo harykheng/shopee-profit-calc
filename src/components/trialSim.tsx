@@ -102,7 +102,8 @@ export function TrialSimNotice({ sim }: { sim: TrialSim }) {
 export function TrialSimBlocked({ limit }: { limit: number }) {
   return (
     <Alert tone="warning" title={`Jatah simulasi uji coba sudah habis (${limit} produk).`}>
-      Produk yang sudah pernah kamu coba tetap bisa dibuka lagi. Berlangganan supaya simulasi tidak dibatasi.
+      Produk yang sudah pernah kamu coba tetap bisa dibuka lagi. Butuh lebih? Minta tambahan jatah ke pengelola, atau
+      berlangganan supaya simulasi tidak dibatasi.
     </Alert>
   )
 }

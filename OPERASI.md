@@ -129,7 +129,10 @@ lepas**. Selama `trial = true` (migration `20261027000000_trial_limits.sql` + an
 `20261028000000_trial_limits_total.sql`):
 - laporan penghasilan + data iklan hanya bisa disimpan untuk **1 bulan** (bulan uang cair / periode iklan;
   export pesanan tidak dibatasi; upload ulang bulan yang sama selalu boleh);
-- Simulasi Harga maksimal **50 produk selama uji coba** (produk yang sama dihitung sekali);
+- Simulasi Harga maksimal **50 produk selama uji coba** (produk yang sama dihitung sekali). Pemakaiannya
+  terlihat di daftar Pelanggan ("Simulasi: 48 dari 50 produk"); tombol **Tambah jatah simulasi** menambah jatah
+  toko itu saja (+10 / +25 / +50 / angka sendiri, menumpuk). Butuh migration
+  `20261102000000_trial_simulation_bonus.sql`;
 - **Cek cepat** di halaman Iklan tidak tersedia (khusus pelanggan berlangganan; dikunci di aplikasi saja,
   karena Cek cepat tidak menyimpan apa pun ke database).
 

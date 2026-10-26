@@ -100,12 +100,13 @@ begin
     ('20261029000000_store_name_by_customer.sql',  to_regprocedure('public.set_store_name(bigint, text)') is not null),
     ('20261030000000_platform_create_account.sql', to_regprocedure('public.platform_create_account(text, text, text, date, boolean, boolean)') is not null),
     ('20261031000000_platform_set_subscription.sql', to_regprocedure('public.platform_subscribe_store(bigint, date)') is not null),
-    ('20261101000000_platform_reset_password.sql', to_regprocedure('public.platform_reset_password(text, text)') is not null)
+    ('20261101000000_platform_reset_password.sql', to_regprocedure('public.platform_reset_password(text, text)') is not null),
+    ('20261102000000_trial_simulation_bonus.sql',  to_regprocedure('public.platform_add_trial_simulations(bigint, integer)') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261101000000_platform_reset_password.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261102000000_trial_simulation_bonus.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -212,6 +213,7 @@ begin
       and p.proname not in ('is_store_member', 'is_store_active', 'client_errors_rate_limit',
                             'is_platform_admin', 'platform_create_trial', 'platform_list_customers',
                             'platform_create_account', 'platform_subscribe_store', 'platform_reset_password',
+                            'platform_add_trial_simulations', 'platform_trial_simulation_usage',
                             -- Memeriksa keanggotaan toko sendiri; diuji di bagian 2c.
                             'use_trial_simulation',
                             -- Hanya anggota toko, hanya sekali (name_pending); diuji di bagian 2c dan 2g.
@@ -458,6 +460,10 @@ begin
          'select count(*) from (select public.platform_subscribe_store(' || sa || ', date ''2099-12-31'')) x'),
         ('Bukan pengelola: reset password akunnya sendiri (platform_reset_password)',
          'select count(*) from (select public.platform_reset_password(''' || a_email || ''', ''UjiPemisahan999'')) x'),
+        ('Bukan pengelola: tambah jatah simulasi tokonya sendiri (platform_add_trial_simulations)',
+         'select count(*) from (select public.platform_add_trial_simulations(' || sa || ', 1000)) x'),
+        ('Bukan pengelola: lihat pemakaian simulasi semua toko (platform_trial_simulation_usage)',
+         'select count(*) from public.platform_trial_simulation_usage()'),
         ('Bukan pengelola: lihat daftar pelanggan (platform_list_customers)',
          'select count(*) from public.platform_list_customers()')
       ) as x (nama, kueri)
@@ -589,6 +595,27 @@ begin
       v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
     end;
     v_uji := v_uji || 'Pengelola: reset password pelanggan, bukan pengelola (kontrol)'::text;
+
+    -- Kontrol: pengelola menambah jatah simulasi toko uji coba; batas yang dipakai pemiliknya ikut naik.
+    begin
+      reset role;
+      execute 'insert into public.platform_admins (user_id) values ($1) on conflict do nothing' using a_user;
+      execute 'update public.stores set trial = true where id = $1' using sa;
+      set local role authenticated;
+      execute 'select (public.use_trial_simulation($1) ->> ''limit'')::bigint' into n using sa;
+      execute 'select (public.platform_add_trial_simulations($1, 25) ->> ''limit'')::bigint' into n2 using sa;
+      execute 'select (public.use_trial_simulation($1) ->> ''limit'')::bigint' into m using sa;
+      reset role;
+      execute 'update public.stores set trial = false where id = $1' using sa;
+      v_status := v_status || case when n2 = n + 25 and m = n + 25 then 'LULUS' else 'GAGAL' end;
+      v_ket := v_ket || case when n2 = n + 25 and m = n + 25 then format('batas %s jadi %s', n, m)
+                             else format('batas awal %s, setelah tambah %s, dipakai pemilik %s', n, n2, m) end;
+    exception when others then
+      reset role;
+      v_status := v_status || 'CEK'::text;
+      v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+    end;
+    v_uji := v_uji || 'Pengelola: tambah jatah simulasi toko uji coba (kontrol)'::text;
 
     -- 2f. Akun uji coba: bulan di atas batas ditolak, bulan yang sudah ada tetap boleh. Mengikuti
     --     angka di trial_month_limit(), jadi tidak perlu diubah kalau batasnya diganti.

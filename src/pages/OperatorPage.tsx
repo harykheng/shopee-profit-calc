@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react'
 import { Alert, Button, Card, Modal, PageTitle, Spinner, Stamp, inputClass, linkClass } from '../components/ui'
 import { IconCopy, IconWhatsApp } from '../components/icons'
-import { createAccount, fetchCustomers, resetCustomerPassword, subscribeStore } from '../lib/api'
+import {
+  addTrialSimulations,
+  createAccount,
+  fetchCustomers,
+  fetchTrialSimUsage,
+  resetCustomerPassword,
+  subscribeStore,
+  type TrialSimUsage,
+} from '../lib/api'
 import { APP_NAME } from '../lib/brand'
 import { adminHint, friendlyError } from '../lib/errors'
 import { formatDate } from '../lib/format'
@@ -61,8 +69,11 @@ function OperatorTabs({ current }: { current: 'pelanggan' | 'pengelola' }) {
 export function CustomersPage({ showTabs }: { showTabs: boolean }) {
   const [customers, setCustomers] = useState<CustomerRow[] | null>(null)
   const [listError, setListError] = useState<string | null>(null)
+  const [simUsage, setSimUsage] = useState<Map<number, TrialSimUsage> | null>(null)
 
   const load = useCallback(() => {
+    // Pemakaian simulasi hanya pelengkap: kalau gagal, daftar tetap tampil tanpa itu.
+    fetchTrialSimUsage().then(setSimUsage)
     fetchCustomers()
       .then((rows) => {
         setCustomers(rows)
@@ -109,7 +120,7 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
         ) : !customers ? (
           <Spinner />
         ) : (
-          <CustomerList rows={customers} onChanged={load} />
+          <CustomerList rows={customers} simUsage={simUsage} onChanged={load} />
         )}
       </Card>
     </>
@@ -403,10 +414,19 @@ function sortRows(rows: CustomerRow[], filter: Filter): CustomerRow[] {
   return [...rows].sort((a, b) => (filter === 'ended' ? end(b).localeCompare(end(a)) : end(a).localeCompare(end(b))))
 }
 
-function CustomerList({ rows, onChanged }: { rows: CustomerRow[]; onChanged: () => void }) {
+function CustomerList({
+  rows,
+  simUsage,
+  onChanged,
+}: {
+  rows: CustomerRow[]
+  simUsage: Map<number, TrialSimUsage> | null
+  onChanged: () => void
+}) {
   const counts = countByGroup(rows)
   const [subscribing, setSubscribing] = useState<CustomerRow | null>(null)
   const [resetting, setResetting] = useState<CustomerRow | null>(null)
+  const [addingSims, setAddingSims] = useState<CustomerRow | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>(counts.trial > 0 ? 'trial' : counts.paid > 0 ? 'paid' : 'all')
   const shown = useMemo(
@@ -448,11 +468,27 @@ function CustomerList({ rows, onChanged }: { rows: CustomerRow[]; onChanged: () 
               row={r}
               onSubscription={() => setSubscribing(r)}
               onResetPassword={() => setResetting(r)}
+              simUsage={r.trial ? (simUsage?.get(r.store_id) ?? null) : null}
+              onAddSimulations={() => setAddingSims(r)}
             />
           ))}
         </ul>
       )}
       {resetting && <ResetPasswordDialog row={resetting} onClose={() => setResetting(null)} />}
+      {addingSims && (
+        <AddSimulationsDialog
+          row={addingSims}
+          usage={simUsage?.get(addingSims.store_id) ?? null}
+          onClose={() => setAddingSims(null)}
+          onDone={(u) => {
+            setDone(
+              `Jatah simulasi ${addingSims.store_name} sekarang ${u.limit} produk (${u.used} terpakai). Kalau pemiliknya sedang membuka Simulasi Harga, minta muat ulang halamannya.`,
+            )
+            setAddingSims(null)
+            onChanged()
+          }}
+        />
+      )}
       {subscribing && (
         <SubscriptionDialog
           row={subscribing}
@@ -479,10 +515,15 @@ function CustomerItem({
   row,
   onSubscription,
   onResetPassword,
+  simUsage,
+  onAddSimulations,
 }: {
   row: CustomerRow
   onSubscription: () => void
   onResetPassword: () => void
+  /** Hanya toko uji coba, dan hanya kalau SQL 20261102 sudah dijalankan. */
+  simUsage: TrialSimUsage | null
+  onAddSimulations: () => void
 }) {
   const status = customerStatus(row.active_until)
   const statusColor = status.state === 'expired' || status.state === 'expiring' ? 'text-warn' : 'text-ink-2'
@@ -507,8 +548,18 @@ function CustomerItem({
           )}
         </p>
         <p className="text-ink-3">Login terakhir: {lastLoginLabel(row.last_sign_in_at)}</p>
+        {simUsage && (
+          <p className={simUsage.used >= simUsage.limit ? 'font-semibold text-warn' : 'text-ink-3'}>
+            Simulasi: {simUsage.used} dari {simUsage.limit} produk{simUsage.used >= simUsage.limit ? ', habis' : ''}
+          </p>
+        )}
         {/* Uji coba → berlangganan; berlangganan dengan tanggal berakhir → perpanjang (toko tanpa batas tidak perlu). */}
         <div className="mt-2 flex flex-wrap gap-2 sm:justify-end">
+          {simUsage && (
+            <Button variant="secondary" onClick={onAddSimulations}>
+              Tambah jatah simulasi
+            </Button>
+          )}
           {row.owner_emails.length > 0 && (
             <Button variant="secondary" onClick={onResetPassword}>
               Reset password
@@ -724,6 +775,100 @@ function ResetPasswordDialog({ row, onClose }: { row: CustomerRow; onClose: () =
           </div>
         </>
       )}
+    </Modal>
+  )
+}
+
+const SIM_AMOUNTS = [10, 25, 50] as const
+
+/** Jendela "Tambah jatah simulasi" untuk satu toko uji coba. Tambahan menumpuk di atas jatah sekarang. */
+function AddSimulationsDialog({
+  row,
+  usage,
+  onClose,
+  onDone,
+}: {
+  row: CustomerRow
+  usage: TrialSimUsage | null
+  onClose: () => void
+  onDone: (usage: TrialSimUsage) => void
+}) {
+  const titleId = useId()
+  const [amount, setAmount] = useState<number | null>(25)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const save = async () => {
+    if (amount === null || !Number.isInteger(amount) || amount < 1 || amount > 1000) {
+      setError('Isi tambahan 1 sampai 1000 produk.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      onDone(await addTrialSimulations(row.store_id, amount))
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal labelledBy={titleId} onClose={onClose} dismissible={!busy}>
+      <h2 id={titleId} className="font-display text-2xl font-extrabold tracking-tight">
+        Tambah jatah simulasi {row.store_name}
+      </h2>
+      <p className="mt-3 text-ink-2">
+        {usage ? `Sekarang ${usage.used} dari ${usage.limit} produk terpakai. ` : ''}Tambahan berlaku untuk toko ini saja,
+        selama masa uji coba.
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Jumlah tambahan">
+        {SIM_AMOUNTS.map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-pressed={amount === n}
+            onClick={() => setAmount(n)}
+            className={`min-h-11 rounded-full border-2 px-4 font-semibold transition-colors ${
+              amount === n ? 'border-ink bg-ink text-paper' : 'border-control bg-paper text-ink hover:border-ink'
+            }`}
+          >
+            +{n}
+          </button>
+        ))}
+      </div>
+      <label className="mt-4 block font-semibold">
+        Tambahan (produk)
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={1000}
+          value={amount ?? ''}
+          onChange={(e) => setAmount(e.target.value === '' ? null : Number(e.target.value))}
+          className={`num mt-1.5 font-normal ${inputClass}`}
+        />
+      </label>
+      {error && (
+        <div className="mt-4">
+          <Alert tone="error">{error}</Alert>
+        </div>
+      )}
+      <div className="mt-5 flex flex-col gap-3">
+        <Button onClick={save} disabled={busy}>
+          {busy
+            ? 'Menyimpan…'
+            : amount && usage
+              ? `Tambah ${amount} produk (jadi ${usage.limit + amount})`
+              : amount
+                ? `Tambah ${amount} produk`
+                : 'Tambah jatah'}
+        </Button>
+        <Button variant="secondary" onClick={onClose} disabled={busy}>
+          Batal
+        </Button>
+      </div>
     </Modal>
   )
 }

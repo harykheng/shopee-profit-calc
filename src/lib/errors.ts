@@ -9,6 +9,7 @@ const MISSING_MIGRATIONS: [match: (lower: string) => boolean, file: string][] = 
   [(l) => l.includes('platform_create_account'), '20261030000000_platform_create_account.sql'],
   [(l) => l.includes('platform_subscribe_store'), '20261031000000_platform_set_subscription.sql'],
   [(l) => l.includes('platform_reset_password'), '20261101000000_platform_reset_password.sql'],
+  [(l) => l.includes('platform_add_trial_simulations'), '20261102000000_trial_simulation_bonus.sql'],
   [
     (l) => l.includes('platform_create_trial') || l.includes('platform_list_customers') || l.includes('is_platform_admin'),
     '20261026000000_platform_admin.sql',

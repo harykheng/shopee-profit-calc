@@ -443,7 +443,8 @@ berbeda, di Satu produk maupun Grup iklan. Satu produk dihitung sekali: mengubah
 produk yang sama **tidak** menambah hitungan, dan produk yang sudah pernah dicoba tetap bisa dibuka lagi.
 Produk yang diketik sendiri dihitung per modal (HPP). Sisa jatah tertulis di atas kotak pilih produk.
 Kalau jatah habis, hasil untuk produk baru tidak tampil (di Grup iklan, produk itu tidak ikut dihitung).
-Setelah berlangganan, batas ini hilang.
+Butuh lebih? Minta tambahan jatah ke pengelola (lalu muat ulang halaman). Setelah berlangganan, batas ini
+hilang.
 
 ### Cara pakai
 

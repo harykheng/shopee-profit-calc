@@ -781,6 +781,28 @@ export async function resetCustomerPassword(email: string, password: string): Pr
   check(await supabase.rpc('platform_reset_password', { p_email: email, p_new_password: password }))
 }
 
+export interface TrialSimUsage {
+  used: number
+  limit: number
+}
+
+/** Pengelola: pemakaian & batas simulasi tiap toko uji coba. null kalau SQL 20261102 belum dijalankan / gagal. */
+export async function fetchTrialSimUsage(): Promise<Map<number, TrialSimUsage> | null> {
+  const res = await supabase.rpc('platform_trial_simulation_usage')
+  if (res.error) return null
+  const rows = (res.data ?? []) as { store_id: number; used: number; sim_limit: number }[]
+  return new Map(rows.map((r) => [Number(r.store_id), { used: Number(r.used), limit: Number(r.sim_limit) }]))
+}
+
+/** Pengelola: tambah jatah simulasi satu toko uji coba sebanyak `amount` produk. */
+export async function addTrialSimulations(storeId: number, amount: number): Promise<TrialSimUsage> {
+  const r = check(await supabase.rpc('platform_add_trial_simulations', { p_store_id: storeId, p_amount: amount })) as {
+    used: number
+    limit: number
+  }
+  return { used: Number(r.used), limit: Number(r.limit) }
+}
+
 /** Pemilik mengisi nama tokonya (sekali, hanya kalau name_pending). */
 export async function setStoreName(storeId: number, name: string): Promise<void> {
   check(await supabase.rpc('set_store_name', { p_store_id: storeId, p_name: name }))

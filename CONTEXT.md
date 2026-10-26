@@ -128,6 +128,7 @@ Migration (jalankan berurutan; file baru ditandai):
 | **`20261021000000_income_per_order_views.sql`** | View `order_item_income`, `income_order_match`, `income_product_monthly`; kolom baru di `product_monthly_recap` |
 | **`20261022000000_income_monthly_breakdown.sql`** | View `income_monthly_breakdown` (Bab 2 Rekap dari omzet) |
 | **`20261023000000_admin_reset_password.sql`** | Fungsi admin `admin_reset_password(email, password)` untuk SQL Editor: ganti password (bcrypt), hapus penanda `password_changed` supaya banner muncul lagi, keluarkan semua sesi. Tidak dipakai aplikasi |
+| **`20261102000000_trial_simulation_bonus.sql`** | `stores.trial_sim_bonus`; `use_trial_simulation` memakai batas 50 + bonus toko; `platform_add_trial_simulations(id, n)` (pengelola, 1–1000, menumpuk) dan `platform_trial_simulation_usage()` (pemakaian per toko uji coba). Boleh sebelum/sesudah deploy |
 | **`20261101000000_platform_reset_password.sql`** | `platform_reset_password(email, password)`: hanya pengelola, hanya akun yang anggota toko, **menolak akun pengelola** (supaya tidak bisa saling ambil alih); memanggil `admin_reset_password`. Tombol **Reset password** di Pelanggan. Boleh sebelum/sesudah deploy |
 | **`20261031000000_platform_set_subscription.sql`** | `platform_subscribe_store(store_id, sampai)`: hanya pengelola; `trial = false` + tanggal langganan (tombol **Jadikan berlangganan** di Pelanggan). Boleh sebelum/sesudah deploy |
 | **`20261030000000_platform_create_account.sql`** | `platform_create_account(email, password, nama, sampai, minta_nama, uji_coba)`: memanggil `platform_create_trial` (4 parameter, cek pengelola) lalu mengatur `trial` & `name_pending`. Untuk akun yang langsung berlangganan. Jalankan sebelum/bersamaan deploy |
@@ -259,6 +260,7 @@ npm run build
 | (30 Okt) | Pengelola: halaman awal = Pelanggan (uji coba / berlangganan / berakhir); Buat akun = uji coba atau langsung berlangganan. Pengelola tanpa toko hanya melihat 2 menu itu. SQL 20261030. |
 | (31 Okt) | Pelanggan: tombol **Jadikan berlangganan** di toko uji coba (1 bulan / 1 tahun / tanggal, mulai hari ini) dan **Perpanjang** di toko berlangganan (lanjut dari tanggal berakhir kalau masih aktif, `extendedEnd`). SQL 20261031 dipakai keduanya. `Modal` kini lewat portal ke body (lapisan gelap menutup seluruh layar). |
 | (1 Nov) | Pelanggan: tombol **Reset password** (password acak + teks WhatsApp; akun pengelola ditolak). SQL 20261101. |
+| (2 Nov) | Pelanggan: pemakaian simulasi tiap toko uji coba + tombol **Tambah jatah simulasi** (per toko). SQL 20261102. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 
