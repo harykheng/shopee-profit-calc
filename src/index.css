@@ -207,6 +207,21 @@
   .reveal {
     animation: reveal 200ms ease-out both;
   }
+  /* Kotak penting yang perlu dibaca dulu (halaman Upload akun uji coba): cincin kuning berdenyut 2 kali
+     saat muncul. Cincinnya pseudo-element supaya hanya opacity & transform yang bergerak. */
+  .attention {
+    position: relative;
+  }
+  .attention::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border: 3px solid var(--color-sun);
+    border-radius: 21px;
+    pointer-events: none;
+    opacity: 0;
+    animation: attention 1100ms ease-out 300ms 2;
+  }
   /* Ganti halaman / tab. */
   .page-in {
     animation: page-in 180ms ease-out both;
@@ -276,6 +291,21 @@
   }
 }
 
+@keyframes attention {
+  0% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.025);
+  }
+}
+
 @keyframes page-in {
   from {
     opacity: 0;
@@ -294,7 +324,8 @@
   .print-in > *,
   .print-last,
   .reveal,
-  .page-in {
+  .page-in,
+  .attention::after {
     animation: none;
   }
   .nav-indicator,

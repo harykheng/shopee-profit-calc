@@ -274,8 +274,15 @@ export function UploadPage({
       </PageTitle>
 
       {trialUsed !== null && (
-        <div className="mb-8">
-          <Alert tone="info">{trialMonthsNotice(trialUsed)}</Alert>
+        // Belum ada bulan tersimpan = saat yang menentukan (bulan pertama tidak bisa diganti): kuning + disorot
+        // begitu halaman dibuka. Setelah terisi, cukup info biasa.
+        <div className={`mb-8 ${trialUsed.length === 0 ? 'attention' : ''}`}>
+          <Alert
+            tone={trialUsed.length === 0 ? 'warning' : 'info'}
+            title={trialUsed.length === 0 ? 'Baca dulu sebelum upload' : undefined}
+          >
+            {trialMonthsNotice(trialUsed)}
+          </Alert>
         </div>
       )}
 

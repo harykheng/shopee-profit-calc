@@ -327,6 +327,8 @@ Motion marks an answer arriving or a state changing; only transform and opacity;
 - **Sticker stamp** (`.stamp-in`): from 30% with a twist, overshoot to 114%, settle (460ms); lists stagger 60ms.
 - **Printing** (`.print-in`, `.print-last`): nota lines appear one after another (120ms apart), the total last.
 - **Bar grows** (`.grow-split`): Rp100 bar segments grow from the base (vertical) or left (horizontal).
+- **Attention** (`.attention`): a `sun` ring pulses twice around a box that must be read before acting (Upload page, trial
+  account with no month saved yet; the box itself is a warning alert, so it still stands out with motion off).
 - **Feedback:** nav marker slides (260ms); opened panels fade down 4px; pages and tabs fade up 4px; buttons press 1px.
 - **Removed with the reskin:** confetti and word-by-word headlines. The landing dropped both as template patterns.
 
