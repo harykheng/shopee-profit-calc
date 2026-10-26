@@ -545,8 +545,11 @@ function NotaCard({
       <section className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:items-stretch lg:gap-12">
         <div className="min-w-0">
           <Kicker>Bab 1 · Untung bersih</Kicker>
-          <h1 className="mt-3 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-            {period}, {storeName} <span className="hl">{loss ? 'rugi' : 'untung bersih'}</span>
+          {/* Periode, nama toko, dan "untung bersih" masing-masing tidak terbelah ke dua baris (mis. "Sora / Store").
+              Kalau periode atau nama toko lebih panjang dari satu baris, ia turun di dalam kotaknya sendiri. */}
+          <h1 className="mt-3 text-balance font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+            <span className="inline-block">{period},</span> <span className="inline-block">{storeName}</span>{' '}
+            <span className="hl whitespace-nowrap">{loss ? 'rugi' : 'untung bersih'}</span>
           </h1>
           <p
             className={`num mt-3 font-display text-6xl font-extrabold leading-[0.95] tracking-tighter sm:text-8xl lg:text-[7.5rem] ${
