@@ -68,7 +68,7 @@ select public.admin_purge_client_errors(90);
 tanpa toko sendiri hanya melihat menu **Pelanggan** dan **Buat akun**; pengelola yang juga punya toko tetap
 melihat menu toko, dan membuka Pelanggan lewat ikon kunci di kanan atas.
 
-**Akun baru: Buat akun.** Pilih **Jenis akun**: **Uji coba 30 hari** (dengan batas uji coba) atau **Langsung
+**Akun baru: Buat akun.** Pilih **Jenis akun**: **Uji coba 7 hari** (dengan batas uji coba) atau **Langsung
 berlangganan** (tanpa batas; tombol **1 bulan** / **1 tahun** mengisi tanggal berakhir). Akun berlangganan butuh
 migration `20261030000000_platform_create_account.sql`. Isi:
 
@@ -81,8 +81,9 @@ migration `20261030000000_platform_create_account.sql`. Isi:
   bagian depan email. Butuh migration `20261029000000_store_name_by_customer.sql`; tanpa itu nama dari
   email dipakai seterusnya seperti dulu. Pelanggan salah ketik nama:
   `update public.stores set name = 'Nama Benar' where id = 5;`
-- **Bisa dipakai sampai**: bawaan **30 hari** (hari ini ikut dihitung, jadi dibuat 1 November → aktif
-  sampai akhir 30 November WIB). Setelah itu toko otomatis jadi baca saja.
+- **Bisa dipakai sampai**: bawaan **7 hari** (hari ini ikut dihitung, jadi dibuat 1 November → aktif
+  sampai akhir 7 November WIB). Akun uji coba yang dibuat sebelum 29 Oktober 2026 tetap memakai tanggal
+  berakhirnya sendiri (dulu 30 hari). Setelah itu toko otomatis jadi baca saja.
 
 Tekan **Buat akun uji coba**. Akun langsung aktif (tanpa verifikasi email), toko ditandai **Uji coba**,
 lalu muncul teks siap kirim: alamat login, email, password, dan tanggal berakhir. **Salin teks** atau
@@ -129,8 +130,9 @@ lepas**. Selama `trial = true` (migration `20261027000000_trial_limits.sql` + an
 `20261028000000_trial_limits_total.sql`):
 - laporan penghasilan + data iklan hanya bisa disimpan untuk **1 bulan** (bulan uang cair / periode iklan;
   export pesanan tidak dibatasi; upload ulang bulan yang sama selalu boleh);
-- Simulasi Harga maksimal **50 produk selama uji coba** (produk yang sama dihitung sekali). Pemakaiannya
-  terlihat di daftar Pelanggan ("Simulasi: 48 dari 50 produk"); tombol **Tambah jatah simulasi** menambah jatah
+- Simulasi Harga maksimal **10 produk selama uji coba** (produk yang sama dihitung sekali; migration
+  `20261103000000_trial_simulation_10.sql`). Pemakaiannya terlihat di daftar Pelanggan ("Simulasi: 8 dari 10
+  produk"); tombol **Tambah jatah simulasi** menambah jatah
   toko itu saja (+10 / +25 / +50 / angka sendiri, menumpuk). Butuh migration
   `20261102000000_trial_simulation_bonus.sql`;
 - **Cek cepat** di halaman Iklan tidak tersedia (khusus pelanggan berlangganan; dikunci di aplikasi saja,

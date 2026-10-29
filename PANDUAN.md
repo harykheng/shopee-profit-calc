@@ -438,7 +438,7 @@ sedangkan Simulasi Harga menghitung **sebelum** terjadi. Potongan Shopee dihitun
 (admin %, Gratis Ongkir XTRA %, dan biaya proses yang tetap per order), jadi lebih tepat untuk
 memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
 
-**Akun uji coba: maksimal 50 produk.** Selama uji coba, Simulasi Harga bisa dipakai untuk 50 produk
+**Akun uji coba: maksimal 10 produk.** Selama uji coba, Simulasi Harga bisa dipakai untuk 10 produk
 berbeda, di Satu produk maupun Grup iklan. Satu produk dihitung sekali: mengubah harga, ROAS, atau biaya
 produk yang sama **tidak** menambah hitungan, dan produk yang sudah pernah dicoba tetap bisa dibuka lagi.
 Produk yang diketik sendiri dihitung per modal (HPP). Sisa jatah tertulis di atas kotak pilih produk.
@@ -608,7 +608,7 @@ aman.
 Tidak. Pesanan, penghasilan, dan data iklan dikenali dan diperbarui, tidak ditambah lagi.
 
 **Akun uji coba: kenapa laporan bulan lain ditolak?**
-Uji coba bisa menyimpan data 1 bulan dan Simulasi Harga untuk 50 produk; Cek cepat di halaman Iklan
+Uji coba (7 hari) bisa menyimpan data 1 bulan dan Simulasi Harga untuk 10 produk; Cek cepat di halaman Iklan
 khusus pelanggan berlangganan (lihat
 [Halaman Upload](#4-halaman-upload) dan [Simulasi Harga](#9-halaman-simulasi-harga)). Data yang sudah
 tersimpan tetap aman. Setelah berlangganan, bulan lain bisa langsung di-upload.

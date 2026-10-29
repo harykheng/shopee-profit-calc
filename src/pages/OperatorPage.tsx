@@ -14,6 +14,7 @@ import { APP_NAME } from '../lib/brand'
 import { adminHint, friendlyError } from '../lib/errors'
 import { formatDate } from '../lib/format'
 import { MIN_PASSWORD_LENGTH } from '../lib/password'
+import { TRIAL_MONTH_LIMIT, TRIAL_SIMULATION_LIMIT } from '../lib/trialLimits'
 import { wibToday } from '../lib/subscription'
 import {
   DEFAULT_TRIAL_DAYS,
@@ -231,7 +232,7 @@ function CreateTrialCard() {
           </div>
           <span className="mt-1 block text-sm text-ink-3">
             {trial
-              ? 'Dengan batas uji coba: data 1 bulan, Simulasi Harga 50 produk, tanpa Cek cepat iklan.'
+              ? `Dengan batas uji coba: data ${TRIAL_MONTH_LIMIT} bulan, Simulasi Harga ${TRIAL_SIMULATION_LIMIT} produk, tanpa Cek cepat iklan.`
               : 'Tanpa batas uji coba. Pakai untuk pelanggan yang sudah membayar.'}
           </span>
         </fieldset>

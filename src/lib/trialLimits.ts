@@ -1,11 +1,11 @@
 /**
  * Batas akun uji coba (stores.trial = true). Aturannya sama dengan migration 20261027000000_trial_limits.sql
- * dan angka di 20261028000000_trial_limits_total.sql:
+ * dan angka di 20261028000000_trial_limits_total.sql / 20261103000000_trial_simulation_10.sql:
  *
  * - Data maksimal 1 bulan: bulan laporan penghasilan (tanggal uang cair) dan bulan data iklan.
  *   Export pesanan tidak dibatasi. Yang benar-benar menolak adalah trigger di database; fungsi di sini
  *   untuk memberi tahu SEBELUM tombol simpan ditekan.
- * - Simulasi maksimal 50 produk selama uji coba. Satu produk dihitung sekali, baik di Satu produk maupun
+ * - Simulasi maksimal 10 produk selama uji coba (+ jatah tambahan per toko dari pengelola). Satu produk dihitung sekali, baik di Satu produk maupun
  *   di Grup iklan; mengubah harga/ROAS/biaya produk yang sama tidak menambah hitungan.
  *
  * Fungsi murni (tanpa Supabase) supaya bisa dites.
@@ -14,7 +14,7 @@ import { formatMonth } from './format'
 import type { IncomeParseResult } from './parsers/income'
 
 export const TRIAL_MONTH_LIMIT = 1
-export const TRIAL_SIMULATION_LIMIT = 50
+export const TRIAL_SIMULATION_LIMIT = 10
 
 /** "YYYY-MM-DD" → "YYYY-MM-01". */
 export function monthOf(date: string): string {
@@ -103,7 +103,7 @@ export function groupRowSimKey(rowKey: string): string {
   return `grup-baris:${rowKey}`
 }
 
-/** Kalimat sisa jatah, mis. "Uji coba: 3 dari 50 produk sudah disimulasikan." */
+/** Kalimat sisa jatah, mis. "Uji coba: 3 dari 10 produk sudah disimulasikan." */
 export function trialSimNotice(used: number, limit = TRIAL_SIMULATION_LIMIT): string {
   return `Uji coba: ${used} dari ${limit} produk sudah disimulasikan. Mengubah harga atau ROAS produk yang sama tidak menambah hitungan.`
 }

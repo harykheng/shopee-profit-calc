@@ -101,12 +101,15 @@ begin
     ('20261030000000_platform_create_account.sql', to_regprocedure('public.platform_create_account(text, text, text, date, boolean, boolean)') is not null),
     ('20261031000000_platform_set_subscription.sql', to_regprocedure('public.platform_subscribe_store(bigint, date)') is not null),
     ('20261101000000_platform_reset_password.sql', to_regprocedure('public.platform_reset_password(text, text)') is not null),
-    ('20261102000000_trial_simulation_bonus.sql',  to_regprocedure('public.platform_add_trial_simulations(bigint, integer)') is not null)
+    ('20261102000000_trial_simulation_bonus.sql',  to_regprocedure('public.platform_add_trial_simulations(bigint, integer)') is not null),
+    ('20261103000000_trial_simulation_10.sql',     exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+                                                     where s.nspname = 'public' and p.proname = 'trial_simulation_limit'
+                                                       and p.prosrc like '%select 10%'))
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261102000000_trial_simulation_bonus.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261103000000_trial_simulation_10.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 

@@ -27,7 +27,7 @@ kuat dari pengalaman umum, **[Tebakan]** = belum ada dasar, harus diuji.
    (README bagian 8). Jadi 10% klik bisa saja menghasilkan 0 pelanggan kalau balasan chat lambat
    atau harga tidak jelas. Ukur juga: klik → chat benar-benar masuk → bayar.
 4. **Harga dan uji coba sudah ada (Rp69.000/bulan atau Rp599.000/tahun per toko, uji coba gratis
-   30 hari), tapi belum ada testimonial atau angka hasil.** `PRODUCT.md`: "No testimonials, metrics or external claims
+   7 hari), tapi belum ada testimonial atau angka hasil.** `PRODUCT.md`: "No testimonials, metrics or external claims
    exist; none should be invented." Landing page tanpa bukti sosial biasanya kehilangan klik dari
    orang yang butuh kepastian. Bukti kita yang jujur
    adalah **demo interaktif** (bagian 5) dan cerita **dibuat dan dipakai sendiri untuk 2 toko**.
@@ -108,7 +108,7 @@ Tanpa ini, halaman jadi di atas kertas saja. Isi di sini, lalu salin ke teks hal
 | # | Keputusan | Isi | Dampak ke klik |
 |---|---|---|---|
 | 1 | Harga per toko | **Rp69.000/bulan** atau **Rp599.000/tahun** (hemat ±28%, setara ±8,7 bulan). Potongan untuk toko kedua dst.: `[ISI]` | Tinggi. Halaman tanpa harga memaksa orang bertanya dulu. |
-| 2 | Uji coba / garansi? | **Gratis 30 hari per toko**, semua fitur dengan batas wajar (data 1 bulan, Simulasi Harga 50 produk, tanpa Cek cepat iklan; lihat OPERASI.md), tanpa bayar di depan. Satu kali per seller. Setelah habis: mode baca saja, data disimpan `[ISI berapa hari]` | Tinggi. Menurunkan rasa risiko klik. |
+| 2 | Uji coba / garansi? | **Gratis 7 hari per toko**, semua fitur dengan batas wajar (data 1 bulan, Simulasi Harga 10 produk, tanpa Cek cepat iklan; lihat OPERASI.md), tanpa bayar di depan. Satu kali per seller. Setelah habis: mode baca saja, data disimpan `[ISI berapa hari]` | Tinggi. Menurunkan rasa risiko klik. |
 | 3 | Nomor WhatsApp admin (format `62…`) | `[ISI]` | Wajib. Sama dengan `VITE_SUPPORT_WA`. |
 | 4 | Janji waktu balas dan waktu akun jadi | `[ISI jam kerja + SLA]` | Tinggi. Tulis hanya yang bisa ditepati. |
 | 5 | Domain halaman | `studioharel.id`? (app tetap di `app.studioharel.id`) | Sedang |
@@ -221,7 +221,7 @@ bukti sosial yang kita punya dan benar adanya.
 
 Isi dari keputusan #1, #2, #4. Tiga langkah: **chat WhatsApp → akun dibuatkan → upload bulan
 pertama.** Tulis jujur bahwa akun dibuat manual, plus janji waktunya (`[ISI]`). Kalimat uji coba:
-`Gratis 30 hari. Upload data bulan lalu dan lihat untung aslimu sebelum bayar.` Satu paket
+`Gratis 7 hari. Upload data bulan lalu dan lihat untung aslimu sebelum bayar.` Satu paket
 (semua fitur), dua cara bayar: **Rp69.000/bulan** atau **Rp599.000/tahun** per toko. Tulis yang
 tahunan sebagai "hemat ±Rp229.000", jangan memberi nama paket lain atau tabel fitur yang berbeda.
 
@@ -456,7 +456,7 @@ trafik dari iklan dingin, targetkan dulu 3–5% dan naikkan lewat perbaikan, jan
 
 ### 9.4 Urutan perbaikan (paling berdampak dulu)
 
-1. Tampilkan **harga dan uji coba 30 hari** (keputusan #1, #2) di halaman, lalu cek apakah klik naik.
+1. Tampilkan **harga dan uji coba 7 hari** (keputusan #1, #2) di halaman, lalu cek apakah klik naik.
 2. **Simulator di atas lipatan atau tepat setelah hero**, bukan di tengah halaman.
 3. Judul hero (A/B/C di 4.2).
 4. Teks tombol: `Chat WhatsApp, tanya cara mulai` vs `Cek iklan tokomu` vs `Coba 1 bulan`.

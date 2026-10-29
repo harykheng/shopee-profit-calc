@@ -129,6 +129,6 @@ describe('kunci jatah simulasi', () => {
   })
 
   it('kalimat sisa jatah', () => {
-    expect(trialSimNotice(3)).toMatch(/^Uji coba: 3 dari 50 produk sudah disimulasikan/)
+    expect(trialSimNotice(3)).toMatch(/^Uji coba: 3 dari 10 produk sudah disimulasikan/)
   })
 })

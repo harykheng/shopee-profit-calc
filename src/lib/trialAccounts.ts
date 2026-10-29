@@ -9,8 +9,8 @@ import { MIN_PASSWORD_LENGTH } from './password'
 import { subscriptionStatus, wibToday } from './subscription'
 import { formatDate } from './format'
 
-/** Lama uji coba bawaan (hari), sama dengan janji di landing ("Gratis 30 hari") dan OPERASI.md. */
-export const DEFAULT_TRIAL_DAYS = 30
+/** Lama uji coba bawaan (hari), sama dengan janji di landing ("Gratis 7 hari") dan OPERASI.md. */
+export const DEFAULT_TRIAL_DAYS = 7
 
 /** Huruf & angka yang tidak mirip satu sama lain (tanpa 0/O, 1/l/I), supaya mudah diketik dari WhatsApp. */
 const PASSWORD_CHARS = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -43,7 +43,7 @@ export function addDays(date: string, days: number): string {
 }
 
 /**
- * Tanggal berakhir bawaan: hari ini (WIB) ikut dihitung, jadi 30 hari = hari ini + 29.
+ * Tanggal berakhir bawaan: hari ini (WIB) ikut dihitung, jadi 7 hari = hari ini + 6.
  * Toko aktif sampai akhir tanggal itu (sama dengan is_store_active di database).
  */
 export function defaultTrialEnd(now: Date = new Date(), days = DEFAULT_TRIAL_DAYS): string {

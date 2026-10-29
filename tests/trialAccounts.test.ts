@@ -49,12 +49,12 @@ describe('tanggal', () => {
     expect(addDays('2026-12-25', 10)).toBe('2027-01-04')
   })
 
-  it('bawaan 30 hari termasuk hari ini (hari ini WIB + 29)', () => {
-    expect(defaultTrialEnd(NOW)).toBe('2026-11-24')
-    // Contoh di OPERASI.md: dibuat 1 November → 30 November
-    expect(defaultTrialEnd(wib('2026-11-01'))).toBe('2026-11-30')
+  it('bawaan 7 hari termasuk hari ini (hari ini WIB + 6)', () => {
+    expect(defaultTrialEnd(NOW)).toBe('2026-11-01')
+    // Contoh di OPERASI.md: dibuat 1 November → 7 November
+    expect(defaultTrialEnd(wib('2026-11-01'))).toBe('2026-11-07')
     // 00:30 WIB tanggal 27 dihitung tanggal 27, bukan 26 (UTC)
-    expect(defaultTrialEnd(wib('2026-10-27', '00:30:00'))).toBe('2026-11-25')
+    expect(defaultTrialEnd(wib('2026-10-27', '00:30:00'))).toBe('2026-11-02')
   })
 })
 
@@ -100,7 +100,7 @@ describe('welcomeMessage', () => {
     expect(text).toContain('Email: budi@gmail.com')
     expect(text).toContain('Password: Rahasia123')
     expect(text).toContain('1 bulan')
-    expect(text).toContain('50 produk')
+    expect(text).toContain('10 produk')
     expect(text).toContain('9 Nov 2026')
     expect(text).not.toMatch(/—/)
   })
@@ -212,7 +212,7 @@ describe('welcomeMessage akun berlangganan', () => {
     expect(text).toContain('Langganan aktif sampai')
     expect(text).toContain('Password: Rahasia123')
     expect(text).not.toContain('uji coba')
-    expect(text).not.toContain('50 produk')
+    expect(text).not.toContain('10 produk')
   })
 })
 

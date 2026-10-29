@@ -102,6 +102,10 @@ menghapus data.
 > aplikasi tetap jalan tanpa batas; tanpa deploy, batas data tetap ditegakkan database (pesannya saja
 > yang kurang rapi).
 
+> Sudah setup sebelum 3 November 2026? Jalankan sekali file `20261103000000_trial_simulation_10.sql` (aman
+> diulang). Batas Simulasi Harga akun uji coba jadi **10 produk** (sebelumnya 50; jatah tambahan per toko tetap
+> berlaku). Jalankan **sebelum atau bersamaan dengan deploy**. Lama uji coba bawaan (7 hari) ada di aplikasi.
+
 > Sudah setup sebelum 2 November 2026? Jalankan sekali file `20261102000000_trial_simulation_bonus.sql`
 > (aman diulang) **setelah** `20261028000000_trial_limits_total.sql`. Isinya jatah simulasi tambahan per toko uji
 > coba (tombol **Tambah jatah simulasi** dan pemakaian simulasi di halaman Pelanggan). Boleh sebelum atau
@@ -381,7 +385,7 @@ membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
    di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
    free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
 2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
-   satu per satu, dari `20260930000000_init.sql` sampai `20261102000000_trial_simulation_bonus.sql`.
+   satu per satu, dari `20260930000000_init.sql` sampai `20261103000000_trial_simulation_10.sql`.
 3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
    hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
 
@@ -404,7 +408,7 @@ Tanpa baris di `store_members` orang asing hanya melihat data kosong, tapi tetap
 **Cara cepat (disarankan): halaman Pengelola.** Butuh migration `20261026000000_platform_admin.sql` dan
 akunmu dijadikan pengelola sekali (`select public.admin_set_platform_admin('email-kamu@contoh.com');`).
 Setelah itu muncul ikon kunci di kanan atas aplikasi. Isi email, password (atau tekan **Buat acak**), nama
-toko, dan tanggal berakhir (bawaan 30 hari), lalu **Buat akun uji coba**. Akun langsung aktif tanpa
+toko, dan tanggal berakhir (bawaan 7 hari), lalu **Buat akun uji coba**. Akun langsung aktif tanpa
 verifikasi email, tokonya ditandai "Uji coba", dan aplikasi menyiapkan teks WhatsApp berisi alamat
 login, email, dan password. Email yang sudah terdaftar ditolak. Detail di [OPERASI.md](OPERASI.md)
 bagian 2.
@@ -548,7 +552,7 @@ aman: seed tidak menambah apa pun.
 ### Sebelum pelanggan pertama
 
 - [ ] Project HitungCuan sudah di paket Pro (backup aktif).
-- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261102000000_trial_simulation_bonus.sql`
+- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261103000000_trial_simulation_10.sql`
       (cek: tabel `store_settings`, `fee_categories`, `client_errors`, `income_orders`, dan view
       `order_item_income` ada).
 - [ ] **Pemantau error:** buka aplikasi, sengaja picu satu error (mis. buka halaman dengan akun yang

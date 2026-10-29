@@ -1,4 +1,4 @@
-// Jatah simulasi akun uji coba (50 produk selama uji coba). Toko berbayar: semua langsung "ok", tanpa panggilan ke server.
+// Jatah simulasi akun uji coba (10 produk selama uji coba, bisa ditambah pengelola per toko). Toko berbayar: semua langsung "ok", tanpa panggilan ke server.
 import { useEffect, useRef, useState } from 'react'
 import { claimTrialSimulation } from '../lib/api'
 import { TRIAL_SIMULATION_LIMIT, trialSimNotice } from '../lib/trialLimits'
