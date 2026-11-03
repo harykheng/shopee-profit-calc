@@ -6,6 +6,7 @@ import {
   REQUIRED_ORDER_COLUMNS,
   SKU_KEY_SEPARATOR,
   statusGroup,
+  statusLabel,
   type OrderColumnKey,
   type StatusGroup,
 } from '../shopeeColumns'
@@ -180,7 +181,7 @@ function parseRows(rows: unknown[][], headerIndex: number, columns: ColumnIndex)
     totalRows++
 
     const status = cleanText(cell(row, 'status')) || '(status kosong)'
-    const group = statusGroup(status)
+    let group = statusGroup(status)
 
     const productName = cleanText(cell(row, 'productName'))
     const variantName = cleanText(cell(row, 'variantName'))
@@ -189,6 +190,8 @@ function parseRows(rows: unknown[][], headerIndex: number, columns: ColumnIndex)
     const subtotal = parseRupiah(cell(row, 'subtotal'))
     const completedAt = parseShopeeDateTime(cell(row, 'completedAt'))
     const createdAt = parseShopeeDateTime(cell(row, 'createdAt'))
+    // "Pesanan diterima…" tanpa waktu selesai: belum bisa ditaruh di bulan mana pun, anggap masih diproses.
+    if (group === 'selesai' && !completedAt && status.trim().toLowerCase() !== 'selesai') group = 'proses'
 
     // Pesanan selesai wajib punya waktu selesai; status lain boleh kosong.
     const badDates =
@@ -240,7 +243,10 @@ function parseRows(rows: unknown[][], headerIndex: number, columns: ColumnIndex)
 
   const items = [...merged.values()]
   const byStatus: Record<string, number> = {}
-  for (const i of items) byStatus[i.status] = (byStatus[i.status] ?? 0) + 1
+  for (const i of items) {
+    const label = statusLabel(i.status)
+    byStatus[label] = (byStatus[label] ?? 0) + 1
+  }
   return {
     items,
     totalRows,

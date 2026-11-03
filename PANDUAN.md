@@ -88,6 +88,9 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
   cair di awal bulan sering berasal dari pesanan akhir bulan sebelumnya.
 - Status **Semua** (bukan hanya Selesai), supaya aplikasi juga tahu pesanan yang batal atau masih
   dikirim. Ini dipakai di tab "Semua pesanan" dan untuk menghitung ROAS nyata di halaman Iklan.
+- Status **"Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga …"** dihitung
+  sebagai **selesai** (uangnya sudah bisa cair). Kalau pembeli jadi mengembalikan barang, upload ulang
+  export pesanan yang terbaru supaya returnya ikut tercatat.
 
 ### b. Laporan penghasilan (Excel "Sudah Dilepas")
 

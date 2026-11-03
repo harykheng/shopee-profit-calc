@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx'
 import { describe, expect, it } from 'vitest'
 import { ParseError } from '../src/lib/parsers/common'
 import { parseOrdersFile, parseOrdersWorkbook } from '../src/lib/parsers/orders'
-import { BUYER_PRIVATE_COLUMNS } from '../src/lib/shopeeColumns'
+import { BUYER_PRIVATE_COLUMNS, statusGroup } from '../src/lib/shopeeColumns'
 
 const FIXTURE = path.join(import.meta.dirname, 'fixtures/orders_dummy.xlsx')
 const readFixture = () => new Uint8Array(fs.readFileSync(FIXTURE))
@@ -145,6 +145,24 @@ describe('parseOrdersWorkbook — format variations', () => {
     )
   })
 
+  it('"Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian…" dihitung selesai', () => {
+    const rows = fixtureRows()
+    const header = rows[0] as string[]
+    const col = (name: string) => header.indexOf(name)
+    const done = rows.slice(1).filter((r) => r[col('Status Pesanan')] === 'Selesai')
+    const received = [...done[0]]
+    received[col('Status Pesanan')] = 'Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga 2026-11-04.'
+    const noDate = [...done.find((d) => d[col('No. Pesanan')] !== received[col('No. Pesanan')])!]
+    noDate[col('Status Pesanan')] = 'Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga 2026-11-05.'
+    noDate[col('Waktu Pesanan Selesai')] = ''
+    const r = parseOrdersWorkbook(workbookFromRows([header, received, noDate]))
+    const byOrder = (no: unknown) => r.items.find((i) => i.order_no === String(no))!
+    expect(byOrder(received[col('No. Pesanan')]).status_group).toBe('selesai')
+    // Tanpa waktu selesai belum bisa masuk bulan mana pun: masih diproses, bukan baris tidak valid.
+    expect(byOrder(noDate[col('No. Pesanan')]).status_group).toBe('proses')
+    expect(r.byStatus).toEqual({ 'Diterima (masa pengembalian)': 2 })
+  })
+
   it('rejects an export without data rows', () => {
     const rows = fixtureRows()
     expect(() => parseOrdersWorkbook(workbookFromRows([rows[0]]))).toThrow(/tidak berisi data pesanan/)
@@ -153,5 +171,14 @@ describe('parseOrdersWorkbook — format variations', () => {
   it('rejects a PDF uploaded in the order slot', () => {
     const pdf = fs.readFileSync(path.join(import.meta.dirname, 'fixtures/income_dummy.pdf'))
     expect(() => parseOrdersFile(new Uint8Array(pdf))).toThrow(ParseError)
+  })
+})
+
+describe('statusGroup', () => {
+  it('mengenali status Shopee', () => {
+    expect(statusGroup('Selesai')).toBe('selesai')
+    expect(statusGroup('Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga 2026-11-04.')).toBe('selesai')
+    expect(statusGroup('Sedang Dikirim')).toBe('proses')
+    expect(statusGroup('Batal')).toBe('batal')
   })
 })

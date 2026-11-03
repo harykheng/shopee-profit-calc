@@ -51,11 +51,24 @@ export const CANCELLED_STATUS_KEYWORDS = ['batal', 'belum bayar']
 /** Kelompok status: selesai (dihitung profit), proses (belum selesai), batal. */
 export type StatusGroup = 'selesai' | 'proses' | 'batal'
 
+/**
+ * Status Shopee untuk pesanan yang sudah diterima pembeli dan uangnya sudah bisa cair, tapi masih dalam masa
+ * pengajuan pengembalian, mis. "Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga
+ * 2026-11-04." Dihitung selesai (modalnya ikut dihitung); kalau nanti diretur, upload ulang memperbaruinya.
+ */
+export const RECEIVED_STATUS_PREFIX = 'pesanan diterima'
+
 export function statusGroup(status: string): StatusGroup {
   const s = status.trim().toLowerCase()
   if (COMPLETED_STATUSES.some((c) => c.toLowerCase() === s)) return 'selesai'
+  if (s.startsWith(RECEIVED_STATUS_PREFIX)) return 'selesai'
   if (CANCELLED_STATUS_KEYWORDS.some((k) => s.includes(k))) return 'batal'
   return 'proses'
+}
+
+/** Nama status untuk ringkasan upload: status "Pesanan diterima…" (beda tanggal tiap pesanan) disatukan. */
+export function statusLabel(status: string): string {
+  return status.trim().toLowerCase().startsWith(RECEIVED_STATUS_PREFIX) ? 'Diterima (masa pengembalian)' : status
 }
 
 /** Berapa baris teratas yang diperiksa untuk mencari baris header. */
