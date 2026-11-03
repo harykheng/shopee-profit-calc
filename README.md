@@ -343,6 +343,7 @@ src/index.css          Token warna, huruf, gerak, dan gaya dasar (palet "Dapur T
 src/components/        Komponen dasar (tombol, lembar, cap stempel, ikon garis)
 public/fonts/          Huruf Parkinsans & Plus Jakarta Sans (lisensi OFL, disimpan sendiri)
 public/logo/           Logo HitungCuan dari landing (dipakai kalau VITE_APP_NAME=HitungCuan)
+public/og/             Gambar pratinjau tautan HitungCuan (WhatsApp/Facebook), sumber scripts/og/, `npm run og`
 PRODUCT.md / DESIGN.md Fakta produk & sistem desain (dipakai skill desain Impeccable)
 tests/                 Test Vitest + fixture dummy
 scripts/make-fixtures.mjs  Pembuat fixture dummy
@@ -479,6 +480,7 @@ isi variabel berikut (Production dan Preview):
 | `VITE_SUPABASE_ANON_KEY` | anon / publishable key project **HitungCuan** |
 | `VITE_APP_NAME` | `HitungCuan` |
 | `VITE_SUPPORT_WA` | nomor WhatsApp admin, format `62…` (mis. `6281234567890`) |
+| `VITE_SITE_URL` | (tidak wajib) alamat situs untuk pratinjau tautan, default `https://app.studioharel.id` |
 
 - Cloudflare Pages: Workers & Pages → Create → Pages → hubungkan repo → Settings → Variables and
   Secrets. Tambahkan domain `app.studioharel.id` di Custom domains.
@@ -486,6 +488,11 @@ isi variabel berikut (Production dan Preview):
 - Nilai `VITE_…` ditanam saat build; setelah mengubahnya lakukan **Redeploy**.
 - `VITE_APP_NAME` dan `VITE_SUPPORT_WA` tidak wajib; tanpa keduanya aplikasi memakai nama
   "Profit Shopee" dan teks "hubungi pengelola" tanpa tautan WhatsApp (deploy keluarga).
+- Pratinjau tautan (gambar + judul saat link dibagikan di WhatsApp/Facebook/Telegram) hanya dipasang
+  kalau `VITE_APP_NAME=HitungCuan`. Gambar: `public/og/hitungcuan.png`. Untuk mengubah teks/desainnya,
+  edit `scripts/og/hitungcuan.html` lalu jalankan `npm run og` (butuh Playwright + Chromium) dan commit
+  PNG-nya. WhatsApp menyimpan pratinjau lama beberapa waktu; cek di
+  https://developers.facebook.com/tools/debug/ dan tekan "Scrape Again".
 - **Jangan pernah** mengisi `service_role` / secret key di variabel apa pun.
 
 ### Cloudflare Workers Builds: deploy HitungCuan dari branch `multi-tenant`

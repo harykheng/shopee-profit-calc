@@ -263,6 +263,7 @@ npm run build
 | (1 Nov) | Pelanggan: tombol **Reset password** (password acak + teks WhatsApp; akun pengelola ditolak). SQL 20261101. |
 | (2 Nov) | Pelanggan: pemakaian simulasi tiap toko uji coba + tombol **Tambah jatah simulasi** (per toko). SQL 20261102. |
 | (3 Nov) | Uji coba diubah pemilik: **7 hari** (bawaan form, `DEFAULT_TRIAL_DAYS`), data tetap 1 bulan, Simulasi **10 produk**. SQL 20261103. |
+| (3 Nov) | Pratinjau tautan (Open Graph) untuk deploy HitungCuan: `public/og/hitungcuan.png` (sumber `scripts/og/`, `npm run og`), meta tag dari `shareMeta()` di vite.config.ts, alamat dari `VITE_SITE_URL` (default app.studioharel.id). Tanpa SQL. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 
