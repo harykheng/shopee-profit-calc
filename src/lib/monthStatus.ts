@@ -162,3 +162,32 @@ export function missingOrdersAction(month: string, unmatched: UnmatchedOrderRef[
   const text = parts.join('. Lalu ')
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`
 }
+
+/** Barang selesai yang statusnya di export masih "Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian…". */
+export interface ReturnWindowItem {
+  order_no: string
+  status: string
+}
+
+/** Pesanan di sebuah bulan yang masih dalam masa pengembalian (atau baru lewat, tapi export-nya belum di-upload ulang). */
+export interface ReturnWindow {
+  orders: number
+  /** Batas pengembalian paling akhir ("YYYY-MM-DD"); null kalau tanggalnya tidak terbaca. */
+  until: string | null
+  /** true = masa pengembalian sudah lewat, jadi export pesanan bisa di-upload ulang untuk angka final. */
+  passed: boolean
+}
+
+/** Tanggal batas dari status "…mengajukan pengembalian hingga 2026-11-04." → "2026-11-04". */
+export function returnWindowEnd(status: string): string | null {
+  return /(\d{4}-\d{2}-\d{2})/.exec(status)?.[1] ?? null
+}
+
+export function returnWindow(items: ReturnWindowItem[], today: string): ReturnWindow | null {
+  if (items.length === 0) return null
+  const orders = new Set(items.map((i) => i.order_no)).size
+  const dates = items.map((i) => returnWindowEnd(i.status))
+  // Satu tanggal tidak terbaca: anggap masih terbuka, jangan menyuruh upload ulang terlalu cepat.
+  const until = dates.every((d) => d !== null) ? (dates as string[]).sort().at(-1)! : null
+  return { orders, until, passed: until !== null && today > until }
+}

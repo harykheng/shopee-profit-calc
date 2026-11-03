@@ -377,6 +377,30 @@ export async function fetchReturnedItems(storeId: number, from: string, to: stri
   )
 }
 
+/**
+ * Barang selesai yang di export terakhir masih berstatus "Pesanan diterima, namun Pembeli masih dapat mengajukan
+ * pengembalian hingga …", per bulan selesai (WIB). Gagal = kosong: ini hanya catatan.
+ */
+export async function fetchReturnWindowItems(storeId: number, from: string, to: string) {
+  try {
+    const rows = await fetchAllPages<{ order_no: string; status: string; completed_at: string }>((a, b) =>
+      supabase
+        .from('order_items')
+        .select('order_no, status, completed_at')
+        .eq('store_id', storeId)
+        .eq('status_group', 'selesai')
+        .ilike('status', 'pesanan diterima%')
+        .gte('completed_at', `${from}T00:00:00+07:00`)
+        .lte('completed_at', `${monthEnd(to)}T23:59:59.999+07:00`)
+        .order('id')
+        .range(a, b),
+    )
+    return rows.map((r) => ({ order_no: r.order_no, status: r.status, month: `${wibDay(r.completed_at).slice(0, 7)}-01` }))
+  } catch {
+    return []
+  }
+}
+
 export async function fetchOrdersByCreated(storeId: number, from: string, to: string) {
   return check(
     await supabase

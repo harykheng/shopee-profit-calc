@@ -89,8 +89,10 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
 - Status **Semua** (bukan hanya Selesai), supaya aplikasi juga tahu pesanan yang batal atau masih
   dikirim. Ini dipakai di tab "Semua pesanan" dan untuk menghitung ROAS nyata di halaman Iklan.
 - Status **"Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga …"** dihitung
-  sebagai **selesai** (uangnya sudah bisa cair). Kalau pembeli jadi mengembalikan barang, upload ulang
-  export pesanan yang terbaru supaya returnya ikut tercatat.
+  sebagai **selesai** (uangnya sudah bisa cair). Rincian status di Rekap memberi catatan **"N pesanan
+  masih bisa diretur pembeli sampai …"**: angkanya sudah bisa dipakai, tapi bisa bergeser sedikit kalau
+  ada retur. Setelah tanggal itu lewat, Rekap dan kartu pengingat di atas halaman mengingatkan untuk
+  **upload ulang export pesanan bulan itu** supaya retur (kalau ada) tercatat dan angkanya final.
 
 ### b. Laporan penghasilan (Excel "Sudah Dilepas")
 

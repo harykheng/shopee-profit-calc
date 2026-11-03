@@ -15,6 +15,7 @@ import {
   fetchProducts,
   fetchReconciliation,
   fetchReturnedItems,
+  fetchReturnWindowItems,
   fetchUnmatchedIncomeOrders,
   fetchIncomeBreakdown,
   fetchSetupProgress,
@@ -27,7 +28,7 @@ import {
 } from '../lib/api'
 import { notifyDataChanged } from '../lib/events'
 import { addMonths, countUpLabels, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '../lib/format'
-import { missingOrdersAction, monthStatus, monthTodos, type MonthStatus } from '../lib/monthStatus'
+import { missingOrdersAction, monthStatus, monthTodos, returnWindow, type MonthStatus, type ReturnWindow } from '../lib/monthStatus'
 import {
   THIN_MARGIN,
   estimateProfit,
@@ -46,6 +47,7 @@ import {
 } from '../lib/recapMath'
 import { resolveSettings } from '../lib/storeSettings'
 import { navigate } from '../lib/router'
+import { wibToday } from '../lib/subscription'
 import { fullMonthOf } from '../lib/adsMath'
 import { loadAdsAnalysis, type Period as AdsPeriod } from '../lib/adsLoad'
 import { useCountUp } from '../components/motion'
@@ -67,6 +69,8 @@ interface RecapData {
   unmatched: UnmatchedIncomeOrder[]
   /** Rincian omzet → uang cair per bulan (kosong kalau SQL 20261022 belum dijalankan). */
   breakdown: IncomeBreakdownRow[]
+  /** Barang selesai yang masih dalam masa pengembalian Shopee (status "Pesanan diterima…"). */
+  returnWindow: { order_no: string; status: string; month: string }[]
 }
 
 /** Data untuk tab "Semua pesanan" & penjelasan barang terjual (butuh SQL ke-3). */
@@ -129,19 +133,20 @@ export function RecapPage({
           fetchReturnedItems(storeId, from, end),
           fetchUnmatchedIncomeOrders(storeId, from, end),
           fetchIncomeBreakdown(storeId, from, end),
+          fetchReturnWindowItems(storeId, from, end),
         ])
-      let [months, products, reconciliation, returned, unmatched, breakdown] = await fetchRecap()
+      let [months, products, reconciliation, returned, unmatched, breakdown, returnWindowItems] = await fetchRecap()
       // HPP yang baru diisi di halaman HPP langsung dipakai (barang yang HPP-nya masih kosong saja), tanpa
       // menekan "Hitung ulang HPP". Kalau gagal, Rekap tetap tampil dengan angka yang ada.
       const stale = months.filter((m) => Number(m.items_missing_hpp) > 0).map((m) => m.month)
       if (!readOnly && stale.length > 0) {
         const filled = await fillMissingHpp(storeId, stale).catch(() => 0)
         if (filled > 0) {
-          ;[months, products, reconciliation, returned, unmatched, breakdown] = await fetchRecap()
+          ;[months, products, reconciliation, returned, unmatched, breakdown, returnWindowItems] = await fetchRecap()
           notifyDataChanged()
         }
       }
-      setData({ months, products, reconciliation, returned, unmatched, breakdown })
+      setData({ months, products, reconciliation, returned, unmatched, breakdown, returnWindow: returnWindowItems })
     } catch (e) {
       setError(e)
       return
@@ -489,7 +494,14 @@ function NotaCard({
     }),
     { income: 0, adjustments: 0, modal: 0, returnedLoss: 0, expenses: 0, profit: 0, qty: 0 },
   )
-  const statuses = data.months.map((m) => ({ month: m.month, status: monthStatus(m, data.reconciliation) }))
+  const today = wibToday()
+  const statuses = data.months.map((m) => ({
+    month: m.month,
+    status: monthStatus(m, data.reconciliation),
+    window: returnWindow(data.returnWindow.filter((i) => i.month === m.month), today),
+  }))
+  const windows = statuses.flatMap((s) => (s.window ? [s.window] : []))
+  const windowOrders = windows.reduce((n, w) => n + w.orders, 0)
   const todoCount = statuses.reduce((n, s) => n + monthTodos(s.status).length, 0)
   const allFinal = statuses.length > 0 && todoCount === 0
   const firstTodo = statuses.flatMap((s) => monthTodos(s.status))[0]
@@ -585,6 +597,13 @@ function NotaCard({
               </button>
             )}
             {!allFinal && firstTodo && <span className="font-semibold text-warn">Belum final: {firstTodo.short}</span>}
+            {allFinal && windowOrders > 0 && (
+              <span className="text-ink-2">
+                {windows.every((w) => w.passed)
+                  ? 'Masa pengembalian sudah lewat: upload ulang export pesanan supaya angkanya final.'
+                  : `${formatNumber(windowOrders)} pesanan masih bisa diretur pembeli, angkanya bisa bergeser sedikit.`}
+              </span>
+            )}
           </div>
         </div>
         {insights.length > 0 ? (
@@ -602,6 +621,7 @@ function NotaCard({
               month={s.month}
               status={s.status}
               unmatched={data.unmatched.filter((u) => u.month === s.month)}
+              returnWindow={s.window}
               showTitle={statuses.length > 1}
               onRecalc={onRecalc}
             />
@@ -1231,12 +1251,14 @@ function Checklist({
   month,
   status: s,
   unmatched,
+  returnWindow: rw,
   showTitle,
   onRecalc,
 }: {
   month: string
   status: MonthStatus
   unmatched: UnmatchedIncomeOrder[]
+  returnWindow: ReturnWindow | null
   showTitle: boolean
   onRecalc: (month: string) => void
 }) {
@@ -1259,6 +1281,7 @@ function Checklist({
         )}
       </CheckRow>
       {unmatched.length > 0 && <UnmatchedOrders orders={unmatched} />}
+      {rw && <ReturnWindowNote info={rw} label={label} />}
       {s.shifted.days.length > 0 && (
         <p className="flex gap-2 pl-8 text-sm text-ink-2">
           <IconInfo size={16} className="mt-0.5 shrink-0 text-accent" />
@@ -1307,6 +1330,40 @@ function Checklist({
 }
 
 /** Nomor pesanan yang uangnya sudah cair tapi belum cocok dengan export pesanan (dari Excel "Sudah Dilepas"). */
+/** Catatan: pesanan yang masih bisa diretur pembeli. Tidak menghalangi "Angka final". */
+function ReturnWindowNote({ info: w, label }: { info: ReturnWindow; label: string }) {
+  const readOnly = useContext(ReadOnlyContext)
+  const until = w.until ? formatDate(w.until) : null
+  return (
+    <p className="flex gap-2 pl-8 text-sm text-ink-2">
+      <IconInfo size={16} className="mt-0.5 shrink-0 text-accent" />
+      <span>
+        {w.passed ? (
+          <>
+            <strong className="text-ink">Masa pengembalian {formatNumber(w.orders)} pesanan sudah lewat</strong> ({until}).
+            Upload ulang export pesanan {label} supaya barang yang diretur (kalau ada) tercatat dan angka {label} final;
+            datanya tidak akan dobel.
+            {!readOnly && (
+              <>
+                {' '}
+                <button type="button" className={linkClass} onClick={() => navigate('upload')}>
+                  Upload pesanan
+                </button>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <strong className="text-ink">{formatNumber(w.orders)} pesanan masih bisa diretur pembeli</strong>
+            {until ? <> sampai {until}</> : null}. Uangnya sudah cair dan sudah dihitung; kalau ada yang diretur, untung{' '}
+            {label} bisa bergeser sedikit.{until ? <> Setelah {until}, upload ulang export pesanan {label} supaya angkanya final.</> : null}
+          </>
+        )}
+      </span>
+    </p>
+  )
+}
+
 function UnmatchedOrders({ orders }: { orders: UnmatchedIncomeOrder[] }) {
   const missing = orders.filter((o) => o.match === 'tidak_ada')
   const stale = orders.filter((o) => o.match === 'belum_selesai')

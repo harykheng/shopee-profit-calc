@@ -1,10 +1,10 @@
 // Pengingat rutinitas bulanan: kartu di atas halaman kalau rekap bulan lalu belum lengkap.
 import { useEffect, useRef, useState } from 'react'
-import { fetchMonthlyRecap, fetchReconciliation, fetchUnmatchedIncomeOrders, hasRecapBefore } from '../lib/api'
+import { fetchMonthlyRecap, fetchReconciliation, fetchReturnWindowItems, fetchUnmatchedIncomeOrders, hasRecapBefore } from '../lib/api'
 import { onDataChanged } from '../lib/events'
 import { addMonths, currentMonth } from '../lib/format'
 import { buildReminder, reminderDismissKey, type MonthlyReminder } from '../lib/monthlyReminder'
-import { monthStatus } from '../lib/monthStatus'
+import { monthStatus, returnWindow } from '../lib/monthStatus'
 import { hrefFor, type Route } from '../lib/router'
 import { wibToday } from '../lib/subscription'
 import { Alert } from './ui'
@@ -39,11 +39,12 @@ export function MonthlyReminderCard({ storeId, route }: { storeId: number; route
       fetchReconciliation(storeId, month, month),
       hasRecapBefore(storeId, month),
       fetchUnmatchedIncomeOrders(storeId, month, month),
+      fetchReturnWindowItems(storeId, month, month),
     ])
-      .then(([recap, days, earlier, unmatched]) => {
+      .then(([recap, days, earlier, unmatched, windowItems]) => {
         if (run !== latest.current) return
         const status = recap[0] ? monthStatus(recap[0], days) : null
-        setReminder(buildReminder({ month, status, hadEarlierData: earlier, unmatched }))
+        setReminder(buildReminder({ month, status, hadEarlierData: earlier, unmatched, returnWindow: returnWindow(windowItems, wibToday()) }))
       })
       .catch(() => {
         if (run === latest.current) setReminder(null)

@@ -1,6 +1,6 @@
 // Pengingat rutinitas bulanan: "bulan lalu belum lengkap". Fungsi murni (tanpa Supabase).
 import { formatMonth } from './format'
-import { missingOrdersAction, monthTodos, type MonthStatus, type UnmatchedOrderRef } from './monthStatus'
+import { missingOrdersAction, monthTodos, type MonthStatus, type ReturnWindow, type UnmatchedOrderRef } from './monthStatus'
 
 export interface ReminderItem {
   key: string
@@ -61,8 +61,10 @@ export function buildReminder(input: {
   hadEarlierData: boolean
   /** Pesanan yang uangnya cair tapi belum cocok; dipakai untuk menyebut langkah yang tepat. */
   unmatched?: UnmatchedOrderRef[]
+  /** Pesanan yang masih/baru lewat masa pengembalian; diingatkan upload ulang setelah lewat. */
+  returnWindow?: ReturnWindow | null
 }): MonthlyReminder | null {
-  const { month, status, hadEarlierData, unmatched = [] } = input
+  const { month, status, hadEarlierData, unmatched = [], returnWindow = null } = input
   const label = formatMonth(month)
   if (status === null) {
     if (!hadEarlierData) return null
@@ -76,10 +78,18 @@ export function buildReminder(input: {
       ],
     }
   }
-  if (status.final) return null
-  const items = reminderItems(status, month, unmatched)
+  const items = status.final ? [] : reminderItems(status, month, unmatched)
+  if (returnWindow?.passed) {
+    items.push({
+      key: 'returns',
+      text: `Masa pengembalian ${returnWindow.orders} pesanan sudah lewat. Upload ulang export pesanan ${label} supaya retur (kalau ada) tercatat dan angkanya final.`,
+      action: 'Upload pesanan',
+      route: 'upload',
+    })
+  }
   if (items.length === 0) return null
-  return { month, kind: 'incomplete', title: `Rekap ${label} belum lengkap`, items }
+  const title = status.final ? `Rekap ${label} hampir final` : `Rekap ${label} belum lengkap`
+  return { month, kind: 'incomplete', title, items }
 }
 
 /** Kunci penyimpanan "ingatkan besok" untuk satu toko dan satu bulan. */
