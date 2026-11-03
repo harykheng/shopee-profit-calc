@@ -27,7 +27,7 @@ import {
 } from '../lib/api'
 import { notifyDataChanged } from '../lib/events'
 import { addMonths, countUpLabels, currentMonth, formatDate, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '../lib/format'
-import { monthStatus, monthTodos, type MonthStatus } from '../lib/monthStatus'
+import { missingOrdersAction, monthStatus, monthTodos, type MonthStatus } from '../lib/monthStatus'
 import {
   THIN_MARGIN,
   estimateProfit,
@@ -1254,7 +1254,7 @@ function Checklist({
         {s.missingOrders.days.length === 0 ? 'Semua uang yang cair sudah ketemu pesanannya' : (
           <>
             <strong>Ada uang cair {formatRupiah(s.missingOrders.amount)} dari pesanan yang belum di-upload</strong>{' '}
-            ({dayList(s.missingOrders.days)}). Upload export pesanan <strong>{formatMonth(addMonths(month, -1))}</strong>.
+            ({dayList(s.missingOrders.days)}). {missingOrdersAction(month, unmatched)}
           </>
         )}
       </CheckRow>

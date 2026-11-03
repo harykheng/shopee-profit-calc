@@ -1,4 +1,5 @@
 // Menentukan apakah angka profit sebuah bulan sudah "final" (lengkap).
+import { addMonths, formatMonth } from './format'
 import type { DailyReconciliation, MonthlyRecap } from './types'
 
 export interface MonthStatus {
@@ -118,4 +119,46 @@ export function monthTodos(s: MonthStatus): MonthTodo[] {
   if (s.missingHpp > 0) out.push({ key: 'hpp', short: 'ada barang yang HPP-nya kosong' })
   if (!s.expensesFilled) out.push({ key: 'expenses', short: 'biaya belum diisi' })
   return out
+}
+
+/**
+ * Bulan pesanan dari nomor pesanan Shopee: 6 angka pertama = TTBBHH (mis. "261023D8MY3EE8" → "2026-10-01").
+ * null kalau formatnya tidak dikenali.
+ */
+export function orderNoMonth(orderNo: string): string | null {
+  const m = /^(\d{2})(\d{2})(\d{2})/.exec(orderNo.trim())
+  if (!m) return null
+  const month = Number(m[2])
+  const day = Number(m[3])
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null
+  return `20${m[1]}-${m[2]}-01`
+}
+
+/** Pesanan yang uangnya sudah cair tapi belum cocok dengan export pesanan (lihat view income_order_match). */
+export interface UnmatchedOrderRef {
+  order_no: string
+  match: 'tidak_ada' | 'belum_selesai'
+}
+
+/**
+ * Langkah untuk "ada uang cair yang pesanannya belum di-upload" di bulan `month`, dalam satu kalimat.
+ * - Pesanan yang statusnya belum Selesai di export → download ulang export terbaru.
+ * - Pesanan yang tidak ada di export → upload export bulan pesanan itu dibuat (dari nomor pesanannya).
+ * - Tanpa daftar nomor pesanan → tebakan lama: export bulan sebelumnya.
+ */
+export function missingOrdersAction(month: string, unmatched: UnmatchedOrderRef[]): string {
+  const absent = unmatched.filter((o) => o.match === 'tidak_ada')
+  const stale = unmatched.filter((o) => o.match === 'belum_selesai')
+  const months = new Set<string>()
+  for (const o of absent) months.add(orderNoMonth(o.order_no) ?? addMonths(month, -1))
+  if (unmatched.length === 0) months.add(addMonths(month, -1))
+  const parts: string[] = []
+  if (months.size > 0) {
+    const names = [...months].sort().map(formatMonth)
+    const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} dan ${names[names.length - 1]}` : names[0]
+    parts.push(`upload export pesanan ${list}`)
+  }
+  if (stale.length > 0) parts.push('download ulang export pesanan terbaru (status Semua) dari Shopee lalu upload lagi')
+  const text = parts.join('. Lalu ')
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`
 }

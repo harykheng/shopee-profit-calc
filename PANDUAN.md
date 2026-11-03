@@ -623,9 +623,15 @@ Shopee menghitung 1 paket = 1 barang. Jadi HPP diisi **per paket**, dan "Barang 
 paketnya, bukan pcs di dalamnya.
 
 **Status "Ada uang cair dari pesanan yang belum di-upload", padahal sudah upload?**
-Biasanya pesanan bulan sebelumnya belum di-upload, karena uang awal bulan sering dari pesanan akhir
-bulan lalu. Upload export pesanan dengan rentang yang lebih lebar. Kalau uangnya hanya cair 1–2 hari
-setelah pesanan selesai, aplikasi sudah mengenalinya otomatis dan tidak dianggap kurang.
+Lihat daftar nomor pesanan di bawah status itu (Rekap → bulannya); aplikasi menyebut langkahnya:
+- **"statusnya belum Selesai"**: export pesanan di-download waktu pesanan itu masih dikirim. Download
+  ulang export pesanan terbaru (status **Semua**) lalu upload lagi; datanya tidak akan dobel.
+- **"tidak ada di export pesanan"**: pesanan itu dibuat di bulan lain. 6 angka pertama nomor pesanan
+  adalah tanggal pesanan dibuat (TTBBHH, mis. 260928… = 28 September 2026); aplikasi menyebut bulan
+  export yang perlu di-upload.
+
+Kalau uangnya hanya cair 1–2 hari setelah pesanan selesai, aplikasi sudah mengenalinya otomatis dan
+tidak dianggap kurang. Data iklan tidak berpengaruh ke status ini.
 
 **Ada "refund sudah dipotong" di nota.**
 Itu pengembalian dana ke pembeli yang dipotong Shopee dari uang cair. Sudah ikut dihitung; tidak

@@ -1,6 +1,6 @@
 // Pengingat rutinitas bulanan: "bulan lalu belum lengkap". Fungsi murni (tanpa Supabase).
-import { addMonths, formatMonth } from './format'
-import { monthTodos, type MonthStatus } from './monthStatus'
+import { formatMonth } from './format'
+import { missingOrdersAction, monthTodos, type MonthStatus, type UnmatchedOrderRef } from './monthStatus'
 
 export interface ReminderItem {
   key: string
@@ -22,7 +22,7 @@ export interface MonthlyReminder {
 }
 
 /** Dari status sebuah bulan ke daftar langkah berikutnya, lengkap dengan halaman tujuannya. */
-export function reminderItems(status: MonthStatus, month: string): ReminderItem[] {
+export function reminderItems(status: MonthStatus, month: string, unmatched: UnmatchedOrderRef[] = []): ReminderItem[] {
   return monthTodos(status).map((t): ReminderItem => {
     switch (t.key) {
       case 'income':
@@ -30,7 +30,7 @@ export function reminderItems(status: MonthStatus, month: string): ReminderItem[
       case 'orders':
         return {
           key: t.key,
-          text: `Ada uang cair yang pesanannya belum di-upload. Upload export pesanan ${formatMonth(addMonths(month, -1))}.`,
+          text: `Ada uang cair yang pesanannya belum di-upload. ${missingOrdersAction(month, unmatched)}`,
           action: 'Upload pesanan',
           route: 'upload',
         }
@@ -59,8 +59,10 @@ export function buildReminder(input: {
   month: string
   status: MonthStatus | null
   hadEarlierData: boolean
+  /** Pesanan yang uangnya cair tapi belum cocok; dipakai untuk menyebut langkah yang tepat. */
+  unmatched?: UnmatchedOrderRef[]
 }): MonthlyReminder | null {
-  const { month, status, hadEarlierData } = input
+  const { month, status, hadEarlierData, unmatched = [] } = input
   const label = formatMonth(month)
   if (status === null) {
     if (!hadEarlierData) return null
@@ -75,7 +77,7 @@ export function buildReminder(input: {
     }
   }
   if (status.final) return null
-  const items = reminderItems(status, month)
+  const items = reminderItems(status, month, unmatched)
   if (items.length === 0) return null
   return { month, kind: 'incomplete', title: `Rekap ${label} belum lengkap`, items }
 }
