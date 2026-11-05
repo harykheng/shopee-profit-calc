@@ -266,6 +266,7 @@ npm run build
 | (3 Nov) | Pratinjau tautan (Open Graph) untuk deploy HitungCuan: `public/og/hitungcuan.png` (sumber `scripts/og/`, `npm run og`), meta tag dari `shareMeta()` di vite.config.ts, alamat dari `VITE_SITE_URL` (default app.studioharel.id). Tanpa SQL. |
 | (3 Nov) | Status export **"Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga …"** (dana sudah bisa cair) dihitung **selesai** (`statusGroup`, `RECEIVED_STATUS_PREFIX`); tanpa Waktu Pesanan Selesai tetap `proses`. Sebelumnya uangnya masuk tapi modalnya tidak. Data lama: upload ulang export pesanan (SQL backfill di 20261005 belum mengenal status ini, jangan dijalankan ulang). Kalimat "uang cair belum ketemu pesanannya" kini menyebut langkah yang tepat (`missingOrdersAction`). Tanpa SQL. |
 | (3 Nov) | Catatan masa pengembalian: barang selesai yang statusnya masih "Pesanan diterima…hingga TGL" (`returnWindow`, `fetchReturnWindowItems`) tampil di rincian status Rekap; tidak menghalangi "Angka final". Setelah TGL lewat, Rekap + kartu pengingat (`buildReminder`, judul "hampir final") menyuruh upload ulang export pesanan bulan itu. Tanpa SQL. |
+| (5 Nov) | Dicek dengan data asli: saat status "Pesanan diterima…" berubah jadi "Selesai", **Waktu Pesanan Selesai di export tidak berubah**. Jadi upload ulang tidak memindahkan modal ke bulan lain; `completed_at` tidak perlu dikunci. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 
