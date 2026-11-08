@@ -42,6 +42,8 @@ const IGNORED: RegExp[] = [
   /resizeobserver loop/i,
   /^script error/i,
   /aborterror|signal is aborted|the user aborted/i,
+  // Batas akun uji coba bekerja sebagaimana mestinya, bukan kerusakan.
+  /trial_month_limit/i,
 ]
 
 export function isIgnorable(message: string, stack?: string | null): boolean {

@@ -79,6 +79,15 @@ export const IconUser = (p: IconProps) => (
   </Svg>
 )
 
+export const IconUsers = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M2.5 20c0-3 2.9-5.5 6.5-5.5s6.5 2.5 6.5 5.5" />
+    <path d="M15.5 4.8a3.5 3.5 0 0 1 0 6.4" />
+    <path d="M18 14.9c2 .8 3.5 2.6 3.5 5.1" />
+  </Svg>
+)
+
 export const IconLogout = (p: IconProps) => (
   <Svg {...p}>
     <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
@@ -174,6 +183,24 @@ export const IconStore = (p: IconProps) => (
     <path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0" />
     <path d="M5.5 12v8h13v-8" />
     <path d="M10 20v-4.5h4V20" />
+  </Svg>
+)
+
+/** Kunci: halaman Pengelola (buat akun uji coba). */
+export const IconKey = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="8" cy="15" r="4" />
+    <path d="m10.85 12.15 8.65-8.65" />
+    <path d="m15.5 7.5 2.5 2.5" />
+    <path d="m18 5 2 2" />
+  </Svg>
+)
+
+/** Salin ke clipboard. */
+export const IconCopy = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="9" y="9" width="12" height="12" rx="2" />
+    <path d="M5 15V5a2 2 0 0 1 2-2h10" />
   </Svg>
 )
 

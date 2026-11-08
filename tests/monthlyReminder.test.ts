@@ -71,3 +71,16 @@ describe('reminderItems', () => {
     expect(reminderItems(s, '2026-09-01').map((i) => i.key)).toEqual(['income'])
   })
 })
+
+describe('buildReminder: masa pengembalian', () => {
+  const passed = { orders: 27, until: '2026-11-11', passed: true }
+  it('bulan final tapi masa pengembalian sudah lewat: diingatkan upload ulang', () => {
+    const r = buildReminder({ month: '2026-10-01', status: ok, hadEarlierData: true, returnWindow: passed })!
+    expect(r.title).toBe('Rekap Oktober 2026 hampir final')
+    expect(r.items.map((i) => i.key)).toEqual(['returns'])
+    expect(r.items[0].route).toBe('upload')
+  })
+  it('masa pengembalian belum lewat: tidak diingatkan', () => {
+    expect(buildReminder({ month: '2026-10-01', status: ok, hadEarlierData: true, returnWindow: { ...passed, passed: false } })).toBeNull()
+  })
+})

@@ -7,6 +7,7 @@ import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
 import { addMonths, monthEnd, wibDay } from './format'
 import { MAX_SHIFT_DAYS } from './monthStatus'
+import type { CustomerRow, TrialForm } from './trialAccounts'
 import type { AdSource } from './shopeeColumns'
 import type {
   AdReport,
@@ -38,7 +39,19 @@ function chunks<T>(items: T[], size = CHUNK): T[][] {
 }
 
 export async function fetchStores(): Promise<Store[]> {
-  return check(await supabase.from('stores').select('id, name, active_until').order('id'))
+  // Kolom baru menyusul migration-nya (trial: 20261026, name_pending: 20261029). Kalau belum dijalankan,
+  // coba lagi tanpa kolom itu: toko dianggap berbayar / namanya sudah terisi.
+  const columns = ['trial', 'name_pending']
+  for (;;) {
+    const res = await supabase.from('stores').select(['id', 'name', 'active_until', ...columns].join(', ')).order('id')
+    const missing = res.error ? columns.findIndex((c) => errorTextOf(res.error).includes(c)) : -1
+    if (missing < 0) return check(res) as unknown as Store[]
+    columns.splice(missing, 1)
+  }
+}
+
+function errorTextOf(err: unknown): string {
+  return err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : String(err)
 }
 
 /** Sudah sampai mana toko ini mengisi data. Dipakai untuk panduan awal di halaman Rekap. */
@@ -362,6 +375,30 @@ export async function fetchReturnedItems(storeId: number, from: string, to: stri
       .order('id')
       .range(a, b),
   )
+}
+
+/**
+ * Barang selesai yang di export terakhir masih berstatus "Pesanan diterima, namun Pembeli masih dapat mengajukan
+ * pengembalian hingga …", per bulan selesai (WIB). Gagal = kosong: ini hanya catatan.
+ */
+export async function fetchReturnWindowItems(storeId: number, from: string, to: string) {
+  try {
+    const rows = await fetchAllPages<{ order_no: string; status: string; completed_at: string }>((a, b) =>
+      supabase
+        .from('order_items')
+        .select('order_no, status, completed_at')
+        .eq('store_id', storeId)
+        .eq('status_group', 'selesai')
+        .ilike('status', 'pesanan diterima%')
+        .gte('completed_at', `${from}T00:00:00+07:00`)
+        .lte('completed_at', `${monthEnd(to)}T23:59:59.999+07:00`)
+        .order('id')
+        .range(a, b),
+    )
+    return rows.map((r) => ({ order_no: r.order_no, status: r.status, month: `${wibDay(r.completed_at).slice(0, 7)}-01` }))
+  } catch {
+    return []
+  }
 }
 
 export async function fetchOrdersByCreated(storeId: number, from: string, to: string) {
@@ -705,4 +742,121 @@ export async function saveAdsExpense(storeId: number, month: string, amount: num
         { onConflict: 'store_id,month,category' },
       ),
   )
+}
+
+// --- Halaman Pengelola ------------------------------------------------------------
+
+/** true kalau akun yang login pengelola. Database belum diperbarui / error lain = false (ikon tidak tampil). */
+export async function fetchIsPlatformAdmin(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('is_platform_admin')
+  return !error && data === true
+}
+
+/** Buat akun uji coba: akun login + toko + masa aktif. Database menolak kalau bukan pengelola. */
+export async function createTrialAccount(
+  form: TrialForm,
+  askName = false,
+): Promise<{ user_id: string; store_id: number; name_pending?: boolean }> {
+  const args = {
+    p_email: form.email,
+    p_password: form.password,
+    p_store_name: form.storeName,
+    p_active_until: form.activeUntil,
+  }
+  if (askName) {
+    const res = await supabase.rpc('platform_create_trial', { ...args, p_ask_name: true })
+    // Tanpa SQL 20261029 versi 5 parameter belum ada: buat akun seperti dulu (nama dari email).
+    if (!res.error || !/p_ask_name|could not find the function/i.test(errorTextOf(res.error))) {
+      return check(res) as { user_id: string; store_id: number; name_pending?: boolean }
+    }
+  }
+  return check(await supabase.rpc('platform_create_trial', args)) as { user_id: string; store_id: number }
+}
+
+/**
+ * Buat akun dari halaman Pengelola: uji coba atau langsung berlangganan (SQL 20261030).
+ * Tanpa SQL itu, akun uji coba tetap bisa dibuat lewat cara lama; akun berlangganan tidak.
+ */
+export async function createAccount(
+  form: TrialForm,
+  opts: { askName: boolean; trial: boolean },
+): Promise<{ user_id: string; store_id: number }> {
+  const res = await supabase.rpc('platform_create_account', {
+    p_email: form.email,
+    p_password: form.password,
+    p_store_name: form.storeName,
+    p_active_until: form.activeUntil,
+    p_ask_name: opts.askName,
+    p_trial: opts.trial,
+  })
+  if (res.error && opts.trial && /platform_create_account|could not find the function/i.test(errorTextOf(res.error))) {
+    return createTrialAccount(form, opts.askName)
+  }
+  return check(res) as { user_id: string; store_id: number }
+}
+
+/** Pengelola: jadikan toko uji coba berlangganan sampai tanggal itu (SQL 20261031). */
+export async function subscribeStore(storeId: number, activeUntil: string): Promise<void> {
+  check(await supabase.rpc('platform_subscribe_store', { p_store_id: storeId, p_active_until: activeUntil }))
+}
+
+/** Pengelola: reset password pemilik toko (bukan akun pengelola). SQL 20261101. */
+export async function resetCustomerPassword(email: string, password: string): Promise<void> {
+  check(await supabase.rpc('platform_reset_password', { p_email: email, p_new_password: password }))
+}
+
+export interface TrialSimUsage {
+  used: number
+  limit: number
+}
+
+/** Pengelola: pemakaian & batas simulasi tiap toko uji coba. null kalau SQL 20261102 belum dijalankan / gagal. */
+export async function fetchTrialSimUsage(): Promise<Map<number, TrialSimUsage> | null> {
+  const res = await supabase.rpc('platform_trial_simulation_usage')
+  if (res.error) return null
+  const rows = (res.data ?? []) as { store_id: number; used: number; sim_limit: number }[]
+  return new Map(rows.map((r) => [Number(r.store_id), { used: Number(r.used), limit: Number(r.sim_limit) }]))
+}
+
+/** Pengelola: tambah jatah simulasi satu toko uji coba sebanyak `amount` produk. */
+export async function addTrialSimulations(storeId: number, amount: number): Promise<TrialSimUsage> {
+  const r = check(await supabase.rpc('platform_add_trial_simulations', { p_store_id: storeId, p_amount: amount })) as {
+    used: number
+    limit: number
+  }
+  return { used: Number(r.used), limit: Number(r.limit) }
+}
+
+/** Pemilik mengisi nama tokonya (sekali, hanya kalau name_pending). */
+export async function setStoreName(storeId: number, name: string): Promise<void> {
+  check(await supabase.rpc('set_store_name', { p_store_id: storeId, p_name: name }))
+}
+
+export async function fetchCustomers(): Promise<CustomerRow[]> {
+  const rows = check(await supabase.rpc('platform_list_customers')) as CustomerRow[]
+  return rows.map((r) => ({ ...r, store_id: Number(r.store_id), owner_emails: r.owner_emails ?? [] }))
+}
+
+// --- Batas akun uji coba (migration 20261027000000_trial_limits.sql) -------------------------
+
+/** Bulan ("YYYY-MM-01") yang sudah berisi laporan penghasilan / data iklan. null kalau SQL-nya belum dijalankan. */
+export async function fetchTrialMonthsUsed(storeId: number): Promise<string[] | null> {
+  const res = await supabase.rpc('trial_months_used', { p_store_id: storeId })
+  if (res.error) return null
+  return ((res.data as string[] | null) ?? []).map((d) => d.slice(0, 10))
+}
+
+export interface TrialSimulationStatus {
+  trial: boolean
+  allowed: boolean
+  used: number
+  limit: number
+}
+
+/**
+ * Catat satu simulasi produk (key) untuk toko uji coba, dan apakah hasilnya boleh ditampilkan.
+ * key null = hanya melihat sisa jatah. Toko berbayar selalu boleh.
+ */
+export async function claimTrialSimulation(storeId: number, key: string | null): Promise<TrialSimulationStatus> {
+  return check(await supabase.rpc('use_trial_simulation', { p_store_id: storeId, p_key: key })) as TrialSimulationStatus
 }

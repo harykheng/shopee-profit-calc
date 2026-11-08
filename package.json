@@ -12,6 +12,7 @@
     "typecheck": "tsc -b",
     "fixtures": "node scripts/make-fixtures.mjs",
     "sample": "node scripts/make-sample-store.mjs",
+    "og": "node scripts/make-og.mjs",
     "check:tenants": "node --env-file-if-exists=.env.local scripts/check-tenant-isolation.mjs"
   },
   "dependencies": {

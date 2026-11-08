@@ -1,4 +1,5 @@
-import { useEffect, useId, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type ChangeEvent } from 'react'
+import { Spotlight } from '../components/Spotlight'
 import { Alert, Button, Card, ErrorBox, Modal, PageTitle, ScrollX, Spinner, Stamp, linkClass } from '../components/ui'
 import { IconCheck, IconMinus, IconStore, IconUpload } from '../components/icons'
 import {
@@ -12,7 +13,8 @@ import {
   type ParsedAdsFile,
   type SavedAdsPeriod,
 } from '../components/adsUpload'
-import { fetchProducts, findAdShopElsewhere, saveIncomeReport, saveOrderItems } from '../lib/api'
+import { fetchProducts, fetchTrialMonthsUsed, findAdShopElsewhere, saveIncomeReport, saveOrderItems } from '../lib/api'
+import { QUICK_CHECK_TRIAL_NOTE, trialMonthsNotice, trialUploadCheck, trialUploadProblem, uploadMonths } from '../lib/trialLimits'
 import { notifyDataChanged } from '../lib/events'
 import { ROUTES, navigate } from '../lib/router'
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from '../lib/format'
@@ -73,6 +75,48 @@ export function UploadPage({
   const adsGroups = allAdsGroups.filter((g) => g.month !== null)
   const adsSkipped = allAdsGroups.length - adsGroups.length
   const adsBlocked = adsProblem(adsGroups)
+
+  // Akun uji coba: bulan laporan penghasilan & iklan yang sudah tersimpan (null = bukan uji coba / belum tahu).
+  const trial = Boolean(store?.trial)
+  const storeKey = store?.id ?? null
+  const [trialUsed, setTrialUsed] = useState<string[] | null>(null)
+  const [trialVersion, setTrialVersion] = useState(0)
+  useEffect(() => {
+    setTrialUsed(null)
+    if (storeKey === null || !trial) return
+    let cancelled = false
+    fetchTrialMonthsUsed(storeKey).then((m) => !cancelled && setTrialUsed(m))
+    return () => {
+      cancelled = true
+    }
+  }, [storeKey, trial, trialVersion])
+  // Sorotan kotak batas uji coba: sekali per sesi login per toko, selama belum ada bulan tersimpan.
+  const trialBox = useRef<HTMLDivElement>(null)
+  const spotlightKey = storeKey === null ? null : `sorotan-uji-coba:${storeKey}`
+  const [spotlightDone, setSpotlightDone] = useState(false)
+  const spotlightSeen = (() => {
+    if (spotlightDone || !spotlightKey) return true
+    try {
+      return sessionStorage.getItem(spotlightKey) === '1'
+    } catch {
+      return false
+    }
+  })()
+  const closeSpotlight = useCallback(() => {
+    setSpotlightDone(true)
+    try {
+      if (spotlightKey) sessionStorage.setItem(spotlightKey, '1')
+    } catch {
+      // Penyimpanan browser tidak tersedia: sorotan muncul lagi lain kali, tidak apa-apa.
+    }
+  }, [spotlightKey])
+  const trialProblem =
+    trialUsed === null
+      ? null
+      : trialUploadProblem(
+          trialUploadCheck(trialUsed, uploadMonths(income?.result, adsGroups.map((g) => g.month))),
+          trialUsed,
+        )
 
   const onOrdersFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -167,7 +211,7 @@ export function UploadPage({
   const hasData = Boolean(orders?.result || income?.result || adsGroups.length > 0)
   const reading = Boolean(orders?.loading || income?.loading || ads?.loading)
   const hasFileErrors = Boolean(orders?.error || income?.error || ads?.files.some((f) => f.error))
-  const canSave = Boolean(store) && hasData && !adsBlocked && !reading && !saving
+  const canSave = Boolean(store) && hasData && !adsBlocked && !trialProblem && !reading && !saving
 
   // File yang sudah dibaca tapi belum disimpan hilang kalau pindah halaman. Tahan semua tautan di dalam
   // aplikasi (menu, logo) dan tanya dulu; menutup / memuat ulang tab memakai peringatan browser.
@@ -233,7 +277,10 @@ export function UploadPage({
       setSaveError(error)
       return false
     } finally {
-      if (savedSomething) notifyDataChanged()
+      if (savedSomething) {
+        notifyDataChanged()
+        setTrialVersion((v) => v + 1)
+      }
       setSaving(false)
     }
   }
@@ -246,6 +293,30 @@ export function UploadPage({
       >
         Upload laporan
       </PageTitle>
+
+      {trialUsed !== null &&
+        (() => {
+          // Belum ada bulan tersimpan = saat yang menentukan (bulan pertama tidak bisa diganti): kuning, dan
+          // disorot (layar lain gelap) begitu halaman dibuka. Setelah terisi, cukup info biasa.
+          const first = trialUsed.length === 0
+          const box = (
+            <Alert tone={first ? 'warning' : 'info'} title={first ? 'Baca dulu sebelum upload' : undefined}>
+              {trialMonthsNotice(trialUsed)}
+            </Alert>
+          )
+          return (
+            <>
+              <div ref={trialBox} className="mb-8">
+                {box}
+              </div>
+              {first && !spotlightSeen && (
+                <Spotlight target={trialBox} onClose={closeSpotlight}>
+                  {box}
+                </Spotlight>
+              )}
+            </>
+          )
+        })()}
 
       {multiStore && (
         <div className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-tint px-5 py-4 ring-1 ring-line">
@@ -283,11 +354,16 @@ export function UploadPage({
         >
           <p className="mb-3 text-ink-2">
             Seller Centre → Iklan Saya → Download Data, periode <strong className="text-ink">1 bulan penuh</strong>. Tiap
-            periode terdiri dari beberapa file: pilih semuanya sekaligus. Mau cek iklan beberapa hari terakhir?{' '}
-            <a href="#/iklan?cek=1" className={linkClass}>
-              Pakai Cek cepat
-            </a>{' '}
-            (tidak disimpan).
+            periode terdiri dari beberapa file: pilih semuanya sekaligus.{' '}
+            {trial ? null : (
+              <>
+                Mau cek iklan beberapa hari terakhir?{' '}
+                <a href="#/iklan?cek=1" className={linkClass}>
+                  Pakai Cek cepat
+                </a>{' '}
+                (tidak disimpan).
+              </>
+            )}
           </p>
           <AdsHowTo />
           <FileInput
@@ -306,6 +382,7 @@ export function UploadPage({
               problem={adsBlocked}
               elsewhere={adsElsewhere}
               storeName={store?.name}
+              trial={trial}
             />
           ) : null}
         </Card>
@@ -337,11 +414,18 @@ export function UploadPage({
           {adsSkipped > 0 && (
             <div className="mb-4">
               <Alert tone="info">
-                {adsSkipped} periode data iklan bukan 1 bulan penuh, jadi tidak ikut disimpan. Cek di{' '}
-                <a href="#/iklan?cek=1" className={linkClass}>
-                  Cek cepat
-                </a>
-                .
+                {adsSkipped} periode data iklan bukan 1 bulan penuh, jadi tidak ikut disimpan.{' '}
+                {trial ? (
+                  QUICK_CHECK_TRIAL_NOTE
+                ) : (
+                  <>
+                    Cek di{' '}
+                    <a href="#/iklan?cek=1" className={linkClass}>
+                      Cek cepat
+                    </a>
+                    .
+                  </>
+                )}
               </Alert>
             </div>
           )}
@@ -353,6 +437,11 @@ export function UploadPage({
           {adsBlocked && (
             <div className="mb-4">
               <Alert tone="error">{adsBlocked}</Alert>
+            </div>
+          )}
+          {trialProblem && (
+            <div className="mb-4">
+              <Alert tone="error">{trialProblem}</Alert>
             </div>
           )}
           {saveError ? (

@@ -90,6 +90,51 @@ menghapus data.
 > (aman diulang). Isinya fungsi admin `admin_reset_password` untuk SQL Editor (lihat OPERASI.md bagian 2);
 > tidak dipakai aplikasi, jadi tidak ada urutan terhadap deploy.
 
+> Sudah setup sebelum 26 Oktober 2026? Jalankan sekali file `20261026000000_platform_admin.sql` (aman
+> diulang) untuk halaman **Pengelola** (buat akun uji coba dari aplikasi, lihat bagian 8 d). Boleh sebelum
+> atau sesudah deploy: tanpa SQL ini aplikasi tetap jalan, hanya ikon Pengelola yang tidak muncul. Setelah
+> itu jadikan akunmu pengelola, sekali saja:
+> `select public.admin_set_platform_admin('email-kamu@contoh.com');`
+
+> Sudah setup sebelum 27 Oktober 2026? Jalankan sekali file `20261027000000_trial_limits.sql` (aman
+> diulang) **setelah** `20261026000000_platform_admin.sql`. Isinya batas akun uji coba: data 2 bulan dan
+> Simulasi Harga 10 produk per hari (OPERASI.md bagian 2). Boleh sebelum atau sesudah deploy: tanpa SQL ini
+> aplikasi tetap jalan tanpa batas; tanpa deploy, batas data tetap ditegakkan database (pesannya saja
+> yang kurang rapi).
+
+> Sudah setup sebelum 3 November 2026? Jalankan sekali file `20261103000000_trial_simulation_10.sql` (aman
+> diulang). Batas Simulasi Harga akun uji coba jadi **10 produk** (sebelumnya 50; jatah tambahan per toko tetap
+> berlaku). Jalankan **sebelum atau bersamaan dengan deploy**. Lama uji coba bawaan (7 hari) ada di aplikasi.
+
+> Sudah setup sebelum 2 November 2026? Jalankan sekali file `20261102000000_trial_simulation_bonus.sql`
+> (aman diulang) **setelah** `20261028000000_trial_limits_total.sql`. Isinya jatah simulasi tambahan per toko uji
+> coba (tombol **Tambah jatah simulasi** dan pemakaian simulasi di halaman Pelanggan). Boleh sebelum atau
+> sesudah deploy.
+
+> Sudah setup sebelum 1 November 2026? Jalankan sekali file `20261101000000_platform_reset_password.sql`
+> (aman diulang) **setelah** `20261023000000_admin_reset_password.sql`. Isinya tombol **Reset password** di
+> halaman Pelanggan (hanya pengelola; akun pengelola tidak bisa direset dari aplikasi). Boleh sebelum atau
+> sesudah deploy.
+
+> Sudah setup sebelum 31 Oktober 2026? Jalankan sekali file `20261031000000_platform_set_subscription.sql`
+> (aman diulang). Isinya fungsi tombol **Jadikan berlangganan** di halaman Pelanggan (hanya pengelola). Boleh
+> sebelum atau sesudah deploy: tanpa SQL ini tombolnya menampilkan pesan gangguan sistem.
+
+> Sudah setup sebelum 30 Oktober 2026? Jalankan sekali file `20261030000000_platform_create_account.sql`
+> (aman diulang) **setelah** `20261029000000_store_name_by_customer.sql`. Isinya fungsi untuk membuat akun yang
+> **langsung berlangganan** dari halaman Pengelola. Jalankan sebelum/bersamaan deploy: tanpa SQL ini akun uji
+> coba tetap bisa dibuat, akun berlangganan tidak.
+
+> Sudah setup sebelum 29 Oktober 2026? Jalankan sekali file `20261029000000_store_name_by_customer.sql`
+> (aman diulang) **setelah** `20261026000000_platform_admin.sql`. Isinya: kalau "Nama toko" di halaman
+> Pengelola dikosongkan, pemilik akun mengisi nama tokonya sendiri saat pertama login. Boleh sebelum atau
+> sesudah deploy: tanpa SQL ini nama dari email dipakai seperti dulu.
+
+> Sudah setup sebelum 28 Oktober 2026? Jalankan sekali file `20261028000000_trial_limits_total.sql` (aman
+> diulang) **setelah** `20261027000000_trial_limits.sql`. Batas uji coba jadi data **1 bulan** dan Simulasi
+> Harga **50 produk selama uji coba**. Jalankan **sebelum atau bersamaan dengan deploy**: tanpa SQL ini
+> database masih memakai 2 bulan / 10 per hari, sedangkan aplikasi sudah menulis 1 bulan / 50 produk.
+
 > Sudah setup sebelum 22 Oktober 2026? Jalankan sekali file `20261022000000_income_monthly_breakdown.sql`
 > (aman diulang, hanya view baru) **setelah** `20261021000000_income_per_order_views.sql`. Dipakai Bab 2
 > Rekap yang dimulai dari omzet (potongan Shopee per jenis) dan kotak "Kenapa untungnya segini?" di Bab 1.
@@ -298,6 +343,7 @@ src/index.css          Token warna, huruf, gerak, dan gaya dasar (palet "Dapur T
 src/components/        Komponen dasar (tombol, lembar, cap stempel, ikon garis)
 public/fonts/          Huruf Parkinsans & Plus Jakarta Sans (lisensi OFL, disimpan sendiri)
 public/logo/           Logo HitungCuan dari landing (dipakai kalau VITE_APP_NAME=HitungCuan)
+public/og/             Gambar pratinjau tautan HitungCuan (WhatsApp/Facebook), sumber scripts/og/, `npm run og`
 PRODUCT.md / DESIGN.md Fakta produk & sistem desain (dipakai skill desain Impeccable)
 tests/                 Test Vitest + fixture dummy
 scripts/make-fixtures.mjs  Pembuat fixture dummy
@@ -340,7 +386,7 @@ membuat akun, menjalankan satu fungsi SQL, dan memperpanjang lewat SQL.
    di-pause kalau lama tidak dipakai dan tidak punya backup yang bisa diandalkan; untuk uji coba
    free cukup, pakai data dummy saja). Upgrade ke Pro bisa dilakukan di project yang sama.
 2. SQL Editor → jalankan **semua** file di `supabase/migrations/` **berurutan** (urut nama file),
-   satu per satu, dari `20260930000000_init.sql` sampai `20261023000000_admin_reset_password.sql`.
+   satu per satu, dari `20260930000000_init.sql` sampai `20261103000000_trial_simulation_10.sql`.
 3. Jalankan migration **sebelum membuat user apa pun**. Seed transisi di migration terakhir
    hanya berjalan kalau `store_members` masih kosong, jadi di project baru tidak berpengaruh.
 
@@ -359,6 +405,16 @@ Authentication → Sign In / Providers (atau Settings) → matikan **Allow new u
 Tanpa baris di `store_members` orang asing hanya melihat data kosong, tapi tetap matikan.
 
 ### d) Menambah pelanggan
+
+**Cara cepat (disarankan): halaman Pengelola.** Butuh migration `20261026000000_platform_admin.sql` dan
+akunmu dijadikan pengelola sekali (`select public.admin_set_platform_admin('email-kamu@contoh.com');`).
+Setelah itu muncul ikon kunci di kanan atas aplikasi. Isi email, password (atau tekan **Buat acak**), nama
+toko, dan tanggal berakhir (bawaan 7 hari), lalu **Buat akun uji coba**. Akun langsung aktif tanpa
+verifikasi email, tokonya ditandai "Uji coba", dan aplikasi menyiapkan teks WhatsApp berisi alamat
+login, email, dan password. Email yang sudah terdaftar ditolak. Detail di [OPERASI.md](OPERASI.md)
+bagian 2.
+
+**Cara manual (SQL Editor),** misalnya untuk menambah toko kedua ke akun yang sudah ada:
 
 1. Authentication → Users → **Add user → Create new user**: isi email dan password, centang
    **Auto Confirm User**.
@@ -389,7 +445,7 @@ Tanpa baris di `store_members` orang asing hanya melihat data kosong, tapi tetap
    pelanggan sendiri. Kalau Supabase meminta login ulang saat ganti password (pengaturan
    "Secure password change"), aplikasi menyuruh pelanggan keluar lalu masuk lagi.
 
-Lihat semua pelanggan:
+Lihat semua pelanggan (atau buka halaman Pengelola → **Semua toko**):
 
 ```sql
 select s.id, s.name, s.active_until, u.email
@@ -424,6 +480,7 @@ isi variabel berikut (Production dan Preview):
 | `VITE_SUPABASE_ANON_KEY` | anon / publishable key project **HitungCuan** |
 | `VITE_APP_NAME` | `HitungCuan` |
 | `VITE_SUPPORT_WA` | nomor WhatsApp admin, format `62…` (mis. `6281234567890`) |
+| `VITE_SITE_URL` | (tidak wajib) alamat situs untuk pratinjau tautan, default `https://app.studioharel.id` |
 
 - Cloudflare Pages: Workers & Pages → Create → Pages → hubungkan repo → Settings → Variables and
   Secrets. Tambahkan domain `app.studioharel.id` di Custom domains.
@@ -431,6 +488,11 @@ isi variabel berikut (Production dan Preview):
 - Nilai `VITE_…` ditanam saat build; setelah mengubahnya lakukan **Redeploy**.
 - `VITE_APP_NAME` dan `VITE_SUPPORT_WA` tidak wajib; tanpa keduanya aplikasi memakai nama
   "Profit Shopee" dan teks "hubungi pengelola" tanpa tautan WhatsApp (deploy keluarga).
+- Pratinjau tautan (gambar + judul saat link dibagikan di WhatsApp/Facebook/Telegram) hanya dipasang
+  kalau `VITE_APP_NAME=HitungCuan`. Gambar: `public/og/hitungcuan.png`. Untuk mengubah teks/desainnya,
+  edit `scripts/og/hitungcuan.html` lalu jalankan `npm run og` (butuh Playwright + Chromium) dan commit
+  PNG-nya. WhatsApp menyimpan pratinjau lama beberapa waktu; cek di
+  https://developers.facebook.com/tools/debug/ dan tekan "Scrape Again".
 - **Jangan pernah** mengisi `service_role` / secret key di variabel apa pun.
 
 ### Cloudflare Workers Builds: deploy HitungCuan dari branch `multi-tenant`
@@ -497,7 +559,7 @@ aman: seed tidak menambah apa pun.
 ### Sebelum pelanggan pertama
 
 - [ ] Project HitungCuan sudah di paket Pro (backup aktif).
-- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261023000000_admin_reset_password.sql`
+- [ ] **Semua migration** sudah dijalankan berurutan sampai `20261103000000_trial_simulation_10.sql`
       (cek: tabel `store_settings`, `fee_categories`, `client_errors`, `income_orders`, dan view
       `order_item_income` ada).
 - [ ] **Pemantau error:** buka aplikasi, sengaja picu satu error (mis. buka halaman dengan akun yang
@@ -518,7 +580,10 @@ aman: seed tidak menambah apa pun.
 - [ ] **File asli calon pelanggan sudah diuji** (lihat bagian di bawah).
 - [ ] Signup publik mati, dan tidak ada `service_role` key di variabel hosting atau di git.
 - [ ] **Header keamanan aktif** di domain produksi (perintah `curl` di bagian "Header keamanan").
-- [ ] Sudah berlatih `admin_add_customer`, memperpanjang lewat SQL, dan `admin_reset_password`.
+- [ ] Akunmu sudah pengelola (`admin_set_platform_admin`) dan ikon kunci muncul; akun pelanggan dan
+      akun tes **bukan** pengelola.
+- [ ] Sudah berlatih membuat akun di halaman Pengelola (`admin_add_customer` untuk toko kedua),
+      memperpanjang lewat SQL, dan `admin_reset_password`.
 
 ### Uji pemisahan data antar-toko
 
@@ -537,8 +602,10 @@ role di SQL Editor pada `postgres` (bawaan).
 Skrip membuat dua toko uji, mengisi toko B dengan satu baris di setiap tabel, lalu berpura-pura
 menjadi akun yang login (role `authenticated` + identitas akun, cara yang sama dengan API Supabase)
 dan mencoba membaca, mengubah, menghapus, serta menulis data toko B **dan semua toko pelanggan
-lain**, lewat tabel, view, dan fungsi upload. Juga mencoba tanpa login, dan memeriksa bahwa semua
-tabel memakai RLS, semua view memakai `security_invoker`, dan fungsi `admin_*` tertutup.
+lain**, lewat tabel, view, dan fungsi upload. Juga mencoba fungsi halaman Pengelola sebagai akun biasa
+(harus ditolak), membuat satu akun uji coba sebagai pengelola (harus berhasil, lalu dibatalkan), mencoba
+tanpa login, dan memeriksa bahwa semua tabel memakai RLS, semua view memakai `security_invoker`, dan
+fungsi `admin_*` tertutup.
 
 - **Tidak ada yang tersimpan.** Semua langkah berjalan dalam satu transaksi yang selalu dibatalkan
   di akhir, termasuk percobaan yang ternyata tembus. Kalau SQL Editor memperingatkan "destructive
@@ -556,7 +623,8 @@ seperti browser pelanggan) lalu mencoba membobol toko B.
 
 1. Buat **dua akun tes** dengan cara yang sama seperti pelanggan (bagian d), mis.
    `tes-a@domainmu.id` → "Toko Tes A" dan `tes-b@domainmu.id` → "Toko Tes B". Jangan pakai akun
-   pelanggan sungguhan, dan jangan jadikan kedua akun anggota toko yang sama.
+   pelanggan sungguhan, jangan jadikan kedua akun anggota toko yang sama, dan jangan jadikan
+   pengelola.
 2. Isi toko B dengan data supaya ada yang bisa "dicuri": `npm run sample -- "Toko Tes B"`, login
    sebagai akun B, lalu upload isi folder `sample-store/` (urutannya ada di `BACA-DULU.txt`). Toko
    yang kosong tetap diuji, tapi cek baca per tabel jadi DILEWATI.

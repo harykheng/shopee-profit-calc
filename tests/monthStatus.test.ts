@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { monthStatus } from '../src/lib/monthStatus'
+import { missingOrdersAction, monthStatus, orderNoMonth, returnWindow, returnWindowEnd } from '../src/lib/monthStatus'
 import type { DailyReconciliation, MonthlyRecap } from '../src/lib/types'
 
 const recap = (over: Partial<MonthlyRecap> = {}): MonthlyRecap => ({
@@ -96,5 +96,59 @@ describe('monthStatus', () => {
       day('2026-08-01', { orders_subtotal: 0, has_orders: false, difference: 198200 }),
     ])
     expect(july.ordersWithoutIncome.days).toEqual([])
+  })
+})
+
+describe('orderNoMonth', () => {
+  it('membaca bulan dari 6 angka pertama nomor pesanan', () => {
+    expect(orderNoMonth('261023D8MY3EE8')).toBe('2026-10-01')
+    expect(orderNoMonth('260830ABCDEF12')).toBe('2026-08-01')
+  })
+  it('format tidak dikenal: null', () => {
+    expect(orderNoMonth('ABC123')).toBeNull()
+    expect(orderNoMonth('261323XYZ')).toBeNull()
+  })
+})
+
+describe('missingOrdersAction', () => {
+  it('tanpa daftar nomor pesanan: export bulan sebelumnya', () => {
+    expect(missingOrdersAction('2026-10-01', [])).toBe('Upload export pesanan September 2026.')
+  })
+  it('pesanan belum Selesai di export: download ulang, bukan bulan lalu', () => {
+    const r = missingOrdersAction('2026-10-01', [{ order_no: '261023D8MY3EE8', match: 'belum_selesai' }])
+    expect(r).toBe('Download ulang export pesanan terbaru (status Semua) dari Shopee lalu upload lagi.')
+  })
+  it('pesanan tidak ada di export: sebut bulan pesanan itu dibuat', () => {
+    const r = missingOrdersAction('2026-10-01', [
+      { order_no: '260928AAA', match: 'tidak_ada' },
+      { order_no: '260815BBB', match: 'tidak_ada' },
+      { order_no: '261002CCC', match: 'belum_selesai' },
+    ])
+    expect(r).toBe(
+      'Upload export pesanan Agustus 2026 dan September 2026. Lalu download ulang export pesanan terbaru (status Semua) dari Shopee lalu upload lagi.',
+    )
+  })
+})
+
+describe('returnWindow', () => {
+  const st = (until: string) => `Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga ${until}.`
+  it('membaca tanggal batas dari status', () => {
+    expect(returnWindowEnd(st('2026-11-04'))).toBe('2026-11-04')
+    expect(returnWindowEnd('Pesanan diterima')).toBeNull()
+  })
+  it('tidak ada pesanan dalam masa pengembalian: null', () => {
+    expect(returnWindow([], '2026-11-03')).toBeNull()
+  })
+  it('memakai batas paling akhir; lewat setelah tanggal itu', () => {
+    const items = [
+      { order_no: 'A', status: st('2026-11-04') },
+      { order_no: 'A', status: st('2026-11-04') },
+      { order_no: 'B', status: st('2026-11-11') },
+    ]
+    expect(returnWindow(items, '2026-11-11')).toEqual({ orders: 2, until: '2026-11-11', passed: false })
+    expect(returnWindow(items, '2026-11-12')).toEqual({ orders: 2, until: '2026-11-11', passed: true })
+  })
+  it('tanggal tidak terbaca: anggap masih terbuka', () => {
+    expect(returnWindow([{ order_no: 'A', status: 'Pesanan diterima' }], '2027-01-01')).toEqual({ orders: 1, until: null, passed: false })
   })
 })

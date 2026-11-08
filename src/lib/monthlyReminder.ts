@@ -1,6 +1,6 @@
 // Pengingat rutinitas bulanan: "bulan lalu belum lengkap". Fungsi murni (tanpa Supabase).
-import { addMonths, formatMonth } from './format'
-import { monthTodos, type MonthStatus } from './monthStatus'
+import { formatMonth } from './format'
+import { missingOrdersAction, monthTodos, type MonthStatus, type ReturnWindow, type UnmatchedOrderRef } from './monthStatus'
 
 export interface ReminderItem {
   key: string
@@ -22,7 +22,7 @@ export interface MonthlyReminder {
 }
 
 /** Dari status sebuah bulan ke daftar langkah berikutnya, lengkap dengan halaman tujuannya. */
-export function reminderItems(status: MonthStatus, month: string): ReminderItem[] {
+export function reminderItems(status: MonthStatus, month: string, unmatched: UnmatchedOrderRef[] = []): ReminderItem[] {
   return monthTodos(status).map((t): ReminderItem => {
     switch (t.key) {
       case 'income':
@@ -30,7 +30,7 @@ export function reminderItems(status: MonthStatus, month: string): ReminderItem[
       case 'orders':
         return {
           key: t.key,
-          text: `Ada uang cair yang pesanannya belum di-upload. Upload export pesanan ${formatMonth(addMonths(month, -1))}.`,
+          text: `Ada uang cair yang pesanannya belum di-upload. ${missingOrdersAction(month, unmatched)}`,
           action: 'Upload pesanan',
           route: 'upload',
         }
@@ -59,8 +59,12 @@ export function buildReminder(input: {
   month: string
   status: MonthStatus | null
   hadEarlierData: boolean
+  /** Pesanan yang uangnya cair tapi belum cocok; dipakai untuk menyebut langkah yang tepat. */
+  unmatched?: UnmatchedOrderRef[]
+  /** Pesanan yang masih/baru lewat masa pengembalian; diingatkan upload ulang setelah lewat. */
+  returnWindow?: ReturnWindow | null
 }): MonthlyReminder | null {
-  const { month, status, hadEarlierData } = input
+  const { month, status, hadEarlierData, unmatched = [], returnWindow = null } = input
   const label = formatMonth(month)
   if (status === null) {
     if (!hadEarlierData) return null
@@ -74,10 +78,18 @@ export function buildReminder(input: {
       ],
     }
   }
-  if (status.final) return null
-  const items = reminderItems(status, month)
+  const items = status.final ? [] : reminderItems(status, month, unmatched)
+  if (returnWindow?.passed) {
+    items.push({
+      key: 'returns',
+      text: `Masa pengembalian ${returnWindow.orders} pesanan sudah lewat. Upload ulang export pesanan ${label} supaya retur (kalau ada) tercatat dan angkanya final.`,
+      action: 'Upload pesanan',
+      route: 'upload',
+    })
+  }
   if (items.length === 0) return null
-  return { month, kind: 'incomplete', title: `Rekap ${label} belum lengkap`, items }
+  const title = status.final ? `Rekap ${label} hampir final` : `Rekap ${label} belum lengkap`
+  return { month, kind: 'incomplete', title, items }
 }
 
 /** Kunci penyimpanan "ingatkan besok" untuk satu toko dan satu bulan. */

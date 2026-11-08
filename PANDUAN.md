@@ -88,6 +88,11 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
   cair di awal bulan sering berasal dari pesanan akhir bulan sebelumnya.
 - Status **Semua** (bukan hanya Selesai), supaya aplikasi juga tahu pesanan yang batal atau masih
   dikirim. Ini dipakai di tab "Semua pesanan" dan untuk menghitung ROAS nyata di halaman Iklan.
+- Status **"Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga …"** dihitung
+  sebagai **selesai** (uangnya sudah bisa cair). Rincian status di Rekap memberi catatan **"N pesanan
+  masih bisa diretur pembeli sampai …"**: angkanya sudah bisa dipakai, tapi bisa bergeser sedikit kalau
+  ada retur. Setelah tanggal itu lewat, Rekap dan kartu pengingat di atas halaman mengingatkan untuk
+  **upload ulang export pesanan bulan itu** supaya retur (kalau ada) tercatat dan angkanya final.
 
 ### b. Laporan penghasilan (Excel "Sudah Dilepas")
 
@@ -143,6 +148,16 @@ Setelah disimpan muncul ringkasan:
 - **daftar produk yang belum punya HPP**, dengan tombol ke halaman HPP.
 
 Kalau salah memilih file (misalnya PDF di kotak Excel), aplikasi akan memberi tahu dengan jelas.
+
+**Akun uji coba: data 1 bulan.** Selama uji coba, laporan penghasilan dan data iklan hanya bisa disimpan
+untuk **1 bulan** (dihitung dari bulan uang cair dan bulan periode iklan). Pilih bulan yang sudah selesai,
+biasanya **bulan lalu**: bulan pertama yang disimpan tidak bisa diganti sendiri (minta bantuan admin
+kalau salah bulan). Kotak di atas halaman Upload menunjukkan bulan yang sudah terpakai. Upload ulang bulan
+itu selalu boleh. Kalau file berisi bulan lain, tombol simpan tidak bisa ditekan dan aplikasi menyebut
+bulannya. Export pesanan tidak dibatasi (boleh rentang lebar seperti biasa). Setelah berlangganan, batas
+ini hilang.
+Saat pertama membuka halaman Upload (selama belum ada bulan tersimpan), layar menggelap dan hanya kotak ini
+yang menyala, sampai kamu menekan **Saya mengerti**. Muncul sekali setiap login.
 
 ---
 
@@ -297,6 +312,9 @@ Data 7 hari yang dulu sempat tersimpan tetap ada dan tetap bisa dipilih di **Per
 
 ### Cek cepat (beberapa hari, tidak disimpan)
 
+**Khusus pelanggan berlangganan.** Selama uji coba, tombol **Cek cepat** tidak bisa ditekan; pakai data
+iklan 1 bulan penuh lewat halaman Upload.
+
 Untuk melihat apakah iklan **beberapa hari terakhir** jalan bagus, misalnya setelah memasang iklan
 baru atau mengganti target ROAS.
 
@@ -318,6 +336,16 @@ baru atau mengganti target ROAS.
   kemudian. Pakai untuk melihat arah, bukan untung akhir.
 - Makin pendek periodenya, makin sering hasilnya **Belum cukup data**. Itu jawaban yang jujur: tunggu
   beberapa hari lagi.
+
+**Bertanya lebih dalam ke Claude.** Di bawah daftar produk ada tombol **Download untuk Claude (.md)**.
+File itu berisi ringkasan dan dua tabel per produk (hasil iklan: biaya, klik, ROAS, label; lalu untung & target ROAS: HPP, potongan, untung), cara
+membaca tiap angka, peringatan bahwa data beberapa hari belum lengkap, dan beberapa pertanyaan pembuka.
+Lampirkan file itu di chat Claude, lalu tanyakan apa saja, misalnya produk mana yang perlu diubah target
+ROAS-nya.
+
+- File dibuat di browser dan **tidak disimpan** di aplikasi. Tidak ada data pembeli di dalamnya.
+- Isinya termasuk **HPP dan untung toko**. Bagikan hanya ke layanan yang kamu percaya.
+- Kalau HPP sementara diubah, download lagi supaya filenya ikut angka terbaru.
 
 ### Melihat hasil
 
@@ -424,6 +452,14 @@ Bedanya dengan halaman Iklan: halaman Iklan menilai yang **sudah terjadi** (dari
 sedangkan Simulasi Harga menghitung **sebelum** terjadi. Potongan Shopee dihitung **per komponen**
 (admin %, Gratis Ongkir XTRA %, dan biaya proses yang tetap per order), jadi lebih tepat untuk
 memutuskan harga satu produk daripada rata-rata potongan di halaman Iklan.
+
+**Akun uji coba: maksimal 10 produk.** Selama uji coba, Simulasi Harga bisa dipakai untuk 10 produk
+berbeda, di Satu produk maupun Grup iklan. Satu produk dihitung sekali: mengubah harga, ROAS, atau biaya
+produk yang sama **tidak** menambah hitungan, dan produk yang sudah pernah dicoba tetap bisa dibuka lagi.
+Produk yang diketik sendiri dihitung per modal (HPP). Sisa jatah tertulis di atas kotak pilih produk.
+Kalau jatah habis, hasil untuk produk baru tidak tampil (di Grup iklan, produk itu tidak ikut dihitung).
+Butuh lebih? Minta tambahan jatah ke pengelola (lalu muat ulang halaman). Setelah berlangganan, batas ini
+hilang.
 
 ### Cara pakai
 
@@ -586,6 +622,12 @@ aman.
 **Upload file yang sama dua kali, apakah dobel?**
 Tidak. Pesanan, penghasilan, dan data iklan dikenali dan diperbarui, tidak ditambah lagi.
 
+**Akun uji coba: kenapa laporan bulan lain ditolak?**
+Uji coba (7 hari) bisa menyimpan data 1 bulan dan Simulasi Harga untuk 10 produk; Cek cepat di halaman Iklan
+khusus pelanggan berlangganan (lihat
+[Halaman Upload](#4-halaman-upload) dan [Simulasi Harga](#9-halaman-simulasi-harga)). Data yang sudah
+tersimpan tetap aman. Setelah berlangganan, bulan lain bisa langsung di-upload.
+
 **Kenapa "Barang terjual" di Rekap lebih sedikit dari jumlah barang yang dipesan bulan itu?**
 Rekap hanya menghitung barang yang **selesai dan uangnya cair** di bulan itu. Barang yang batal,
 masih dikirim, retur, atau baru selesai bulan depan tidak ikut. Klik **ⓘ Kenapa …?** untuk
@@ -596,9 +638,15 @@ Shopee menghitung 1 paket = 1 barang. Jadi HPP diisi **per paket**, dan "Barang 
 paketnya, bukan pcs di dalamnya.
 
 **Status "Ada uang cair dari pesanan yang belum di-upload", padahal sudah upload?**
-Biasanya pesanan bulan sebelumnya belum di-upload, karena uang awal bulan sering dari pesanan akhir
-bulan lalu. Upload export pesanan dengan rentang yang lebih lebar. Kalau uangnya hanya cair 1–2 hari
-setelah pesanan selesai, aplikasi sudah mengenalinya otomatis dan tidak dianggap kurang.
+Lihat daftar nomor pesanan di bawah status itu (Rekap → bulannya); aplikasi menyebut langkahnya:
+- **"statusnya belum Selesai"**: export pesanan di-download waktu pesanan itu masih dikirim. Download
+  ulang export pesanan terbaru (status **Semua**) lalu upload lagi; datanya tidak akan dobel.
+- **"tidak ada di export pesanan"**: pesanan itu dibuat di bulan lain. 6 angka pertama nomor pesanan
+  adalah tanggal pesanan dibuat (TTBBHH, mis. 260928… = 28 September 2026); aplikasi menyebut bulan
+  export yang perlu di-upload.
+
+Kalau uangnya hanya cair 1–2 hari setelah pesanan selesai, aplikasi sudah mengenalinya otomatis dan
+tidak dianggap kurang. Data iklan tidak berpengaruh ke status ini.
 
 **Ada "refund sudah dipotong" di nota.**
 Itu pengembalian dana ke pembeli yang dipotong Shopee dari uang cair. Sudah ikut dihitung; tidak
@@ -649,6 +697,10 @@ disimpan**. File dibaca langsung di browser.
 ## 12. Akun dan pengaturan hitungan
 
 Buka lewat ikon orang di pojok kanan atas.
+
+**Login pertama: nama toko.** Kalau akunmu dibuat tanpa nama toko, aplikasi menanyakan **nama tokomu di
+Shopee** saat pertama login. Tulis persis seperti di Seller Centre: nama ini dicocokkan dengan laporan
+yang kamu upload. Hanya bisa diisi sekali; kalau salah, hubungi admin.
 
 ### Pengaturan hitungan (per toko)
 

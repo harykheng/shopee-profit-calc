@@ -1,0 +1,67 @@
+<!doctype html>
+<!-- Sumber gambar pratinjau tautan (Open Graph) HitungCuan, 1200x630. Render: npm run og -->
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<style>
+  @font-face { font-family: 'Parkinsans'; src: url('../../public/fonts/parkinsans-latin.woff2') format('woff2'); font-weight: 300 800; }
+  @font-face { font-family: 'Plus Jakarta Sans'; src: url('../../public/fonts/plus-jakarta-sans-latin.woff2') format('woff2'); font-weight: 200 800; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1200px; height: 630px; }
+  body {
+    background: #fffbf6; color: #1c1917; font-family: 'Plus Jakarta Sans', sans-serif;
+    display: grid; grid-template-columns: 1fr 420px; gap: 44px; padding: 60px 64px; position: relative; overflow: hidden;
+  }
+  body::before { /* lembar tint di kanan, seperti latar kartu di landing */
+    content: ''; position: absolute; right: -80px; top: -80px; width: 620px; height: 790px;
+    background: #f7f1e8; border-radius: 48px; transform: rotate(-4deg);
+  }
+  .left, .card { position: relative; }
+  .left { display: flex; flex-direction: column; }
+  .logo { height: 56px; width: auto; align-self: flex-start; }
+  .kicker { margin-top: 40px; color: #2b3a9e; font-weight: 700; font-size: 24px; letter-spacing: 0.02em; }
+  h1 { margin-top: 12px; font-family: 'Parkinsans', sans-serif; font-weight: 800; font-size: 64px; line-height: 1.04; letter-spacing: -0.03em; }
+  .hl { background: linear-gradient(transparent 58%, #fbe38a 58%, #fbe38a 92%, transparent 92%); }
+  .sub { margin-top: 20px; color: #57534e; font-size: 24px; line-height: 1.4; max-width: 600px; }
+  .url { margin-top: auto; font-weight: 700; font-size: 24px; color: #2b3a9e; }
+  .card {
+    align-self: center; background: #fff; border: 1px solid #ece2d4; border-radius: 24px; padding: 34px 34px 30px;
+    box-shadow: 0 24px 48px -24px rgba(28, 25, 23, 0.25); transform: rotate(1.5deg);
+  }
+  .tag { display: inline-block; background: #f7f1e8; color: #6f6860; font-weight: 700; font-size: 15px; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .say { margin-top: 18px; font-family: 'Parkinsans', sans-serif; font-weight: 700; font-size: 26px; line-height: 1.25; }
+  .big { margin-top: 6px; font-family: 'Parkinsans', sans-serif; font-weight: 800; font-size: 74px; letter-spacing: -0.04em; color: #146c43; font-feature-settings: 'tnum'; }
+  .sticker {
+    position: absolute; top: -22px; right: -18px; background: #f5d547; color: #4a3200; font-family: 'Parkinsans', sans-serif;
+    font-weight: 800; font-size: 18px; letter-spacing: 0.06em; padding: 10px 16px; border-radius: 10px; transform: rotate(6deg);
+    box-shadow: 0 8px 16px -8px rgba(74, 50, 0, 0.5);
+  }
+  .barlabel { margin-top: 22px; color: #57534e; font-size: 17px; font-weight: 600; }
+  .bar { margin-top: 10px; display: flex; height: 22px; border-radius: 9999px; overflow: hidden; gap: 3px; }
+  .bar span:nth-child(1) { flex: 58; background: #d6cab9; }
+  .bar span:nth-child(2) { flex: 26; background: #8a8178; }
+  .bar span:nth-child(3) { flex: 16; background: #146c43; }
+  .legend { margin-top: 12px; display: flex; justify-content: space-between; font-size: 16px; color: #57534e; font-weight: 600; }
+  .legend b { color: #1c1917; font-feature-settings: 'tnum'; }
+  .legend .g b { color: #146c43; }
+</style>
+</head>
+<body>
+  <div class="left">
+    <img class="logo" src="../../public/logo/logo-horizontal.svg" alt="HitungCuan" />
+    <p class="kicker">Untuk seller Shopee</p>
+    <h1>Berapa <span class="hl">untung</span> tokomu bulan ini?</h1>
+    <p class="sub">Upload 3 file dari Seller Centre. Dapat untung bersih, iklan yang perlu dimatikan, dan harga yang aman.</p>
+    <p class="url">app.studioharel.id</p>
+  </div>
+  <div class="card">
+    <div class="sticker">ANGKA FINAL</div>
+    <span class="tag">Contoh</span>
+    <p class="say">Agustus 2026, toko kamu untung</p>
+    <p class="big">Rp3,42 jt</p>
+    <p class="barlabel">Dari setiap Rp100 yang masuk</p>
+    <div class="bar"><span></span><span></span><span></span></div>
+    <div class="legend"><span>Modal <b>Rp58</b></span><span>Biaya <b>Rp26</b></span><span class="g">Untung <b>Rp16</b></span></div>
+  </div>
+</body>
+</html>

@@ -1,8 +1,9 @@
 # Operasi harian (untuk pengelola)
 
 Panduan ini untuk kamu sebagai pengelola HitungCuan: memantau error, mengekspor data, menghapus data,
-dan menghentikan pelanggan. Semua dijalankan di **Supabase → SQL Editor** (role `postgres`). Fungsi
-admin di bawah **tidak bisa dipanggil dari aplikasi**; sudah diuji bahwa pelanggan ditolak.
+dan menghentikan pelanggan. Membuat akun uji coba lewat halaman **Pengelola** di aplikasi (bagian 2);
+sisanya di **Supabase → SQL Editor** (role `postgres`). Fungsi `admin_*` di bawah **tidak bisa dipanggil
+dari aplikasi**, dan fungsi halaman Pengelola menolak semua akun selain pengelola; keduanya sudah diuji.
 
 Prasyarat: semua migration sudah dijalankan sampai `20261016000000_operations.sql`.
 
@@ -62,23 +63,105 @@ select public.admin_purge_client_errors(90);
 
 ## 2. Menambah, memperpanjang, menghentikan pelanggan
 
-Lihat README bagian 8 (d) dan (e). Singkatnya:
+**Halaman pengelola.** Akun pengelola langsung membuka **Pelanggan** (daftar semua toko, dikelompokkan
+**Uji coba** / **Berlangganan** / **Berakhir**, plus email pemilik, sisa hari, dan login terakhir). Pengelola
+tanpa toko sendiri hanya melihat menu **Pelanggan** dan **Buat akun**; pengelola yang juga punya toko tetap
+melihat menu toko, dan membuka Pelanggan lewat ikon kunci di kanan atas.
+
+**Akun baru: Buat akun.** Pilih **Jenis akun**: **Uji coba 7 hari** (dengan batas uji coba) atau **Langsung
+berlangganan** (tanpa batas; tombol **1 bulan** / **1 tahun** mengisi tanggal berakhir). Akun berlangganan butuh
+migration `20261030000000_platform_create_account.sql`. Isi:
+
+- **Email** calon pelanggan. Email yang sudah terdaftar ditolak (mis. orang yang dulu pernah uji coba);
+  perpanjang tokonya lewat SQL di bawah.
+- **Password**: sudah terisi acak (10 huruf & angka yang tidak mirip, mudah diketik). **Buat acak**
+  untuk yang lain, atau ketik sendiri (minimal 8 karakter).
+- **Nama toko**: boleh dikosongkan. Saat pertama login, pemilik akun diminta mengisi nama tokonya di Shopee
+  (jendela yang tidak bisa dilewati, hanya bisa diisi sekali). Sampai itu, di daftar tertulis "Toko " +
+  bagian depan email. Butuh migration `20261029000000_store_name_by_customer.sql`; tanpa itu nama dari
+  email dipakai seterusnya seperti dulu. Pelanggan salah ketik nama:
+  `update public.stores set name = 'Nama Benar' where id = 5;`
+- **Bisa dipakai sampai**: bawaan **7 hari** (hari ini ikut dihitung, jadi dibuat 1 November → aktif
+  sampai akhir 7 November WIB). Akun uji coba yang dibuat sebelum 29 Oktober 2026 tetap memakai tanggal
+  berakhirnya sendiri (dulu 30 hari). Setelah itu toko otomatis jadi baca saja.
+
+Tekan **Buat akun uji coba**. Akun langsung aktif (tanpa verifikasi email), toko ditandai **Uji coba**,
+lalu muncul teks siap kirim: alamat login, email, password, dan tanggal berakhir. **Salin teks** atau
+**Kirim lewat WhatsApp** (memilih kontak di WhatsApp). Password hanya tampil saat itu; setelah halaman
+ditutup tidak bisa dilihat lagi (pakai `admin_reset_password` di bawah kalau hilang). Pelanggan melihat
+banner kuning "ganti password" sampai ia menggantinya sendiri.
+
+Di bawahnya, **Semua toko** menampilkan per toko: email pemilik, status (Aktif sisa X hari / Baca saja),
+dan **login terakhir**. Isi toko (pesanan, untung, HPP) tidak terlihat di sini. Pakai untuk follow up:
+di hari ke-3, tanya lewat WhatsApp peserta yang masih "Belum pernah login" atau belum upload data bulan
+lalu. Status jadi kuning saat sisa ≤ 3 hari.
+
+Halaman Pengelola butuh migration `20261026000000_platform_admin.sql`. Menjadikan / mencabut pengelola:
 
 ```sql
-select public.admin_add_customer('pelanggan@email.com', 'Nama Toko', '2026-12-31');
+select public.admin_set_platform_admin('email-kamu@contoh.com');          -- jadikan pengelola
+select public.admin_set_platform_admin('email-kamu@contoh.com', false);   -- cabut
+```
+
+Jadikan pengelola **hanya akunmu sendiri**: pengelola bisa membuat akun dan melihat email semua pelanggan.
+
+**Lewat SQL Editor** (perpanjang, hentikan, toko kedua untuk akun yang sudah ada). Lihat README bagian 8
+(d) dan (e). Singkatnya:
+
+```sql
+select public.admin_add_customer('pelanggan@email.com', 'Nama Toko', '2026-12-31');            -- toko untuk akun yang sudah ada
 update public.stores set active_until = '2027-01-31' where id = 5;                              -- perpanjang
+update public.stores set active_until = '2027-01-31', trial = false where id = 5;               -- uji coba jadi berlangganan
 update public.stores set active_until = (now() at time zone 'Asia/Jakarta')::date - 1 where id = 5; -- hentikan
 ```
 
-**Uji coba gratis 30 hari:** buat toko seperti biasa, dengan tanggal terakhir = hari ini + 29 (toko
-aktif sampai akhir tanggal itu, WIB; hari pembuatan ikut dihitung). Contoh: dibuat 1 November →
-`'2026-11-30'`. Catat sendiri siapa yang sudah pernah uji coba; aplikasi tidak menandainya. Di hari
-ke-3, tanyakan lewat WhatsApp apakah data bulan lalu sudah di-upload. Setelah 30 hari toko otomatis
-jadi baca saja; kalau pelanggan bayar, perpanjang dengan `update` di atas.
+`id` toko terlihat di hasil `select id, name, active_until, trial from public.stores order by id;`.
+**Uji coba jadi berlangganan (cara cepat):** halaman Pelanggan → tombol **Jadikan berlangganan** di toko itu →
+pilih 1 bulan / 1 tahun / tanggal sendiri (mulai hari ini). Tanda uji coba hilang dan batasnya lepas saat itu
+juga. Butuh migration `20261031000000_platform_set_subscription.sql`; perintah `update` di atas tetap bisa dipakai.
+
+**Perpanjang (cara cepat):** halaman Pelanggan → tombol **Perpanjang** di toko berlangganan → **+1 bulan** /
+**+1 tahun** / tanggal sendiri. Kalau langganan masih aktif, perpanjangan dihitung setelah tanggal berakhirnya
+(sisa hari tidak hilang); kalau sudah berakhir, mulai hari ini. Toko tanpa batas tanggal tidak punya tombol ini.
+
+Penanda **Uji coba** tidak hilang sendiri; ubah `trial = false` saat pelanggan mulai membayar supaya
+daftar Uji coba di halaman Pengelola hanya berisi yang masih mencoba, **dan supaya batas uji coba
+lepas**. Selama `trial = true` (migration `20261027000000_trial_limits.sql` + angka di
+`20261028000000_trial_limits_total.sql`):
+- laporan penghasilan + data iklan hanya bisa disimpan untuk **1 bulan** (bulan uang cair / periode iklan;
+  export pesanan tidak dibatasi; upload ulang bulan yang sama selalu boleh);
+- Simulasi Harga maksimal **10 produk selama uji coba** (produk yang sama dihitung sekali; migration
+  `20261103000000_trial_simulation_10.sql`). Pemakaiannya terlihat di daftar Pelanggan ("Simulasi: 8 dari 10
+  produk"); tombol **Tambah jatah simulasi** menambah jatah
+  toko itu saja (+10 / +25 / +50 / angka sendiri, menumpuk). Butuh migration
+  `20261102000000_trial_simulation_bonus.sql`;
+- **Cek cepat** di halaman Iklan tidak tersedia (khusus pelanggan berlangganan; dikunci di aplikasi saja,
+  karena Cek cepat tidak menyimpan apa pun ke database).
+
+**Pelanggan uji coba salah bulan** (mis. upload bulan berjalan yang belum selesai): hapus laporan
+penghasilan & iklan bulan itu, lalu minta dia upload bulan yang benar. Export pesanan tidak perlu dihapus.
+
+```sql
+-- ganti 5 dengan id toko, '2026-10-01' dengan bulan yang salah
+delete from public.income             where store_id = 5 and date_trunc('month', released_date) = '2026-10-01';
+delete from public.income_adjustments where store_id = 5 and date_trunc('month', released_date) = '2026-10-01';
+delete from public.income_orders      where store_id = 5 and date_trunc('month', released_date) = '2026-10-01';
+delete from public.ad_reports         where store_id = 5 and '2026-10-01' in (date_trunc('month', period_start), date_trunc('month', period_end));
+select public.trial_months_used(5);   -- harus kosong
+```
+
+Lupa mengubah `trial = false` = pelanggan yang sudah bayar tetap kena batas ini. Kalau pelanggan
+mengeluh "laporan bulan lain ditolak", cek dulu kolom `trial` tokonya. Angka batasnya ada di fungsi
+`trial_month_limit()` dan `trial_simulation_limit()`; mengubahnya cukup `create or replace` fungsi itu.
 
 Setelah dihentikan, pelanggan masih bisa **melihat** Rekap (baca saja) tapi tidak bisa mengubah data.
 
 **Lupa password** (pelanggan menekan "Lupa password?" di halaman login → WhatsApp ke kamu):
+
+**Cara cepat:** halaman Pelanggan → tombol **Reset password** di toko itu → password acak sudah terisi → **Reset
+password** → salin teks atau kirim lewat WhatsApp. Sama persis dengan perintah SQL di bawah (password diganti,
+banner "ganti password" muncul lagi, keluar dari semua perangkat). Akun **pengelola** sengaja tidak bisa direset
+dari aplikasi; untuk itu tetap pakai SQL di bawah. Butuh migration `20261101000000_platform_reset_password.sql`.
 
 ```sql
 select public.admin_reset_password('pelanggan@email.com', 'PasswordBaru123');
@@ -213,6 +296,7 @@ bertanya, dan jangan memulihkan cadangan lama tanpa memeriksa apakah ada toko ya
 |---|---|
 | Tiap pagi | Cek `client_error_summary` (bagian 1) |
 | Awal bulan | Lihat siapa yang belum mengunggah data bulan lalu (kartu pengingat di aplikasi menolong pelanggan; kamu bisa mengingatkan lewat WhatsApp) |
-| Sebelum langganan habis | Hubungi pelanggan; banner pengingat di aplikasi muncul 7 hari sebelumnya |
+| Tiap beberapa hari | Halaman Pengelola → **Uji coba**: tanya lewat WhatsApp yang masih "Belum pernah login" |
+| Sebelum langganan habis | Hubungi pelanggan (status kuning di halaman Pengelola saat sisa ≤ 3 hari); banner pengingat di aplikasi muncul 7 hari sebelumnya |
 | Sebulan sekali | `select public.admin_purge_client_errors(90);` dan tinjau akun yatim |
 | Setiap migration baru | Jalankan berurutan, lalu jalankan `supabase/uji-pemisahan-toko.sql` di SQL Editor (harus `0 gagal, 0 perlu dicek`; tidak mengubah data). Cek `client_error_summary` beberapa jam kemudian |
