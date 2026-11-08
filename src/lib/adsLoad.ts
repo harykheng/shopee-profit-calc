@@ -132,6 +132,7 @@ function computeAdsAnalysis(
     fallback.set(k, [...(fallback.get(k) ?? []), Number(p.hpp)])
   }
   const fallbackHpp = new Map([...fallback].map(([k, v]) => [k, v.reduce((s, x) => s + x, 0) / v.length]))
+  const fallbackVariants = new Map([...fallback].map(([k, v]) => [k, v.length]))
 
   const toLine = (i: (typeof items)[number]) => ({
     product_name: i.product_name,
@@ -148,6 +149,7 @@ function computeAdsAnalysis(
     orders: items.map(toLine),
     feeRate: rate,
     fallbackHpp,
+    fallbackVariants,
     feeComponents,
     targets,
     tempHpp,
@@ -163,6 +165,7 @@ function computeAdsAnalysis(
             orders: items.filter((i) => i.created_at && wibDay(i.created_at).slice(0, 7) === m.slice(0, 7)).map(toLine),
             feeRate: rate,
             fallbackHpp,
+            fallbackVariants,
             feeComponents,
             targets,
             actualFees: actualFeeRates(

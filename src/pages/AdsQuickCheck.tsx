@@ -1,10 +1,14 @@
-// Cek cepat iklan: lihat apakah iklan beberapa hari terakhir jalan bagus. File dibaca di browser dan
-// TIDAK disimpan; HPP, potongan, target, dan pesanan diambil dari data toko yang sudah tersimpan.
+// Cek cepat iklan: lihat apakah iklan beberapa hari terakhir jalan bagus. File iklan dibaca di browser dan
+// TIDAK disimpan; HPP, potongan, target, dan pesanan diambil dari data toko yang sudah tersimpan. Export pesanan
+// untuk tanggal yang sama boleh dipilih di sini: disimpan seperti di halaman Upload, lalu hasilnya dihitung ulang.
 import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Alert, Card, ErrorBox, Spinner, Stamp, linkClass, type StampTone } from '../components/ui'
 import { IconUpload, IconX } from '../components/icons'
 import { RupiahInput } from '../components/pickers'
 import { AdsHowTo, adsProblem, formatPeriod, groupAdsFiles, parseAdsFiles, type ParsedAdsFile } from '../components/adsUpload'
+import { saveOrderItems } from '../lib/api'
+import { notifyDataChanged } from '../lib/events'
+import { ParseError } from '../lib/parsers/common'
 import { analyzeUnsavedAds, loadAdsContext, type AdsContext, type Loaded } from '../lib/adsLoad'
 import { productKey, type AdProductResult, type AdVerdict } from '../lib/adsMath'
 import { QUICK_VERDICT, buildQuickExport, formatRoas, quickExportFileName, quickProducts } from '../lib/adsQuickExport'
@@ -129,8 +133,40 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
     }
   }
 
+  const [ordersSave, setOrdersSave] = useState<OrdersSave>({ kind: 'idle' })
+
+  // Export pesanan dipilih dari dalam Cek cepat: simpan (sama dengan halaman Upload), lalu muat ulang data toko
+  // untuk periode yang sedang dicek. File iklan tidak perlu dipilih ulang.
+  const onOrdersFile = async (file: File) => {
+    if (!store || state.kind !== 'done') return
+    const current = state
+    setOrdersSave({ kind: 'saving', fileName: file.name })
+    try {
+      if (!/\.xlsx?$/i.test(file.name)) {
+        throw new ParseError('Pilih file Excel (.xlsx) dari Pesanan Saya → Export, untuk tanggal yang sama dengan data iklan.')
+      }
+      const { parseOrdersFile } = await import('../lib/parsers/orders')
+      const result = parseOrdersFile(await file.arrayBuffer())
+      await saveOrderItems(store.id, result.items)
+      notifyDataChanged()
+      const periods = await Promise.all(
+        current.periods.map(async (p) => ({ ...p, ctx: await loadAdsContext(store.id, p.start, p.end) })),
+      )
+      setState({ ...current, periods })
+      setOrdersSave({
+        kind: 'saved',
+        fileName: file.name,
+        orderCount: result.orderCount,
+        stillMissing: periods.filter((p) => p.ctx.items.length === 0).map((p) => formatPeriod(p.start, p.end)),
+      })
+    } catch (error) {
+      setOrdersSave({ kind: 'error', fileName: file.name, error })
+    }
+  }
+
   const reset = () => {
     setState({ kind: 'idle' })
+    setOrdersSave({ kind: 'idle' })
     setInputKey((k) => k + 1)
   }
 
@@ -157,7 +193,7 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
           <span className="flex flex-wrap items-center gap-3">
             Cek cepat iklan
             <Stamp tone="neutral" tilt={false} size="xs">
-              Tidak disimpan
+              Data iklan tidak disimpan
             </Stamp>
           </span>
           <button
@@ -221,12 +257,7 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
                 Pesanan yang batal atau diretur biasanya baru kelihatan 1–2 minggu kemudian, jadi belum ikut dikurangi.
                 Pakai untuk melihat arah, bukan untung akhir.
               </Alert>
-              {!latest.data.hasOrders && (
-                <Alert tone="info">
-                  Export pesanan untuk tanggal ini belum di-upload, jadi pesanan batal belum dikurangi sama sekali. HPP
-                  diambil dari halaman HPP; produk yang belum punya HPP bisa diisi HPP sementara di kartunya.
-                </Alert>
-              )}
+              <OrdersBox checked={checked} save={ordersSave} onFile={onOrdersFile} />
 
               <div className={`grid gap-4 ${previous ? 'md:grid-cols-2' : ''}`}>
                 {previous && <PeriodSummary period={previous} label="Sebelumnya" />}
@@ -278,6 +309,65 @@ function downloadExport(store: Store | null, checked: CheckedPeriod[]) {
     })),
   })
   downloadText(quickExportFileName(store.name, last.end), text)
+}
+
+type OrdersSave =
+  | { kind: 'idle' }
+  | { kind: 'saving'; fileName: string }
+  | { kind: 'saved'; fileName: string; orderCount: number; stillMissing: string[] }
+  | { kind: 'error'; fileName: string; error: unknown }
+
+/** Ajakan memilih export pesanan untuk tanggal yang dicek kalau pesanannya belum ada; setelah tersimpan, hasilnya. */
+function OrdersBox({ checked, save, onFile }: { checked: CheckedPeriod[]; save: OrdersSave; onFile: (file: File) => void }) {
+  const [inputKey, setInputKey] = useState(0)
+  const missing = checked.filter((c) => !c.data.hasOrders)
+  if (missing.length === 0 && save.kind === 'idle') return null
+
+  const picker = (
+    <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-ink px-4 font-semibold text-paper focus-within:outline focus-within:outline-2 focus-within:outline-accent">
+      <IconUpload size={18} />
+      {save.kind === 'saved' ? 'Pilih export pesanan lain' : 'Pilih export pesanan'}
+      <input
+        key={inputKey}
+        type="file"
+        accept=".xlsx,.xls"
+        className="sr-only"
+        disabled={save.kind === 'saving'}
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          setInputKey((k) => k + 1)
+          if (file) onFile(file)
+        }}
+      />
+    </label>
+  )
+
+  return (
+    <div className="space-y-3">
+      {save.kind === 'saved' && (
+        <Alert tone={save.stillMissing.length > 0 ? 'warning' : 'success'} title="Export pesanan tersimpan">
+          {formatNumber(save.orderCount)} pesanan dari {save.fileName} disimpan, hasil di bawah sudah dihitung ulang.
+          {save.stillMissing.length > 0 &&
+            ` Tapi tidak ada pesanan yang dibuat pada ${save.stillMissing.join(' dan ')}. Pastikan tanggal export pesanan sama dengan data iklan.`}
+        </Alert>
+      )}
+      {missing.length > 0 && (
+        <Alert tone="info">
+          Export pesanan {missing.length > 1 ? 'untuk kedua periode' : `untuk ${formatPeriod(missing[0].start, missing[0].end)}`}{' '}
+          belum di-upload, jadi aplikasi belum tahu <strong>variasi mana yang terjual</strong> dan pesanan batal
+          belum dikurangi. Pilih export pesanan Shopee dengan tanggal yang sama supaya HPP dan label Lanjut/Stop pasti.
+          <span className="mt-1 block text-sm">
+            Pesanan disimpan seperti di halaman Upload (dipakai juga untuk Rekap). Data pembeli tidak dibaca.
+          </span>
+          <div>{picker}</div>
+        </Alert>
+      )}
+      {save.kind === 'saving' && <Spinner label="Menyimpan pesanan dan menghitung ulang…" />}
+      {save.kind === 'error' && (
+        <ErrorBox error={save.error} reportFile={{ kind: 'export pesanan', fileName: save.fileName }} />
+      )}
+    </div>
+  )
 }
 
 function PeriodSummary({ period, label, compare }: { period: CheckedPeriod; label?: string; compare?: CheckedPeriod | null }) {
@@ -380,7 +470,7 @@ function ProductRow({
 }) {
   const v = QUICK[p.verdict]
   // HPP dari halaman HPP / pesanan tidak ada (atau sedang memakai isian sementara): boleh diisi di sini.
-  const needsHpp = p.hpp === null || p.hppTemp
+  const needsHpp = p.hpp === null || p.hppTemp || p.hppAvgVariants > 1
   const cpc = p.clicks > 0 ? p.spend / p.clicks : null
   const conv = p.clicks > 0 ? p.adsSold / p.clicks : null
   const roasTrend = before ? trend(p.realRoas, before.realRoas) : undefined
@@ -418,9 +508,17 @@ function ProductRow({
           <p className="mt-1 text-xs text-ink-3">
             {p.hppTemp
               ? 'Dipakai hanya di Cek cepat, diingat di browser ini. Isi HPP resmi di halaman HPP.'
-              : 'Produk ini belum punya HPP. Isi perkiraan modal per barang untuk melihat Lanjut/Stop. Tidak disimpan ke halaman HPP.'}
+              : p.hppAvgVariants > 1
+                ? 'Kalau tahu variasi mana yang laku, isi HPP rata-ratanya di sini. Tidak disimpan ke halaman HPP.'
+                : 'Produk ini belum punya HPP. Isi perkiraan modal per barang untuk melihat Lanjut/Stop. Tidak disimpan ke halaman HPP.'}
           </p>
         </div>
+      )}
+      {p.hppAvgVariants > 1 && (
+        <p className="mt-3 rounded-xl bg-warn/10 p-3 text-sm text-ink">
+          <strong>Belum pasti.</strong> HPP = rata-rata {p.hppAvgVariants} variasi, karena pesanan tanggal ini belum
+          ada; belum tentu variasi yang terjual. Pilih export pesanan di atas, atau isi HPP sementara.
+        </p>
       )}
       <p className="mt-3 text-sm text-ink-2">{p.hppTemp && p.verdict !== 'hpp_kosong' ? `${v.note} (pakai HPP sementara)` : v.note}</p>
     </li>

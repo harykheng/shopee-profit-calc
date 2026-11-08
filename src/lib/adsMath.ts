@@ -81,6 +81,11 @@ export interface AdProductResult {
   hppTemp: boolean
   /** Sebagian pesanan belum ada HPP-nya. */
   hppIncomplete: boolean
+  /**
+   * > 1 = tidak ada pesanan produk ini di periode, jadi HPP = rata-rata biasa dari sekian variasi (belum tentu
+   * variasi yang terjual). 0 = HPP dari pesanan, satu variasi, atau isian sementara.
+   */
+  hppAvgVariants: number
   /** Potongan Shopee (0–1) yang dipakai untuk produk ini: asli dari laporan, atau rata-rata toko yang disesuaikan admin produk. */
   feeRate: number
   /**
@@ -234,8 +239,10 @@ export function analyzeAds(input: {
   reports: AdReportRows[]
   orders: AdOrderLine[]
   feeRate: number
-  /** HPP per produk (nama listing) untuk produk tanpa pesanan di periode ini. */
+  /** HPP per produk (nama listing) untuk produk tanpa pesanan di periode ini (rata-rata variasi). */
   fallbackHpp?: Map<string, number>
+  /** Jumlah variasi ber-HPP per nama listing, untuk menandai fallbackHpp yang berupa rata-rata beberapa variasi. */
+  fallbackVariants?: Map<string, number>
   /**
    * Porsi potongan admin + XTRA (0–1) per nama produk, hanya untuk produk yang sudah diisi.
    * Potongan produk = rata-rata toko + (porsi produk − porsi pembanding). Produk yang tidak ada
@@ -358,10 +365,19 @@ export function analyzeAds(input: {
     const withHpp = hppLines.filter((l) => l.hpp !== null)
     const hppQty = withHpp.reduce((s, l) => s + l.qty, 0)
     let hpp = hppQty > 0 ? withHpp.reduce((s, l) => s + l.qty * (l.hpp as number), 0) / hppQty : null
-    if (hpp === null && hppLines.length === 0) hpp = input.fallbackHpp?.get(productKey(a.name)) ?? null
-    const tempValue = hpp === null ? input.tempHpp?.get(productKey(a.name)) : undefined
+    let hppAvgVariants = 0
+    if (hpp === null && hppLines.length === 0) {
+      hpp = input.fallbackHpp?.get(key) ?? null
+      const variants = input.fallbackVariants?.get(key) ?? 0
+      if (hpp !== null && variants > 1) hppAvgVariants = variants
+    }
+    // HPP sementara (Cek cepat) mengisi HPP yang kosong, atau menggantikan rata-rata beberapa variasi.
+    const tempValue = hpp === null || hppAvgVariants > 1 ? input.tempHpp?.get(key) : undefined
     const hppTemp = tempValue !== undefined
-    if (hppTemp) hpp = tempValue
+    if (hppTemp) {
+      hpp = tempValue
+      hppAvgVariants = 0
+    }
     // Hanya relevan kalau ada barang yang benar-benar terjual.
     const hppIncomplete = kept.length > 0 && withHpp.length < hppLines.length
 
@@ -399,6 +415,7 @@ export function analyzeAds(input: {
       hpp,
       hppTemp,
       hppIncomplete,
+      hppAvgVariants,
       feeRate: productFee,
       // Dengan hanya satu produk yang diketahui tidak ada pembanding, jadi potongannya tidak bergeser:
       // jujur disebut rata-rata toko.

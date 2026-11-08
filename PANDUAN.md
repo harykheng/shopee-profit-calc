@@ -310,7 +310,7 @@ Kalau file iklan dari toko yang sebelumnya disimpan ke toko lain, akan muncul pe
 
 Data 7 hari yang dulu sempat tersimpan tetap ada dan tetap bisa dipilih di **Periode iklan**.
 
-### Cek cepat (beberapa hari, tidak disimpan)
+### Cek cepat (beberapa hari, data iklan tidak disimpan)
 
 **Khusus pelanggan berlangganan.** Selama uji coba, tombol **Cek cepat** tidak bisa ditekan; pakai data
 iklan 1 bulan penuh lewat halaman Upload.
@@ -325,8 +325,18 @@ baru atau mengganti target ROAS.
    beserta biaya per klik, % klik yang jadi pesanan, ROAS nyata, dan ROAS balik modal. Aturan Stop sama
    dengan penilaian bulanan.
 
-- **Tidak ada yang disimpan.** Hasilnya hilang saat halaman ditutup. HPP, potongan, dan target untung
+- **Data iklan tidak disimpan.** Hasilnya hilang saat halaman ditutup. HPP, potongan, dan target untung
   diambil dari data toko yang sudah ada.
+- **Export pesanan untuk tanggal yang sama bisa dipilih langsung di Cek cepat.** Kalau pesanannya belum
+  ada, muncul kotak biru dengan tombol **Pilih export pesanan**. Download export pesanan Shopee (status
+  Semua) dengan tanggal yang sama dengan data iklan, lalu pilih filenya. Pesanan **disimpan** seperti di
+  halaman Upload (nanti dipakai juga untuk Rekap; upload ulang tidak membuat dobel), dan hasil Cek cepat
+  langsung dihitung ulang tanpa memilih file iklan lagi. Dengan pesanan, aplikasi tahu **variasi mana yang
+  terjual** dan pesanan batal ikut dikurangi.
+- **Produk dengan beberapa variasi** (mis. 50g, 85g, 150g) yang pesanannya belum ada diberi tanda **Belum
+  pasti**: HPP-nya diambil dari rata-rata semua variasi, padahal belum tentu variasi itu yang laku. Label
+  Stop/Lanjut-nya bisa salah. Pilih export pesanan, atau isi **HPP sementara** kalau kamu tahu variasi
+  mana yang laku.
 - **Produk baru yang belum punya HPP** (biasanya karena export pesanannya belum di-upload) muncul dengan
   label **Isi HPP** dan kolom **HPP sementara per barang**. Isi perkiraan modalnya, maka ROAS balik modal
   dan label Lanjut/Stop langsung muncul. Angka ini hanya dipakai di Cek cepat dan **diingat di browser
