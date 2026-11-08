@@ -100,7 +100,8 @@ export function buildQuickExport(input: { storeName: string; createdAt: string; 
   if (!latest.hasOrders) {
     out.push(
       '- **Export pesanan untuk tanggal ini belum di-upload**, jadi pesanan batal dan retur belum dikurangi sama ' +
-        'sekali. ROAS nyata di bawah = ROAS Shopee dan harga jual diperkirakan dari data iklan.',
+        'sekali, dan variasi yang terjual belum diketahui. ROAS nyata di bawah = ROAS Shopee dan harga jual ' +
+        'diperkirakan dari data iklan.',
     )
   }
   out.push(
@@ -230,7 +231,9 @@ export function buildQuickExport(input: { storeName: string; createdAt: string; 
         return [
           cell(p.name),
           p.price === null ? '–' : `${formatRupiah(p.price)}${p.priceSource === 'iklan' ? ' (perkiraan)' : ''}`,
-          p.hpp === null ? '–' : `${formatRupiah(p.hpp)}${p.hppTemp ? ' (sementara)' : ''}${p.hppIncomplete ? ' (sebagian)' : ''}`,
+          p.hpp === null
+            ? '–'
+            : `${formatRupiah(p.hpp)}${p.hppTemp ? ' (sementara)' : ''}${p.hppIncomplete ? ' (sebagian)' : ''}${p.hppAvgVariants > 1 ? ` (rata-rata ${p.hppAvgVariants} variasi)` : ''}`,
           `${formatPercent(p.feeRate * 100)} (${FEE_SOURCE[p.feeSource]})`,
           p.margin === null ? '–' : formatPercent(p.margin * 100),
           formatRupiah(p.unitProfit),
@@ -244,6 +247,14 @@ export function buildQuickExport(input: { storeName: string; createdAt: string; 
     if (products.some((p) => p.hppTemp)) {
       out.push('')
       out.push('"(sementara)" = HPP perkiraan yang saya isi sendiri karena HPP resminya belum ada.')
+    }
+    if (products.some((p) => p.hppAvgVariants > 1)) {
+      out.push('')
+      out.push(
+        '"(rata-rata N variasi)" = pesanan tanggal ini belum ada, jadi variasi yang terjual belum diketahui dan HPP ' +
+          'diambil dari rata-rata semua variasi. Untung, balik modal, dan vonis produk ini belum pasti: bisa terlalu ' +
+          'rendah kalau yang laku variasi murah, atau terlalu tinggi kalau yang laku variasi mahal.',
+      )
     }
     if (products.some((p) => p.priceSource === 'iklan')) {
       out.push('')

@@ -23,6 +23,7 @@ const product = (p: Partial<AdProductResult>): AdProductResult => ({
   hpp: null,
   hppTemp: false,
   hppIncomplete: false,
+  hppAvgVariants: 0,
   feeRate: 0.15,
   feeSource: 'rata-rata',
   unitProfit: null,
@@ -146,6 +147,17 @@ describe('buildQuickExport', () => {
     })
     expect(single).toContain('Export pesanan untuk tanggal ini belum di-upload')
     expect(single).not.toContain('ROAS nyata sebelumnya')
+  })
+
+  it('menandai HPP rata-rata beberapa variasi', () => {
+    const avg = product({ ...dot, hppTemp: false, hppAvgVariants: 3 })
+    const text = buildQuickExport({
+      storeName: 'T',
+      createdAt: '2026-11-08',
+      periods: [period('2026-11-01', '2026-11-07', [avg], false)],
+    })
+    expect(text).toContain('Rp40.000 (rata-rata 3 variasi)')
+    expect(text).toContain('variasi yang terjual belum diketahui')
   })
 
   it('kosong kalau tidak ada periode', () => {

@@ -239,6 +239,32 @@ describe('analyzeAds', () => {
   it('HPP cadangan dipakai untuk produk tanpa pesanan', () => {
     const r = analyzeAds({ reports: [reports[1]], orders: [], feeRate: 0.15, fallbackHpp: new Map([['tabur', 15_000]]) })
     expect(r.products.find((p) => p.code === 'T')?.hpp).toBe(15_000)
+    expect(r.products.find((p) => p.code === 'T')?.hppAvgVariants).toBe(0)
+  })
+
+  it('HPP cadangan dari beberapa variasi ditandai; HPP sementara boleh menggantikannya', () => {
+    const base = { reports: [reports[1]], feeRate: 0.15, fallbackHpp: new Map([['tabur', 15_000]]) }
+    const variants = new Map([['tabur', 3]])
+    const avg = analyzeAds({ ...base, orders: [], fallbackVariants: variants }).products.find((p) => p.code === 'T')
+    expect(avg?.hpp).toBe(15_000)
+    expect(avg?.hppAvgVariants).toBe(3)
+
+    const temp = analyzeAds({ ...base, orders: [], fallbackVariants: variants, tempHpp: new Map([['tabur', 8_000]]) })
+    const t = temp.products.find((p) => p.code === 'T')
+    expect(t?.hpp).toBe(8_000)
+    expect(t?.hppTemp).toBe(true)
+    expect(t?.hppAvgVariants).toBe(0)
+
+    // Ada pesanan: HPP dari pesanan, tanpa tanda, dan HPP sementara tidak dipakai.
+    const withOrders = analyzeAds({
+      ...base,
+      orders: orders('Tabur', 10, 0, 25_000, 9_000),
+      fallbackVariants: variants,
+      tempHpp: new Map([['tabur', 8_000]]),
+    }).products.find((p) => p.code === 'T')
+    expect(withOrders?.hpp).toBe(9_000)
+    expect(withOrders?.hppAvgVariants).toBe(0)
+    expect(withOrders?.hppTemp).toBe(false)
   })
 })
 
