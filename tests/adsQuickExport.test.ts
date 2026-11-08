@@ -103,23 +103,39 @@ describe('buildQuickExport', () => {
     expect(md).toContain('1 ÷ (margin − 5%)')
   })
 
-  it('tabel per produk aman untuk Markdown dan menandai HPP sementara', () => {
-    const rows = md.split('\n').filter((l) => l.startsWith('| Dot'))
-    expect(rows).toHaveLength(1)
-    expect(rows[0]).toContain('Dot / bayi baru')
-    expect(rows[0]).toContain('Rp40.000 (sementara)')
-    expect(rows[0]).toContain('| Lanjut |')
-    expect(md).not.toContain('Tanpa iklan')
-    // Kolom pembanding: Sabun tidak ada di periode sebelumnya.
-    expect(md.split('\n').find((l) => l.startsWith('| Sabun'))).toContain('tidak diiklankan')
+  const lines = md.split('\n')
+  /** Baris isi tabel di bawah judul `heading` (tanpa baris judul kolom & pemisah). */
+  const tableAfter = (heading: string) => {
+    const start = lines.indexOf(heading)
+    expect(start).toBeGreaterThan(-1)
+    const rows: string[] = []
+    for (let i = start + 2; i < lines.length && lines[i].startsWith('|'); i++) rows.push(lines[i])
+    return rows
+  }
+  const hasil = tableAfter('### Hasil iklan')
+  const untung = tableAfter('### Untung & target ROAS')
+
+  it('produk dipecah ke dua tabel dengan urutan yang sama', () => {
+    expect(hasil[0]).toContain('| Kode Produk | Vonis |')
+    expect(untung[0]).toContain('| Harga jual | HPP |')
+    const names = (rows: string[]) => rows.slice(2).map((r) => r.split('|')[1].trim())
+    expect(names(hasil)).toEqual(['Sabun', 'Dot / bayi baru'])
+    expect(names(untung)).toEqual(names(hasil))
   })
 
-  it('jumlah kolom tiap baris tabel produk sama dengan judulnya', () => {
-    const lines = md.split('\n')
-    const head = lines.findIndex((l) => l.startsWith('| Produk | Kode Produk'))
+  it('tabel aman untuk Markdown dan menandai HPP sementara', () => {
+    const dotHasil = hasil.find((l) => l.startsWith('| Dot'))
+    const dotUntung = untung.find((l) => l.startsWith('| Dot'))
+    expect(dotHasil).toContain('| Lanjut |')
+    expect(dotUntung).toContain('Rp40.000 (sementara)')
+    expect(md).not.toContain('Tanpa iklan')
+    // Kolom pembanding: Sabun tidak ada di periode sebelumnya.
+    expect(hasil.find((l) => l.startsWith('| Sabun'))).toContain('tidak diiklankan')
+  })
+
+  it('jumlah kolom tiap baris sama dengan judulnya', () => {
     const cols = (l: string) => l.split('|').length
-    expect(cols(lines[head + 2])).toBe(cols(lines[head]))
-    expect(cols(lines[head + 3])).toBe(cols(lines[head]))
+    for (const rows of [hasil, untung]) for (const r of rows) expect(cols(r)).toBe(cols(rows[0]))
   })
 
   it('memberi tahu kalau export pesanan belum ada', () => {

@@ -338,7 +338,7 @@ baru atau mengganti target ROAS.
   beberapa hari lagi.
 
 **Bertanya lebih dalam ke Claude.** Di bawah daftar produk ada tombol **Download untuk Claude (.md)**.
-File itu berisi ringkasan dan tabel per produk (biaya, klik, ROAS, HPP, potongan, untung, label), cara
+File itu berisi ringkasan dan dua tabel per produk (hasil iklan: biaya, klik, ROAS, label; lalu untung & target ROAS: HPP, potongan, untung), cara
 membaca tiap angka, peringatan bahwa data beberapa hari belum lengkap, dan beberapa pertanyaan pembuka.
 Lampirkan file itu di chat Claude, lalu tanyakan apa saja, misalnya produk mana yang perlu diubah target
 ROAS-nya.

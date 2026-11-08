@@ -49,6 +49,13 @@ const FEE_SOURCE: Record<AdProductResult['feeSource'], string> = {
   'rata-rata': 'rata-rata toko',
 }
 
+/** Tabel Markdown; `textCols` kolom pertama rata kiri, sisanya (angka) rata kanan. */
+function table(out: string[], head: string[], textCols: number, rows: string[][]) {
+  out.push(`| ${head.join(' | ')} |`)
+  out.push(`|${head.map((_, i) => (i < textCols ? '---' : '---:')).join('|')}|`)
+  for (const r of rows) out.push(`| ${r.join(' | ')} |`)
+}
+
 /** Nama file .md: huruf kecil, tanpa spasi/tanda baca. */
 export function quickExportFileName(storeName: string, end: string): string {
   const slug = storeName
@@ -161,64 +168,79 @@ export function buildQuickExport(input: { storeName: string; createdAt: string; 
   if (products.length === 0) {
     out.push('Belum ada produk dengan biaya iklan di periode ini.')
   } else {
-    const head = [
-      'Produk',
-      'Kode Produk',
-      'Vonis',
-      'Biaya iklan',
-      'Klik',
-      'Biaya per klik',
-      'Terjual nyata',
-      'Terjual Shopee',
-      'Klik jadi pesanan',
-      'ROAS Shopee',
-      'ROAS nyata',
-      ...(previous ? ['ROAS nyata sebelumnya'] : []),
-      'Balik modal butuh ROAS',
-      'Target ROAS nyata',
-      'Target ROAS isi di Shopee',
-      'Harga jual',
-      'HPP',
-      'Potongan Shopee',
-      'Margin',
-      'Untung per barang',
-      'Untung setelah iklan',
-    ]
-    out.push(`| ${head.join(' | ')} |`)
-    out.push(`|${head.map((_, i) => (i < 3 ? '---' : '---:')).join('|')}|`)
-    for (const p of products) {
-      const cpc = p.clicks > 0 ? formatRupiah(p.spend / p.clicks) : '–'
-      const conv = p.clicks > 0 ? formatPercent((p.adsSold / p.clicks) * 100) : '–'
-      const bep = p.bepRoas !== null ? formatRoas(p.bepRoas) : p.unitProfit === null ? '–' : 'tidak mungkin'
-      const tgt = (v: number | null) => (v !== null ? formatRoas(v) : p.margin === null ? '–' : 'tidak mungkin')
-      const prev = before.get(p.code)
-      const hpp = p.hpp === null ? '–' : `${formatRupiah(p.hpp)}${p.hppTemp ? ' (sementara)' : ''}${p.hppIncomplete ? ' (sebagian)' : ''}`
-      const price = p.price === null ? '–' : `${formatRupiah(p.price)}${p.priceSource === 'iklan' ? ' (perkiraan)' : ''}`
-      const row = [
-        cell(p.name),
-        cell(p.code),
-        QUICK_VERDICT[p.verdict].label,
-        formatRupiah(p.spend),
-        formatNumber(p.clicks),
-        cpc,
-        formatNumber(Math.round(p.netSold)),
-        formatNumber(p.adsSold),
-        conv,
-        formatRoas(p.shopeeRoas),
-        formatRoas(p.realRoas),
-        ...(previous ? [prev ? formatRoas(prev.realRoas) : 'tidak diiklankan'] : []),
-        bep,
-        tgt(p.targetRoas),
-        tgt(p.shopeeTargetRoas),
-        price,
-        hpp,
-        `${formatPercent(p.feeRate * 100)} (${FEE_SOURCE[p.feeSource]})`,
-        p.margin === null ? '–' : formatPercent(p.margin * 100),
-        formatRupiah(p.unitProfit),
-        formatRupiah(p.profitAfterAds),
-      ]
-      out.push(`| ${row.join(' | ')} |`)
-    }
+    out.push('Dua tabel dengan urutan produk yang sama: hasil iklannya dulu, lalu untung dan target ROAS-nya.')
+    out.push('')
+    out.push('### Hasil iklan')
+    out.push('')
+    table(
+      out,
+      [
+        'Produk',
+        'Kode Produk',
+        'Vonis',
+        'Biaya iklan',
+        'Klik',
+        'Biaya per klik',
+        'Klik jadi pesanan',
+        'Terjual nyata',
+        'Terjual Shopee',
+        'ROAS Shopee',
+        'ROAS nyata',
+        ...(previous ? ['ROAS nyata sebelumnya'] : []),
+      ],
+      3,
+      products.map((p) => {
+        const prev = before.get(p.code)
+        return [
+          cell(p.name),
+          cell(p.code),
+          QUICK_VERDICT[p.verdict].label,
+          formatRupiah(p.spend),
+          formatNumber(p.clicks),
+          p.clicks > 0 ? formatRupiah(p.spend / p.clicks) : '–',
+          p.clicks > 0 ? formatPercent((p.adsSold / p.clicks) * 100) : '–',
+          formatNumber(Math.round(p.netSold)),
+          formatNumber(p.adsSold),
+          formatRoas(p.shopeeRoas),
+          formatRoas(p.realRoas),
+          ...(previous ? [prev ? formatRoas(prev.realRoas) : 'tidak diiklankan'] : []),
+        ]
+      }),
+    )
+    out.push('')
+    out.push('### Untung & target ROAS')
+    out.push('')
+    table(
+      out,
+      [
+        'Produk',
+        'Harga jual',
+        'HPP',
+        'Potongan Shopee',
+        'Margin',
+        'Untung per barang',
+        'Balik modal butuh ROAS',
+        'Target ROAS nyata',
+        'Target ROAS isi di Shopee',
+        'Untung setelah iklan',
+      ],
+      1,
+      products.map((p) => {
+        const tgt = (v: number | null) => (v !== null ? formatRoas(v) : p.margin === null ? '–' : 'tidak mungkin')
+        return [
+          cell(p.name),
+          p.price === null ? '–' : `${formatRupiah(p.price)}${p.priceSource === 'iklan' ? ' (perkiraan)' : ''}`,
+          p.hpp === null ? '–' : `${formatRupiah(p.hpp)}${p.hppTemp ? ' (sementara)' : ''}${p.hppIncomplete ? ' (sebagian)' : ''}`,
+          `${formatPercent(p.feeRate * 100)} (${FEE_SOURCE[p.feeSource]})`,
+          p.margin === null ? '–' : formatPercent(p.margin * 100),
+          formatRupiah(p.unitProfit),
+          p.bepRoas !== null ? formatRoas(p.bepRoas) : p.unitProfit === null ? '–' : 'tidak mungkin',
+          tgt(p.targetRoas),
+          tgt(p.shopeeTargetRoas),
+          formatRupiah(p.profitAfterAds),
+        ]
+      }),
+    )
     if (products.some((p) => p.hppTemp)) {
       out.push('')
       out.push('"(sementara)" = HPP perkiraan yang saya isi sendiri karena HPP resminya belum ada.')
