@@ -318,21 +318,24 @@ iklan 1 bulan penuh lewat halaman Upload.
 Untuk melihat apakah iklan **beberapa hari terakhir** jalan bagus, misalnya setelah memasang iklan
 baru atau mengganti target ROAS.
 
-1. Download data iklan periode pendek dari Shopee (mis. 3 atau 7 hari).
-2. Di halaman Iklan, tekan **Cek cepat**, lalu pilih filenya. Boleh **2 periode** sekaligus (mis. minggu
-   lalu dan minggu ini) supaya kelihatan naik atau turun.
+1. Download dari Shopee untuk tanggal yang sama (mis. 3 atau 7 hari terakhir):
+   - **data iklan** (.csv), dan
+   - **export pesanan** (.xlsx): Pesanan Saya → Export, status **Semua**.
+2. Di halaman Iklan, tekan **Cek cepat**, lalu pilih **semua filenya sekaligus** (iklan dan pesanan).
+   Boleh **2 periode** (mis. minggu lalu dan minggu ini) supaya kelihatan naik atau turun.
 3. Per produk muncul: **Lanjut**, **Lanjut, pantau**, **Stop**, **Belum cukup data**, atau **Isi HPP**,
    beserta biaya per klik, % klik yang jadi pesanan, ROAS nyata, dan ROAS balik modal. Aturan Stop sama
    dengan penilaian bulanan.
 
 - **Data iklan tidak disimpan.** Hasilnya hilang saat halaman ditutup. HPP, potongan, dan target untung
   diambil dari data toko yang sudah ada.
-- **Export pesanan untuk tanggal yang sama bisa dipilih langsung di Cek cepat.** Kalau pesanannya belum
-  ada, muncul kotak biru dengan tombol **Pilih export pesanan**. Download export pesanan Shopee (status
-  Semua) dengan tanggal yang sama dengan data iklan, lalu pilih filenya. Pesanan **disimpan** seperti di
-  halaman Upload (nanti dipakai juga untuk Rekap; upload ulang tidak membuat dobel), dan hasil Cek cepat
-  langsung dihitung ulang tanpa memilih file iklan lagi. Dengan pesanan, aplikasi tahu **variasi mana yang
-  terjual** dan pesanan batal ikut dikurangi.
+- **Export pesanan disimpan** seperti di halaman Upload (nanti dipakai juga untuk Rekap; upload ulang
+  tidak membuat dobel), jadi tidak perlu bolak-balik ke halaman Upload. Dengan pesanan, aplikasi tahu
+  **variasi mana yang terjual** dan pesanan batal ikut dikurangi.
+- **Lupa memilih export pesanan?** Muncul kotak kuning **"Pesanan tanggal ini belum ada, label Stop/Lanjut
+  belum pasti"** dengan tombol **Pilih export pesanan**. Hasil langsung dihitung ulang tanpa memilih file
+  iklan lagi. Kalau pesanan sudah ada tapi pesanan hari terakhir belum ikut, pakai tombol **Perbarui
+  pesanan**.
 - **Produk dengan beberapa variasi** (mis. 50g, 85g, 150g) yang pesanannya belum ada diberi tanda **Belum
   pasti**: HPP-nya diambil dari rata-rata semua variasi, padahal belum tentu variasi itu yang laku. Label
   Stop/Lanjut-nya bisa salah. Pilih export pesanan, atau isi **HPP sementara** kalau kamu tahu variasi

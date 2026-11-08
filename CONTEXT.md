@@ -196,7 +196,7 @@ di export pesanan (`income_order_match`).
 - Target ROAS (untung 5%) = 1 ÷ (margin − 5%); untuk Shopee dinaikkan dengan porsi batal + retur.
 - Label: Takedown, ROAS terlalu kecil, Aman, Hero (ROAS nyata ≥ target × 1,2), Data belum cukup, HPP kosong.
 - **Cek cepat**: CSV beberapa hari, tidak disimpan, boleh HPP sementara, bisa di-download sebagai .md untuk Claude.
-  Export pesanan tanggal yang sama boleh dipilih di sana (disimpan seperti Upload). Tanpa pesanan, HPP produk
+  Export pesanan tanggal yang sama boleh dipilih di sana, sekaligus dengan CSV iklan (disimpan seperti Upload). Tanpa pesanan, HPP produk
   bervariasi = rata-rata variasi dan ditandai "Belum pasti".
 
 **Simulasi Harga** — potongan per komponen: admin % × harga + XTRA 4% × harga + biaya proses tetap per
@@ -272,6 +272,7 @@ npm run build
 | (5 Nov) | Dicek dengan data asli: saat status "Pesanan diterima…" berubah jadi "Selesai", **Waktu Pesanan Selesai di export tidak berubah**. Jadi upload ulang tidak memindahkan modal ke bulan lain; `completed_at` tidak perlu dikunci. |
 | (8 Nov) | Cek cepat iklan: tombol **Download untuk Claude (.md)** (`src/lib/adsQuickExport.ts`): ringkasan + 2 tabel per produk (hasil iklan; untung & target ROAS), definisi rumus, peringatan data beberapa hari, pertanyaan pembuka. Dibuat di browser, tanpa data pembeli; berisi HPP/untung toko. Tanpa SQL. |
 | (8 Nov) | Cek cepat: tombol **Pilih export pesanan** di dalam Cek cepat kalau pesanan tanggal itu belum ada (disimpan lewat `saveOrderItems` seperti Upload, lalu `loadAdsContext` dimuat ulang). Produk tanpa pesanan yang HPP-nya rata-rata beberapa variasi ditandai (`hppAvgVariants`, dari `fallbackVariants`) dan boleh ditimpa HPP sementara; tanda juga di file .md. Tanpa SQL. |
+| (8 Nov) | Cek cepat: pemilih file menerima data iklan (.csv) + export pesanan (.xlsx) sekaligus (pesanan disimpan dulu, lalu dihitung). Peringatan pesanan kosong jadi kotak kuning berjudul; kalau pesanan sudah ada, ada tombol **Perbarui pesanan**. Tanpa SQL. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 
