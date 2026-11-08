@@ -7,6 +7,7 @@ import { RupiahInput } from '../components/pickers'
 import { AdsHowTo, adsProblem, formatPeriod, groupAdsFiles, parseAdsFiles, type ParsedAdsFile } from '../components/adsUpload'
 import { analyzeUnsavedAds, loadAdsContext, type AdsContext, type Loaded } from '../lib/adsLoad'
 import { productKey, type AdProductResult, type AdVerdict } from '../lib/adsMath'
+import { QUICK_VERDICT, buildQuickExport, formatRoas, quickExportFileName, quickProducts } from '../lib/adsQuickExport'
 import type { AdsParseResult } from '../lib/parsers/ads'
 import { formatNumber, formatPercent, formatRupiah, periodDays } from '../lib/format'
 import type { Store } from '../lib/types'
@@ -58,21 +59,32 @@ function writeTempHpp(storeId: number | undefined, value: Record<string, number>
   }
 }
 
-/** Vonis versi tes: aturannya sama dengan halaman Iklan, labelnya dibuat untuk keputusan lanjut / stop. */
-const QUICK: Record<AdVerdict, { label: string; tone: StampTone; note: string }> = {
-  hero: { label: 'Lanjut', tone: 'gain', note: 'ROAS jauh di atas target. Iklan jalan bagus.' },
-  aman: { label: 'Lanjut', tone: 'gain', note: 'ROAS sudah di atas target untung.' },
-  kurang: { label: 'Lanjut, pantau', tone: 'warn', note: 'Sudah balik modal, tapi belum mencapai target untung.' },
-  takedown: { label: 'Stop', tone: 'loss', note: 'Biaya iklan sudah lebih besar dari untung yang dihasilkan.' },
-  belum_cukup: { label: 'Belum cukup data', tone: 'neutral', note: 'Penjualannya masih terlalu sedikit untuk dinilai.' },
-  hpp_kosong: { label: 'Isi HPP', tone: 'neutral', note: 'HPP belum diisi, jadi untungnya belum bisa dihitung.' },
+/** Warna label Cek cepat; teks labelnya di QUICK_VERDICT (sama dengan file .md). */
+const TONE: Record<AdVerdict, StampTone> = {
+  hero: 'gain',
+  aman: 'gain',
+  kurang: 'warn',
+  takedown: 'loss',
+  belum_cukup: 'neutral',
+  hpp_kosong: 'neutral',
 }
-const ORDER: AdVerdict[] = ['takedown', 'kurang', 'hpp_kosong', 'belum_cukup', 'aman', 'hero']
+const QUICK = Object.fromEntries(
+  (Object.keys(TONE) as AdVerdict[]).map((k) => [k, { ...QUICK_VERDICT[k], tone: TONE[k] }]),
+) as Record<AdVerdict, { label: string; tone: StampTone; note: string }>
 
-const roas = (v: number | null | undefined) =>
-  v === null || v === undefined || !Number.isFinite(v)
-    ? '–'
-    : new Intl.NumberFormat('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v)
+const roas = formatRoas
+
+/** Unduh teks sebagai file di browser (tanpa server). */
+function downloadText(fileName: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
 
 export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose: () => void }) {
   const [state, setState] = useState<State>({ kind: 'idle' })
@@ -223,6 +235,22 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
 
               <ProductList latest={latest} previous={previous} onTempHpp={setTempHpp} />
 
+              <section className="rounded-2xl bg-tint p-4">
+                <p className="font-semibold">Mau bertanya lebih dalam ke Claude?</p>
+                <p className="mt-1 text-sm text-ink-2">
+                  Download hasil ini sebagai file .md, lalu lampirkan di chat Claude. Isinya angka per produk
+                  (termasuk HPP dan untung) beserta cara membacanya; tanpa data pembeli. HPP dan untung adalah
+                  rahasia toko, jadi bagikan hanya ke layanan yang kamu percaya.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => downloadExport(store, checked)}
+                  className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-ink px-4 font-semibold text-paper"
+                >
+                  Download untuk Claude (.md)
+                </button>
+              </section>
+
               <button type="button" onClick={reset} className={`${linkClass} min-h-11`}>
                 Cek file lain
               </button>
@@ -232,6 +260,24 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
       )}
     </Card>
   )
+}
+
+function downloadExport(store: Store | null, checked: CheckedPeriod[]) {
+  const last = checked[checked.length - 1]
+  if (!store || !last) return
+  const text = buildQuickExport({
+    storeName: store.name,
+    createdAt: new Date().toISOString(),
+    periods: checked.map((c) => ({
+      start: c.start,
+      end: c.end,
+      days: c.days,
+      analysis: c.data.analysis,
+      targets: c.data.targets,
+      hasOrders: c.data.hasOrders,
+    })),
+  })
+  downloadText(quickExportFileName(store.name, last.end), text)
 }
 
 function PeriodSummary({ period, label, compare }: { period: CheckedPeriod; label?: string; compare?: CheckedPeriod | null }) {
@@ -312,9 +358,7 @@ function ProductList({
   onTempHpp: OnTempHpp
 }) {
   const before = new Map((previous?.data.analysis.products ?? []).map((p) => [p.code, p]))
-  const products = [...latest.data.analysis.products]
-    .filter((p) => p.spend > 0)
-    .sort((a, b) => ORDER.indexOf(a.verdict) - ORDER.indexOf(b.verdict) || b.spend - a.spend)
+  const products = quickProducts(latest.data.analysis)
   if (products.length === 0) return <Alert>Belum ada produk dengan biaya iklan di periode ini.</Alert>
   return (
     <ul className="grid gap-4 md:grid-cols-2">

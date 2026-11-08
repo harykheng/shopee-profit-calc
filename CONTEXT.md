@@ -93,6 +93,7 @@ src/lib/recapMath.ts        Hitungan Rekap: perkiraan/untung pesanan, rincian om
                             untung per produk (productRows/sortProducts), diagnosa Bab 1 (recapInsights)
 src/lib/adsMath.ts          Iklan per produk, potongan asli per Kode Produk, simulasi harga, grup iklan
 src/lib/adsLoad.ts          Memuat data untuk analisis iklan (halaman Iklan, Cek cepat, bab Iklan di Rekap)
+src/lib/adsQuickExport.ts   Label Cek cepat + file .md hasil Cek cepat untuk dibagikan ke Claude
 src/lib/feeCategories.ts    Kategori biaya admin per toko
 src/lib/storeSettings.ts    Pengaturan hitungan per toko (target untung, retur)
 src/lib/trialAccounts.ts    Halaman Pengelola: password acak, tanggal bawaan (7 hari), cek isian, teks WhatsApp, status pelanggan
@@ -194,7 +195,7 @@ di export pesanan (`income_order_match`).
   sesuai kategori admin; kalau tidak ada juga → rata-rata toko; tanpa laporan → 15%.
 - Target ROAS (untung 5%) = 1 ÷ (margin − 5%); untuk Shopee dinaikkan dengan porsi batal + retur.
 - Label: Takedown, ROAS terlalu kecil, Aman, Hero (ROAS nyata ≥ target × 1,2), Data belum cukup, HPP kosong.
-- **Cek cepat**: CSV beberapa hari, tidak disimpan, boleh HPP sementara.
+- **Cek cepat**: CSV beberapa hari, tidak disimpan, boleh HPP sementara, bisa di-download sebagai .md untuk Claude.
 
 **Simulasi Harga** — potongan per komponen: admin % × harga + XTRA 4% × harga + biaya proses tetap per
 order (bawaan Rp1.250) + packaging. Saran harga dari modal (`priceLadder`), Grup iklan
@@ -267,6 +268,7 @@ npm run build
 | (3 Nov) | Status export **"Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga …"** (dana sudah bisa cair) dihitung **selesai** (`statusGroup`, `RECEIVED_STATUS_PREFIX`); tanpa Waktu Pesanan Selesai tetap `proses`. Sebelumnya uangnya masuk tapi modalnya tidak. Data lama: upload ulang export pesanan (SQL backfill di 20261005 belum mengenal status ini, jangan dijalankan ulang). Kalimat "uang cair belum ketemu pesanannya" kini menyebut langkah yang tepat (`missingOrdersAction`). Tanpa SQL. |
 | (3 Nov) | Catatan masa pengembalian: barang selesai yang statusnya masih "Pesanan diterima…hingga TGL" (`returnWindow`, `fetchReturnWindowItems`) tampil di rincian status Rekap; tidak menghalangi "Angka final". Setelah TGL lewat, Rekap + kartu pengingat (`buildReminder`, judul "hampir final") menyuruh upload ulang export pesanan bulan itu. Tanpa SQL. |
 | (5 Nov) | Dicek dengan data asli: saat status "Pesanan diterima…" berubah jadi "Selesai", **Waktu Pesanan Selesai di export tidak berubah**. Jadi upload ulang tidak memindahkan modal ke bulan lain; `completed_at` tidak perlu dikunci. |
+| (8 Nov) | Cek cepat iklan: tombol **Download untuk Claude (.md)** (`src/lib/adsQuickExport.ts`): ringkasan + tabel per produk, definisi rumus, peringatan data beberapa hari, pertanyaan pembuka. Dibuat di browser, tanpa data pembeli; berisi HPP/untung toko. Tanpa SQL. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 

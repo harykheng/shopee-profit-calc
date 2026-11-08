@@ -337,6 +337,16 @@ baru atau mengganti target ROAS.
 - Makin pendek periodenya, makin sering hasilnya **Belum cukup data**. Itu jawaban yang jujur: tunggu
   beberapa hari lagi.
 
+**Bertanya lebih dalam ke Claude.** Di bawah daftar produk ada tombol **Download untuk Claude (.md)**.
+File itu berisi ringkasan dan tabel per produk (biaya, klik, ROAS, HPP, potongan, untung, label), cara
+membaca tiap angka, peringatan bahwa data beberapa hari belum lengkap, dan beberapa pertanyaan pembuka.
+Lampirkan file itu di chat Claude, lalu tanyakan apa saja, misalnya produk mana yang perlu diubah target
+ROAS-nya.
+
+- File dibuat di browser dan **tidak disimpan** di aplikasi. Tidak ada data pembeli di dalamnya.
+- Isinya termasuk **HPP dan untung toko**. Bagikan hanya ke layanan yang kamu percaya.
+- Kalau HPP sementara diubah, download lagi supaya filenya ikut angka terbaru.
+
 ### Melihat hasil
 
 Pilih **Periode iklan**:
