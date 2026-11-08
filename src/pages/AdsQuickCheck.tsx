@@ -103,11 +103,52 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
     writeTempHpp(store?.id, next)
   }
 
+  const [ordersSave, setOrdersSave] = useState<OrdersSave>({ kind: 'idle' })
+
+  /** Baca & simpan export pesanan (sama dengan halaman Upload). Berhenti di file pertama yang gagal. */
+  const saveOrdersFiles = async (storeId: number, files: File[]): Promise<OrdersSave> => {
+    let orderCount = 0
+    for (const file of files) {
+      try {
+        const { parseOrdersFile } = await import('../lib/parsers/orders')
+        const result = parseOrdersFile(await file.arrayBuffer())
+        await saveOrderItems(storeId, result.items)
+        orderCount += result.orderCount
+      } catch (error) {
+        return { kind: 'error', fileName: file.name, error }
+      }
+    }
+    notifyDataChanged()
+    return { kind: 'saved', fileNames: files.map((f) => f.name), orderCount, stillMissing: [] }
+  }
+
+  /** Tandai periode yang masih tanpa pesanan setelah export pesanan disimpan. */
+  const withMissing = (save: OrdersSave, periods: LoadedPeriod[]): OrdersSave =>
+    save.kind === 'saved'
+      ? { ...save, stillMissing: periods.filter((p) => p.ctx.items.length === 0).map((p) => formatPeriod(p.start, p.end)) }
+      : save
+
+  // Data iklan (.csv) dan export pesanan (.xlsx) boleh dipilih sekaligus. Pesanan disimpan dulu, supaya
+  // perhitungan iklan langsung memakai variasi yang terjual dan pesanan batal.
   const onFiles = async (e: ChangeEvent<HTMLInputElement>) => {
     const list = [...(e.target.files ?? [])]
     if (list.length === 0 || !store) return
     setState({ kind: 'loading' })
-    const files = await parseAdsFiles(list)
+    const orderFiles = list.filter((f) => /\.xlsx?$/i.test(f.name))
+    const adFiles = list.filter((f) => !/\.xlsx?$/i.test(f.name))
+    const save = orderFiles.length > 0 ? await saveOrdersFiles(store.id, orderFiles) : ({ kind: 'idle' } as const)
+    setOrdersSave(save)
+    if (adFiles.length === 0) {
+      setState({
+        kind: 'done',
+        files: [],
+        periods: [],
+        problem: save.kind === 'saved' ? 'Export pesanan tersimpan. Pilih juga file data iklan (.csv) untuk tanggal yang sama.' : null,
+        error: null,
+      })
+      return
+    }
+    const files = await parseAdsFiles(adFiles)
     const groups = groupAdsFiles(files.flatMap((f) => (f.result ? [f.result] : [])))
     const problem =
       adsProblem(groups) ??
@@ -128,37 +169,37 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
         })),
       )
       setState({ kind: 'done', files, periods, problem: null, error: null })
+      setOrdersSave(withMissing(save, periods))
     } catch (error) {
       setState({ kind: 'done', files, periods: [], problem: null, error })
     }
   }
 
-  const [ordersSave, setOrdersSave] = useState<OrdersSave>({ kind: 'idle' })
-
-  // Export pesanan dipilih dari dalam Cek cepat: simpan (sama dengan halaman Upload), lalu muat ulang data toko
-  // untuk periode yang sedang dicek. File iklan tidak perlu dipilih ulang.
+  // Export pesanan dipilih setelah hasil keluar: simpan, lalu muat ulang data toko untuk periode yang sedang
+  // dicek. File iklan tidak perlu dipilih ulang.
   const onOrdersFile = async (file: File) => {
     if (!store || state.kind !== 'done') return
     const current = state
     setOrdersSave({ kind: 'saving', fileName: file.name })
+    if (!/\.xlsx?$/i.test(file.name)) {
+      setOrdersSave({
+        kind: 'error',
+        fileName: file.name,
+        error: new ParseError('Pilih file Excel (.xlsx) dari Pesanan Saya → Export, untuk tanggal yang sama dengan data iklan.'),
+      })
+      return
+    }
+    const save = await saveOrdersFiles(store.id, [file])
+    if (save.kind !== 'saved') {
+      setOrdersSave(save)
+      return
+    }
     try {
-      if (!/\.xlsx?$/i.test(file.name)) {
-        throw new ParseError('Pilih file Excel (.xlsx) dari Pesanan Saya → Export, untuk tanggal yang sama dengan data iklan.')
-      }
-      const { parseOrdersFile } = await import('../lib/parsers/orders')
-      const result = parseOrdersFile(await file.arrayBuffer())
-      await saveOrderItems(store.id, result.items)
-      notifyDataChanged()
       const periods = await Promise.all(
         current.periods.map(async (p) => ({ ...p, ctx: await loadAdsContext(store.id, p.start, p.end) })),
       )
       setState({ ...current, periods })
-      setOrdersSave({
-        kind: 'saved',
-        fileName: file.name,
-        orderCount: result.orderCount,
-        stillMissing: periods.filter((p) => p.ctx.items.length === 0).map((p) => formatPeriod(p.start, p.end)),
-      })
+      setOrdersSave(withMissing(save, periods))
     } catch (error) {
       setOrdersSave({ kind: 'error', fileName: file.name, error })
     }
@@ -210,9 +251,21 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
     >
       <p className="mb-3 text-ink-2">
         Untuk melihat apakah iklan beberapa hari terakhir jalan bagus. Download data iklan periode pendek (mis. 3 atau 7
-        hari), lalu pilih filenya di sini. Boleh <strong className="text-ink">2 periode</strong> sekaligus untuk
-        dibandingkan, mis. minggu lalu dan minggu ini. Hasilnya hilang saat halaman ditutup.
+        hari) <strong className="text-ink">dan export pesanan untuk tanggal yang sama</strong>, lalu pilih semua
+        filenya sekaligus di sini. Boleh <strong className="text-ink">2 periode</strong> untuk dibandingkan, mis.
+        minggu lalu dan minggu ini.
       </p>
+      <ul className="mb-3 list-disc space-y-1 pl-6 text-sm text-ink-2">
+        <li>
+          <strong className="text-ink">Data iklan (.csv)</strong>: dibaca saja, tidak disimpan. Hasilnya hilang saat
+          halaman ditutup.
+        </li>
+        <li>
+          <strong className="text-ink">Export pesanan (.xlsx)</strong>: Seller Centre → Pesanan Saya → Export, status{' '}
+          <strong className="text-ink">Semua</strong>. Disimpan seperti di halaman Upload (dipakai juga untuk Rekap),
+          supaya ketahuan variasi mana yang terjual. Data pembeli tidak dibaca.
+        </li>
+      </ul>
       <AdsHowTo />
 
       <label className="flex cursor-pointer flex-wrap items-center gap-4 rounded-2xl border-2 border-dashed border-control/70 bg-tint p-4 transition-colors hover:border-accent focus-within:border-accent">
@@ -221,12 +274,14 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
           Pilih file
         </span>
         <span className="min-w-0 flex-1 truncate text-ink-2">
-          {done ? `${done.files.length} file dibaca` : 'Boleh pilih beberapa file .csv sekaligus'}
+          {done
+            ? `${done.files.length} file iklan${ordersSave.kind === 'saved' ? ` + ${ordersSave.fileNames.length} pesanan` : ''}`
+            : 'Data iklan (.csv) + export pesanan (.xlsx), boleh sekaligus'}
         </span>
         <input
           key={inputKey}
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,text/csv,.xlsx,.xls"
           multiple
           className="sr-only"
           disabled={!store || state.kind === 'loading'}
@@ -234,7 +289,7 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
         />
       </label>
 
-      {state.kind === 'loading' && <Spinner label="Membaca file dan menghitung…" />}
+      {state.kind === 'loading' && <Spinner label="Membaca file, menyimpan pesanan, dan menghitung…" />}
 
       {done && (
         <div className="mt-4 space-y-4">
@@ -248,7 +303,10 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
                 </div>
               </div>
             ))}
-          {done.problem && <Alert tone="error">{done.problem}</Alert>}
+          {!latest && ordersSave.kind === 'error' && (
+            <ErrorBox error={ordersSave.error} reportFile={{ kind: 'export pesanan', fileName: ordersSave.fileName }} />
+          )}
+          {done.problem && <Alert tone={ordersSave.kind === 'saved' && done.files.length === 0 ? 'info' : 'error'}>{done.problem}</Alert>}
           {done.error ? <ErrorBox error={done.error} /> : null}
 
           {latest && (
@@ -314,19 +372,25 @@ function downloadExport(store: Store | null, checked: CheckedPeriod[]) {
 type OrdersSave =
   | { kind: 'idle' }
   | { kind: 'saving'; fileName: string }
-  | { kind: 'saved'; fileName: string; orderCount: number; stillMissing: string[] }
+  | { kind: 'saved'; fileNames: string[]; orderCount: number; stillMissing: string[] }
   | { kind: 'error'; fileName: string; error: unknown }
 
-/** Ajakan memilih export pesanan untuk tanggal yang dicek kalau pesanannya belum ada; setelah tersimpan, hasilnya. */
+/**
+ * Status pesanan untuk tanggal yang dicek: peringatan + tombol kalau belum ada, hasil simpan, dan tombol untuk
+ * memperbarui pesanan (mis. pesanan hari terakhir belum ikut).
+ */
 function OrdersBox({ checked, save, onFile }: { checked: CheckedPeriod[]; save: OrdersSave; onFile: (file: File) => void }) {
   const [inputKey, setInputKey] = useState(0)
   const missing = checked.filter((c) => !c.data.hasOrders)
-  if (missing.length === 0 && save.kind === 'idle') return null
 
-  const picker = (
-    <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-ink px-4 font-semibold text-paper focus-within:outline focus-within:outline-2 focus-within:outline-accent">
+  const picker = (label: string, primary: boolean) => (
+    <label
+      className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-4 font-semibold focus-within:outline focus-within:outline-2 focus-within:outline-accent ${
+        primary ? 'bg-ink text-paper' : 'bg-paper text-ink ring-1 ring-line hover:ring-accent'
+      }`}
+    >
       <IconUpload size={18} />
-      {save.kind === 'saved' ? 'Pilih export pesanan lain' : 'Pilih export pesanan'}
+      {label}
       <input
         key={inputKey}
         type="file"
@@ -346,21 +410,30 @@ function OrdersBox({ checked, save, onFile }: { checked: CheckedPeriod[]; save: 
     <div className="space-y-3">
       {save.kind === 'saved' && (
         <Alert tone={save.stillMissing.length > 0 ? 'warning' : 'success'} title="Export pesanan tersimpan">
-          {formatNumber(save.orderCount)} pesanan dari {save.fileName} disimpan, hasil di bawah sudah dihitung ulang.
+          {formatNumber(save.orderCount)} pesanan dari {save.fileNames.join(', ')} disimpan; hasil di bawah sudah
+          memakainya.
           {save.stillMissing.length > 0 &&
             ` Tapi tidak ada pesanan yang dibuat pada ${save.stillMissing.join(' dan ')}. Pastikan tanggal export pesanan sama dengan data iklan.`}
         </Alert>
       )}
-      {missing.length > 0 && (
-        <Alert tone="info">
-          Export pesanan {missing.length > 1 ? 'untuk kedua periode' : `untuk ${formatPeriod(missing[0].start, missing[0].end)}`}{' '}
-          belum di-upload, jadi aplikasi belum tahu <strong>variasi mana yang terjual</strong> dan pesanan batal
-          belum dikurangi. Pilih export pesanan Shopee dengan tanggal yang sama supaya HPP dan label Lanjut/Stop pasti.
-          <span className="mt-1 block text-sm">
-            Pesanan disimpan seperti di halaman Upload (dipakai juga untuk Rekap). Data pembeli tidak dibaca.
-          </span>
-          <div>{picker}</div>
+      {missing.length > 0 ? (
+        <Alert tone="warning" title="Pesanan tanggal ini belum ada, label Stop/Lanjut belum pasti">
+          <p>
+            Export pesanan{' '}
+            {missing.length > 1 ? 'untuk kedua periode' : `untuk ${formatPeriod(missing[0].start, missing[0].end)}`} belum
+            di-upload, jadi aplikasi belum tahu <strong>variasi mana yang terjual</strong> dan pesanan batal belum
+            dikurangi. Produk dengan beberapa variasi bisa keliru jadi Stop.
+          </p>
+          <p className="mt-1">Pilih export pesanan Shopee (status Semua) dengan tanggal yang sama.</p>
+          <div className="mt-3">{picker('Pilih export pesanan', true)}</div>
         </Alert>
+      ) : (
+        <div className="flex flex-col items-start gap-3 rounded-2xl bg-tint p-4 text-sm text-ink-2 sm:flex-row sm:items-center">
+          <p className="min-w-0 flex-1">
+            Pesanan untuk tanggal ini sudah ada. Kalau pesanan hari terakhir belum ikut, pilih export pesanan terbaru.
+          </p>
+          {picker('Perbarui pesanan', false)}
+        </div>
       )}
       {save.kind === 'saving' && <Spinner label="Menyimpan pesanan dan menghitung ulang…" />}
       {save.kind === 'error' && (
@@ -497,6 +570,12 @@ function ProductRow({
         />
         <Metric label="Balik modal butuh ROAS" value={p.bepRoas !== null ? roas(p.bepRoas) : p.unitProfit === null ? '–' : 'tidak mungkin'} />
       </dl>
+      {p.hppAvgVariants > 1 && (
+        <p className="mt-3 rounded-xl border border-sun bg-sun-tint p-3 text-sm text-ink">
+          <strong>Belum pasti.</strong> HPP = rata-rata {p.hppAvgVariants} variasi, karena pesanan tanggal ini belum
+          ada; belum tentu variasi yang terjual. Pilih export pesanan di atas, atau isi HPP sementara.
+        </p>
+      )}
       {needsHpp && (
         <div className="mt-3 rounded-xl bg-tint p-3">
           <p className="mb-1.5 text-sm font-semibold">HPP sementara per barang</p>
@@ -513,12 +592,6 @@ function ProductRow({
                 : 'Produk ini belum punya HPP. Isi perkiraan modal per barang untuk melihat Lanjut/Stop. Tidak disimpan ke halaman HPP.'}
           </p>
         </div>
-      )}
-      {p.hppAvgVariants > 1 && (
-        <p className="mt-3 rounded-xl bg-warn/10 p-3 text-sm text-ink">
-          <strong>Belum pasti.</strong> HPP = rata-rata {p.hppAvgVariants} variasi, karena pesanan tanggal ini belum
-          ada; belum tentu variasi yang terjual. Pilih export pesanan di atas, atau isi HPP sementara.
-        </p>
       )}
       <p className="mt-3 text-sm text-ink-2">{p.hppTemp && p.verdict !== 'hpp_kosong' ? `${v.note} (pakai HPP sementara)` : v.note}</p>
     </li>
