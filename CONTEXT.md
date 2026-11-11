@@ -6,7 +6,7 @@ dulu sebelum mengubah kode. Untuk **pemakai aplikasi**: [PANDUAN.md](PANDUAN.md)
 toko, pantau error): [OPERASI.md](OPERASI.md). Fakta produk: [PRODUCT.md](PRODUCT.md). Sistem desain:
 [DESIGN.md](DESIGN.md).
 
-Terakhir diperbarui: 26 Oktober 2026 (halaman Pengelola).
+Terakhir diperbarui: 11 November 2026 (link uji coba).
 
 ---
 
@@ -22,9 +22,10 @@ produk**, iklan mana yang rugi, dan harga/target ROAS yang masih untung. Satu ko
    langganan per toko (`stores.active_until`). Toko yang langganannya habis = **baca saja**.
 
 Pemakai **bukan orang teknis**, terutama di **laptop**; HP/iPad harus tetap jalan. Pengelola membuat
-akun uji coba di halaman **Pengelola** (`#/pengelola`, hanya akun di `platform_admins`), memperpanjang
-langganan lewat SQL, dan jadi kontak bantuan (WhatsApp, `VITE_SUPPORT_WA`). Tidak ada daftar sendiri,
-pembayaran, atau reset password mandiri: "Lupa password?" membuka WhatsApp, lalu pengelola menjalankan
+**link uji coba** di halaman **Pengelola** (`#/pengelola`, hanya akun di `platform_admins`); calon pelanggan
+yang membuka link (`#/coba?kode=…`) membuat akun uji cobanya sendiri (email + password). Akun berlangganan
+tetap dibuat pengelola. Pengelola juga memperpanjang langganan dan jadi kontak bantuan (WhatsApp,
+`VITE_SUPPORT_WA`). Tidak ada daftar tanpa link, pembayaran, atau reset password mandiri: "Lupa password?" membuka WhatsApp, lalu pengelola menjalankan
 `admin_reset_password` (OPERASI.md). Password asli tidak pernah bisa dibaca (hanya hash bcrypt).
 
 Pertanyaan yang dijawab:
@@ -55,6 +56,8 @@ Untung bersih = Uang masuk dari Shopee (dana dilepas + penyesuaian) − Modal (q
   (`is_platform_admin()`); halaman itu menampilkan data akun (email, tanggal, login terakhir), **tidak
   pernah** isi toko pelanggan. Fungsi `security definer` baru yang bisa dipanggil aplikasi harus
   ditambahkan ke daftar pengecualian dan diuji di `uji-pemisahan-toko.sql` + `check-tenant-isolation.mjs`.
+  Satu-satunya pintu **tanpa login** yang membuat data: `claim_trial_link` (hanya dengan kode link yang
+  benar, kuota & masa berlaku dicek di database, toko yang dibuat selalu uji coba).
 - **Perubahan database** hanya lewat file SQL **baru** di `supabase/migrations/` (aman diulang, tidak
   menghapus data). Pemilik menjalankannya **manual** di SQL Editor Supabase, jadi setiap fitur yang
   butuh SQL **harus disebutkan jelas**, termasuk urutannya terhadap deploy, dan dicatat di README.
@@ -96,12 +99,13 @@ src/lib/adsLoad.ts          Memuat data untuk analisis iklan (halaman Iklan, Cek
 src/lib/adsQuickExport.ts   Label Cek cepat + file .md hasil Cek cepat untuk dibagikan ke Claude
 src/lib/feeCategories.ts    Kategori biaya admin per toko
 src/lib/storeSettings.ts    Pengaturan hitungan per toko (target untung, retur)
+src/lib/trialLinks.ts       Link uji coba: alamat #/coba?kode=…, cek isian daftar, teks undangan, ringkasan link
 src/lib/trialAccounts.ts    Halaman Pengelola: password acak, tanggal bawaan (7 hari), cek isian, teks WhatsApp, status pelanggan
 src/lib/trialLimits.ts      Batas uji coba: bulan yang diisi upload, cek 1 bulan, kunci jatah simulasi per produk, pesan
 src/components/trialSim.tsx Hook jatah simulasi uji coba (Satu produk & Grup iklan) + pesan jatah habis
 src/lib/errors.ts           Pesan error ramah + petunjuk migration yang belum dijalankan (untuk pengelola)
 src/lib/format.ts           Format Rupiah/angka/bulan (formatRupiahShort = "Rp2,78 juta", dibulatkan ke bawah)
-src/pages/                  Login, Upload, HPP, Biaya, Rekap, Iklan (+ AdsQuickCheck), Simulasi (+ AdGroupSim), Akun, Pengelola (OperatorPage)
+src/pages/                  Login, Daftar (SignupPage, dari link uji coba), Upload, HPP, Biaya, Rekap, Iklan (+ AdsQuickCheck), Simulasi (+ AdGroupSim), Akun, Pengelola (OperatorPage)
 src/components/             ui.tsx, pickers.tsx, icons.tsx, motion.tsx, adsUpload.tsx, MonthlyReminder.tsx
 tests/                      Test Vitest; *.local.test.ts memakai file asli di sample-data/ (dilewati kalau tidak ada)
 ```
@@ -129,6 +133,7 @@ Migration (jalankan berurutan; file baru ditandai):
 | **`20261021000000_income_per_order_views.sql`** | View `order_item_income`, `income_order_match`, `income_product_monthly`; kolom baru di `product_monthly_recap` |
 | **`20261022000000_income_monthly_breakdown.sql`** | View `income_monthly_breakdown` (Bab 2 Rekap dari omzet) |
 | **`20261023000000_admin_reset_password.sql`** | Fungsi admin `admin_reset_password(email, password)` untuk SQL Editor: ganti password (bcrypt), hapus penanda `password_changed` supaya banner muncul lagi, keluarkan semua sesi. Tidak dipakai aplikasi |
+| **`20261111000000_trial_links.sql`** | Tabel `trial_links` (hanya hash SHA-256 kode, kuota 1–1000, berlaku 1–90 hari, bisa dimatikan; tanpa hak untuk aplikasi), `stores.trial_link_id`. Isi `platform_create_trial` dipindah ke `create_store_account` (internal, tertutup; `platform_create_trial` 4 parameter = cek pengelola + panggil itu, perilaku sama). Pengelola: `platform_create_trial_link`, `platform_list_trial_links`, `platform_revoke_trial_link`. **Tanpa login**: `trial_link_status(kode)` dan `claim_trial_link(kode, email, password)` (kunci baris link, toko uji coba 7 hari WIB, `name_pending`, `password_changed`). Jalankan **sebelum** deploy |
 | **`20261103000000_trial_simulation_10.sql`** | `trial_simulation_limit()` = **10** (sebelumnya 50). Jalankan sebelum/bersamaan deploy |
 | **`20261102000000_trial_simulation_bonus.sql`** | `stores.trial_sim_bonus`; `use_trial_simulation` memakai batas 50 + bonus toko; `platform_add_trial_simulations(id, n)` (pengelola, 1–1000, menumpuk) dan `platform_trial_simulation_usage()` (pemakaian per toko uji coba). Boleh sebelum/sesudah deploy |
 | **`20261101000000_platform_reset_password.sql`** | `platform_reset_password(email, password)`: hanya pengelola, hanya akun yang anggota toko, **menolak akun pengelola** (supaya tidak bisa saling ambil alih); memanggil `admin_reset_password`. Tombol **Reset password** di Pelanggan. Boleh sebelum/sesudah deploy |
@@ -214,7 +219,7 @@ order (bawaan Rp1.250) + packaging. Saran harga dari modal (`priceLadder`), Grup
 | HPP | Isi HPP per produk/variasi; filter yang belum diisi. |
 | Biaya | Iklan Shopee, Meta Ads, packaging, lain-lain per bulan. |
 | Akun | Ganti password, pengaturan hitungan per toko, data saya. |
-| Pelanggan / Buat akun | Hanya pengelola (`#/pelanggan` = halaman awal pengelola, `#/pengelola` = Buat akun). Pelanggan: semua toko dikelompokkan Uji coba / Berlangganan / Berakhir, email pemilik, sisa hari, login terakhir; tanpa isi toko. Buat akun: uji coba 7 hari atau langsung berlangganan (1 bulan / 1 tahun), nama toko boleh kosong (diisi pemilik), teks siap kirim WhatsApp. Pengelola tanpa toko hanya melihat 2 menu ini. |
+| Pelanggan / Buat akun | Hanya pengelola (`#/pelanggan` = halaman awal pengelola, `#/pengelola` = Buat akun). Pelanggan: semua toko dikelompokkan Uji coba / Berlangganan / Berakhir, email pemilik, sisa hari, login terakhir; tanpa isi toko. Buat akun: **link uji coba** (1/10/50 orang, berlaku 7/30 hari, teks siap kirim, daftar link aktif + Matikan) dan akun **berlangganan** (1 bulan / 1 tahun, nama toko boleh kosong, teks login siap kirim). Halaman daftar `#/coba?kode=…` tampil tanpa login (`SignupPage`, sebelum cek sesi di App). Pengelola tanpa toko hanya melihat 2 menu ini. |
 
 ## 8. Desain
 
@@ -265,6 +270,7 @@ npm run build
 | (31 Okt) | Pelanggan: tombol **Jadikan berlangganan** di toko uji coba (1 bulan / 1 tahun / tanggal, mulai hari ini) dan **Perpanjang** di toko berlangganan (lanjut dari tanggal berakhir kalau masih aktif, `extendedEnd`). SQL 20261031 dipakai keduanya. `Modal` kini lewat portal ke body (lapisan gelap menutup seluruh layar). |
 | (1 Nov) | Pelanggan: tombol **Reset password** (password acak + teks WhatsApp; akun pengelola ditolak). SQL 20261101. |
 | (2 Nov) | Pelanggan: pemakaian simulasi tiap toko uji coba + tombol **Tambah jatah simulasi** (per toko). SQL 20261102. |
+| (11 Nov) | Uji coba lewat **link**: pengelola menekan Buat link, calon pelanggan daftar sendiri (email + password sendiri, tanpa banner ganti password) dan langsung masuk ke Rekap. Form uji coba manual dihapus; akun berlangganan tetap dibuat pengelola. Email tidak diverifikasi (sama seperti sebelumnya). SQL 20261111. |
 | (3 Nov) | Uji coba diubah pemilik: **7 hari** (bawaan form, `DEFAULT_TRIAL_DAYS`), data tetap 1 bulan, Simulasi **10 produk**. SQL 20261103. |
 | (3 Nov) | Pratinjau tautan (Open Graph) untuk deploy HitungCuan: `public/og/hitungcuan.png` (sumber `scripts/og/`, `npm run og`), meta tag dari `shareMeta()` di vite.config.ts, alamat dari `VITE_SITE_URL` (default app.studioharel.id). Tanpa SQL. |
 | (3 Nov) | Status export **"Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga …"** (dana sudah bisa cair) dihitung **selesai** (`statusGroup`, `RECEIVED_STATUS_PREFIX`); tanpa Waktu Pesanan Selesai tetap `proses`. Sebelumnya uangnya masuk tapi modalnya tidak. Data lama: upload ulang export pesanan (SQL backfill di 20261005 belum mengenal status ini, jangan dijalankan ulang). Kalimat "uang cair belum ketemu pesanannya" kini menyebut langkah yang tepat (`missingOrdersAction`). Tanpa SQL. |

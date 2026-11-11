@@ -8,6 +8,7 @@ import { supabase } from './supabase'
 import { addMonths, monthEnd, wibDay } from './format'
 import { MAX_SHIFT_DAYS } from './monthStatus'
 import type { CustomerRow, TrialForm } from './trialAccounts'
+import { toLinkState, type TrialLinkRow, type TrialLinkState } from './trialLinks'
 import type { AdSource } from './shopeeColumns'
 import type {
   AdReport,
@@ -752,30 +753,9 @@ export async function fetchIsPlatformAdmin(): Promise<boolean> {
   return !error && data === true
 }
 
-/** Buat akun uji coba: akun login + toko + masa aktif. Database menolak kalau bukan pengelola. */
-export async function createTrialAccount(
-  form: TrialForm,
-  askName = false,
-): Promise<{ user_id: string; store_id: number; name_pending?: boolean }> {
-  const args = {
-    p_email: form.email,
-    p_password: form.password,
-    p_store_name: form.storeName,
-    p_active_until: form.activeUntil,
-  }
-  if (askName) {
-    const res = await supabase.rpc('platform_create_trial', { ...args, p_ask_name: true })
-    // Tanpa SQL 20261029 versi 5 parameter belum ada: buat akun seperti dulu (nama dari email).
-    if (!res.error || !/p_ask_name|could not find the function/i.test(errorTextOf(res.error))) {
-      return check(res) as { user_id: string; store_id: number; name_pending?: boolean }
-    }
-  }
-  return check(await supabase.rpc('platform_create_trial', args)) as { user_id: string; store_id: number }
-}
-
 /**
- * Buat akun dari halaman Pengelola: uji coba atau langsung berlangganan (SQL 20261030).
- * Tanpa SQL itu, akun uji coba tetap bisa dibuat lewat cara lama; akun berlangganan tidak.
+ * Buat akun dari halaman Pengelola (SQL 20261030). Halaman sekarang hanya membuat akun berlangganan; akun uji coba
+ * dibuat calon pelanggan sendiri lewat link uji coba.
  */
 export async function createAccount(
   form: TrialForm,
@@ -789,10 +769,38 @@ export async function createAccount(
     p_ask_name: opts.askName,
     p_trial: opts.trial,
   })
-  if (res.error && opts.trial && /platform_create_account|could not find the function/i.test(errorTextOf(res.error))) {
-    return createTrialAccount(form, opts.askName)
-  }
   return check(res) as { user_id: string; store_id: number }
+}
+
+/** Pengelola: buat link uji coba (SQL 20261111). Kode link hanya dikembalikan sekali ini. */
+export async function createTrialLink(maxUses: number, validDays: number): Promise<{ token: string; expires_at: string }> {
+  return check(await supabase.rpc('platform_create_trial_link', { p_max_uses: maxUses, p_valid_days: validDays })) as {
+    token: string
+    expires_at: string
+  }
+}
+
+/** Pengelola: link uji coba yang masih bisa dipakai (tanpa kodenya). */
+export async function fetchTrialLinks(): Promise<TrialLinkRow[]> {
+  const rows = check(await supabase.rpc('platform_list_trial_links')) as TrialLinkRow[] | null
+  return (rows ?? []).map((r) => ({ ...r, id: Number(r.id), max_uses: Number(r.max_uses), used_count: Number(r.used_count) }))
+}
+
+/** Pengelola: matikan link uji coba (orang yang sudah daftar tetap bisa memakai akunnya). */
+export async function revokeTrialLink(id: number): Promise<void> {
+  check(await supabase.rpc('platform_revoke_trial_link', { p_id: id }))
+}
+
+/** Tanpa login: link masih bisa dipakai? */
+export async function fetchTrialLinkState(token: string): Promise<TrialLinkState> {
+  return toLinkState(check(await supabase.rpc('trial_link_status', { p_token: token })))
+}
+
+/** Tanpa login: buat akun uji coba dari link. Database menolak kode yang salah, kedaluwarsa, atau habis. */
+export async function claimTrialLink(token: string, email: string, password: string): Promise<{ email: string; active_until: string }> {
+  return check(
+    await supabase.rpc('claim_trial_link', { p_token: token, p_email: email.trim().toLowerCase(), p_password: password }),
+  ) as { email: string; active_until: string }
 }
 
 /** Pengelola: jadikan toko uji coba berlangganan sampai tanggal itu (SQL 20261031). */

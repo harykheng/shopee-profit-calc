@@ -9,7 +9,7 @@ import { MIN_PASSWORD_LENGTH } from './password'
 import { subscriptionStatus, wibToday } from './subscription'
 import { formatDate } from './format'
 
-/** Lama uji coba bawaan (hari), sama dengan janji di landing ("Gratis 7 hari") dan OPERASI.md. */
+/** Lama uji coba bawaan (hari), sama dengan janji di landing ("Gratis 7 hari") dan OPERASI.md. Ubah juga claim_trial_link (SQL). */
 export const DEFAULT_TRIAL_DAYS = 7
 
 /** Huruf & angka yang tidak mirip satu sama lain (tanpa 0/O, 1/l/I), supaya mudah diketik dari WhatsApp. */

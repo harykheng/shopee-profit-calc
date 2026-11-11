@@ -13,6 +13,8 @@ import { fetchIsPlatformAdmin, fetchStores } from './lib/api'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import type { Store } from './lib/types'
 import { LoginPage } from './pages/LoginPage'
+import { SignupPage } from './pages/SignupPage'
+import { signupCodeFromHash } from './lib/trialLinks'
 import { UploadPage } from './pages/UploadPage'
 import { HppPage } from './pages/HppPage'
 import { ExpensesPage } from './pages/ExpensesPage'
@@ -103,6 +105,14 @@ function saveStoreId(id: number) {
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  // Kode link uji coba (#/coba?kode=…); null = bukan halaman daftar.
+  const [signupCode, setSignupCode] = useState(() => signupCodeFromHash(window.location.hash))
+
+  useEffect(() => {
+    const onHash = () => setSignupCode(signupCodeFromHash(window.location.hash))
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -124,6 +134,19 @@ export default function App() {
     )
   }
   if (!authReady) return <Spinner />
+  if (signupCode !== null) {
+    return (
+      <SignupPage
+        code={signupCode}
+        session={session}
+        onFinished={() => {
+          // Akun baru langsung dibawa ke Rekap (panduan langkah pertama untuk toko yang belum punya data).
+          window.history.replaceState(null, '', '#/rekap')
+          setSignupCode(null)
+        }}
+      />
+    )
+  }
   if (!session) return <LoginPage />
   return <MainApp user={session.user} />
 }

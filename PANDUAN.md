@@ -711,6 +711,12 @@ disimpan**. File dibaca langsung di browser.
 
 Buka lewat ikon orang di pojok kanan atas.
 
+**Daftar uji coba lewat link.** Kalau kamu menerima link uji coba dari pengelola, buka link itu, isi
+**email** dan **buat password** sendiri, lalu tekan **Mulai uji coba 7 hari**. Akunmu langsung jadi dan
+aplikasi langsung terbuka. Simpan password-nya: dipakai untuk masuk lagi nanti (di perangkat lain juga).
+Kalau muncul "link tidak berlaku" atau "kuota habis", minta link baru ke pengelola. Email yang sudah
+punya akun tidak bisa daftar lagi; pakai **Masuk**.
+
 **Login pertama: nama toko.** Kalau akunmu dibuat tanpa nama toko, aplikasi menanyakan **nama tokomu di
 Shopee** saat pertama login. Tulis persis seperti di Seller Centre: nama ini dicocokkan dengan laporan
 yang kamu upload. Hanya bisa diisi sekali; kalau salah, hubungi admin.
