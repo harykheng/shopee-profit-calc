@@ -4,7 +4,10 @@ import { IconCopy, IconWhatsApp } from '../components/icons'
 import {
   addTrialSimulations,
   createAccount,
+  createTrialLink,
   fetchCustomers,
+  fetchTrialLinks,
+  revokeTrialLink,
   fetchTrialSimUsage,
   resetCustomerPassword,
   subscribeStore,
@@ -15,13 +18,20 @@ import { adminHint, friendlyError } from '../lib/errors'
 import { formatDate } from '../lib/format'
 import { MIN_PASSWORD_LENGTH } from '../lib/password'
 import { TRIAL_MONTH_LIMIT, TRIAL_SIMULATION_LIMIT } from '../lib/trialLimits'
+import {
+  LINK_DAY_OPTIONS,
+  LINK_USE_OPTIONS,
+  linkInviteMessage,
+  linkSummary,
+  signupUrl,
+  type TrialLinkRow,
+} from '../lib/trialLinks'
 import { wibToday } from '../lib/subscription'
 import {
   DEFAULT_TRIAL_DAYS,
   countByGroup,
   customerGroup,
   customerStatus,
-  defaultTrialEnd,
   generatePassword,
   resetPasswordMessage,
   lastLoginLabel,
@@ -128,37 +138,184 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
   )
 }
 
-/** Formulir buat akun: uji coba atau langsung berlangganan. */
+/** Buat akun: link uji coba (calon pelanggan daftar sendiri) dan akun yang langsung berlangganan. */
 export function OperatorPage({ showTabs }: { showTabs: boolean }) {
   return (
     <>
-      <PageTitle subtitle="Buat akun uji coba atau akun yang langsung berlangganan. Teks login siap dikirim lewat WhatsApp.">
+      <PageTitle subtitle="Uji coba: buat link, kirim ke calon pelanggan, mereka daftar sendiri. Pelanggan yang sudah membayar: buatkan akun berlangganan.">
         Buat akun
       </PageTitle>
       {showTabs && <OperatorTabs current="pengelola" />}
-      <CreateTrialCard />
+      <TrialLinkCard />
+      <CreatePaidCard />
     </>
   )
 }
 
-type AccountKind = 'trial' | 'paid'
+/** Pilihan berbentuk pil (satu yang aktif). */
+function PillChoice<T extends number>({
+  label,
+  options,
+  value,
+  onChange,
+  format,
+}: {
+  label: string
+  options: readonly T[]
+  value: T
+  onChange: (v: T) => void
+  format: (v: T) => string
+}) {
+  return (
+    <fieldset className="mt-4">
+      <legend className="font-semibold">{label}</legend>
+      <div className="mt-1.5 flex flex-wrap gap-2">
+        {options.map((o) => (
+          <button
+            key={o}
+            type="button"
+            aria-pressed={value === o}
+            onClick={() => onChange(o)}
+            className={`min-h-11 rounded-full border-2 px-4 font-semibold transition-colors ${
+              value === o ? 'border-ink bg-ink text-paper' : 'border-control bg-paper text-ink hover:border-ink'
+            }`}
+          >
+            {format(o)}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
 
-function CreateTrialCard() {
-  const [kind, setKindState] = useState<AccountKind>('trial')
+/**
+ * Link uji coba: satu tombol, lalu teks siap kirim. Orang yang membuka link membuat akun uji coba
+ * {DEFAULT_TRIAL_DAYS} hari sendiri (email + password miliknya) dan langsung masuk ke aplikasi.
+ */
+function TrialLinkCard() {
+  const [maxUses, setMaxUses] = useState<(typeof LINK_USE_OPTIONS)[number]>(1)
+  const [days, setDays] = useState<(typeof LINK_DAY_OPTIONS)[number]>(7)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [created, setCreated] = useState<string | null>(null)
+  const [links, setLinks] = useState<TrialLinkRow[] | null>(null)
+  const [revoking, setRevoking] = useState<number | null>(null)
+
+  const load = useCallback(() => {
+    // Daftar link hanya pelengkap: kalau gagal (mis. SQL belum dijalankan), tombol Buat link tetap tampil.
+    fetchTrialLinks().then(setLinks, () => setLinks(null))
+  }, [])
+  useEffect(load, [load])
+
+  const create = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const link = await createTrialLink(maxUses, days)
+      setCreated(linkInviteMessage({ appName: APP_NAME, url: signupUrl(window.location.origin, link.token) }))
+      load()
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const revoke = async (id: number) => {
+    setRevoking(id)
+    setError(null)
+    try {
+      await revokeTrialLink(id)
+      load()
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setRevoking(null)
+    }
+  }
+
+  return (
+    <Card title="Link uji coba" className="mb-8 max-w-xl">
+      {created ? (
+        <>
+          <Alert tone="success" title="Link sudah jadi.">
+            Kirim teks di bawah. Link ini hanya tampil sekarang; kalau hilang, buat link baru.
+          </Alert>
+          <ShareMessage message={created} />
+          <Button variant="secondary" onClick={() => setCreated(null)} className="mt-6">
+            Buat link lain
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="text-ink-2">
+            Yang membuka link mengisi email dan password sendiri, lalu langsung masuk. Akunnya uji coba{' '}
+            {DEFAULT_TRIAL_DAYS} hari dengan batas uji coba (data {TRIAL_MONTH_LIMIT} bulan, Simulasi Harga{' '}
+            {TRIAL_SIMULATION_LIMIT} produk, tanpa Cek cepat iklan); nama toko diisi pemiliknya saat pertama masuk.
+          </p>
+          <PillChoice
+            label="Bisa dipakai"
+            options={LINK_USE_OPTIONS}
+            value={maxUses}
+            onChange={setMaxUses}
+            format={(n) => (n === 1 ? '1 orang' : `${n} orang`)}
+          />
+          <span className="mt-1 block text-sm text-ink-3">
+            1 orang untuk dikirim langsung lewat chat. Lebih dari itu untuk grup atau postingan.
+          </span>
+          <PillChoice
+            label="Link berlaku"
+            options={LINK_DAY_OPTIONS}
+            value={days}
+            onChange={setDays}
+            format={(n) => `${n} hari`}
+          />
+          <Button onClick={create} disabled={busy} className="mt-6">
+            {busy ? 'Membuat link…' : 'Buat link uji coba'}
+          </Button>
+        </>
+      )}
+
+      {error && (
+        <div className="mt-4">
+          <Alert tone="error">{error}</Alert>
+        </div>
+      )}
+
+      {links && links.length > 0 && (
+        <div className="mt-8 border-t border-line pt-6">
+          <h3 className="font-semibold">Link yang masih aktif</h3>
+          <ul className="mt-2 divide-y divide-line">
+            {links.map((l) => (
+              <li key={l.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
+                <span className="text-ink-2">
+                  {linkSummary(l)}
+                  <span className="text-ink-3"> · dibuat {formatDate(l.created_at)}</span>
+                </span>
+                <Button variant="secondary" onClick={() => revoke(l.id)} disabled={revoking !== null}>
+                  {revoking === l.id ? 'Mematikan…' : 'Matikan'}
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-sm text-ink-3">
+            Mematikan link tidak menghapus akun yang sudah daftar lewat link itu.
+          </p>
+        </div>
+      )}
+    </Card>
+  )
+}
+
+/** Akun yang langsung berlangganan (pelanggan yang sudah membayar). */
+function CreatePaidCard() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState(() => generatePassword())
   const [storeName, setStoreName] = useState('')
-  const [activeUntil, setActiveUntil] = useState(() => defaultTrialEnd())
+  const [activeUntil, setActiveUntil] = useState(() => paidEnd(1))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<{ email: string; message: string } | null>(null)
-  const trial = kind === 'trial'
-
-  const setKind = (k: AccountKind) => {
-    setKindState(k)
-    setActiveUntil(k === 'trial' ? defaultTrialEnd() : paidEnd(1))
-    setError(null)
-  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -169,7 +326,7 @@ function CreateTrialCard() {
     const clean = normalizeTrialForm(form)
     setBusy(true)
     try {
-      await createAccount(clean, { askName: asksStoreName(form), trial })
+      await createAccount(clean, { askName: asksStoreName(form), trial: false })
       setCreated({
         email: clean.email,
         message: welcomeMessage({
@@ -178,7 +335,7 @@ function CreateTrialCard() {
           email: clean.email,
           password: clean.password,
           activeUntil: clean.activeUntil,
-          trial,
+          trial: false,
         }),
       })
     } catch (err) {
@@ -193,7 +350,7 @@ function CreateTrialCard() {
     setEmail('')
     setStoreName('')
     setPassword(generatePassword())
-    setActiveUntil(trial ? defaultTrialEnd() : paidEnd(1))
+    setActiveUntil(paidEnd(1))
     setError(null)
   }
 
@@ -206,37 +363,9 @@ function CreateTrialCard() {
   }
 
   return (
-    <Card className="mb-8 max-w-xl">
+    <Card title="Akun berlangganan" className="mb-8 max-w-xl">
+      <p className="text-ink-2">Tanpa batas uji coba. Pakai untuk pelanggan yang sudah membayar.</p>
       <form onSubmit={submit} noValidate>
-        <fieldset>
-          <legend className="font-semibold">Jenis akun</legend>
-          <div className="mt-1.5 flex w-fit max-w-full flex-wrap gap-1 rounded-full bg-tint p-1 ring-1 ring-line">
-            {(
-              [
-                ['trial', `Uji coba ${DEFAULT_TRIAL_DAYS} hari`],
-                ['paid', 'Langsung berlangganan'],
-              ] as const
-            ).map(([k, label]) => (
-              <button
-                key={k}
-                type="button"
-                aria-pressed={kind === k}
-                onClick={() => setKind(k)}
-                className={`min-h-11 rounded-full px-4 font-semibold transition-colors ${
-                  kind === k ? 'bg-ink text-paper' : 'text-ink-2 hover:text-ink'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <span className="mt-1 block text-sm text-ink-3">
-            {trial
-              ? `Dengan batas uji coba: data ${TRIAL_MONTH_LIMIT} bulan, Simulasi Harga ${TRIAL_SIMULATION_LIMIT} produk, tanpa Cek cepat iklan.`
-              : 'Tanpa batas uji coba. Pakai untuk pelanggan yang sudah membayar.'}
-          </span>
-        </fieldset>
-
         <label className="mt-4 block font-semibold">
           Email
           <input
@@ -293,7 +422,7 @@ function CreateTrialCard() {
         </label>
 
         <label className="mt-4 block font-semibold">
-          Bisa dipakai sampai
+          Berlangganan sampai
           <input
             type="date"
             value={activeUntil}
@@ -302,37 +431,35 @@ function CreateTrialCard() {
             className={`mt-1.5 font-normal ${inputClass}`}
           />
           <span className="mt-1 block text-sm font-normal text-ink-3">
-            {trial ? `Bawaan ${DEFAULT_TRIAL_DAYS} hari, hari ini ikut dihitung.` : 'Hari ini ikut dihitung.'} Setelah
-            tanggal ini tokonya jadi baca saja: data tetap bisa dilihat, upload dan perubahan dimatikan.
+            Hari ini ikut dihitung. Setelah tanggal ini tokonya jadi baca saja: data tetap bisa dilihat, upload dan
+            perubahan dimatikan.
           </span>
         </label>
-        {!trial && (
-          <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Lama berlangganan">
-            {(
-              [
-                [1, '1 bulan'],
-                [12, '1 tahun'],
-              ] as const
-            ).map(([months, label]) => (
-              <button
-                key={months}
-                type="button"
-                aria-pressed={activeUntil === paidEnd(months)}
-                onClick={() => setActiveUntil(paidEnd(months))}
-                className={`min-h-11 rounded-full border-2 px-4 font-semibold transition-colors ${
-                  activeUntil === paidEnd(months)
-                    ? 'border-ink bg-ink text-paper'
-                    : 'border-control bg-paper text-ink hover:border-ink'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Lama berlangganan">
+          {(
+            [
+              [1, '1 bulan'],
+              [12, '1 tahun'],
+            ] as const
+          ).map(([months, label]) => (
+            <button
+              key={months}
+              type="button"
+              aria-pressed={activeUntil === paidEnd(months)}
+              onClick={() => setActiveUntil(paidEnd(months))}
+              className={`min-h-11 rounded-full border-2 px-4 font-semibold transition-colors ${
+                activeUntil === paidEnd(months)
+                  ? 'border-ink bg-ink text-paper'
+                  : 'border-control bg-paper text-ink hover:border-ink'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         <Button type="submit" disabled={busy} className="mt-6">
-          {busy ? 'Membuat akun…' : trial ? 'Buat akun uji coba' : 'Buat akun berlangganan'}
+          {busy ? 'Membuat akun…' : 'Buat akun berlangganan'}
         </Button>
 
         {error && (
@@ -403,7 +530,7 @@ function ShareMessage({ message }: { message: string }) {
 type Filter = CustomerGroup | 'all'
 
 const FILTERS: { value: Filter; label: string; empty: string }[] = [
-  { value: 'trial', label: 'Uji coba', empty: 'Tidak ada akun uji coba yang aktif. Buat di tab Buat akun.' },
+  { value: 'trial', label: 'Uji coba', empty: 'Tidak ada akun uji coba yang aktif. Buat link uji coba di tab Buat akun.' },
   { value: 'paid', label: 'Berlangganan', empty: 'Belum ada pelanggan berlangganan yang aktif.' },
   { value: 'ended', label: 'Berakhir', empty: 'Belum ada toko yang berakhir.' },
   { value: 'all', label: 'Semua', empty: 'Belum ada toko.' },

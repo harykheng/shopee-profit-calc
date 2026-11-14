@@ -382,6 +382,9 @@ try {
     ['A menjadikan dirinya pengelola', () => A.client.from('platform_admins').insert({ user_id: A.user.id })],
     ['A memakai jatah simulasi toko B (use_trial_simulation)', () => A.client.rpc('use_trial_simulation', { p_store_id: storeB.id, p_key: MARK })],
     ['A membaca jatah simulasi uji coba (trial_simulations)', () => A.client.from('trial_simulations').select('*').limit(5)],
+    ['A membuat link uji coba (platform_create_trial_link)', () => A.client.rpc('platform_create_trial_link', { p_max_uses: 1000, p_valid_days: 90 })],
+    ['A melihat link uji coba (platform_list_trial_links)', () => A.client.rpc('platform_list_trial_links')],
+    ['A membaca tabel link uji coba (trial_links)', () => A.client.from('trial_links').select('*').limit(5)],
   ]
   for (const [name, run] of platformCalls) {
     const res = await run()
@@ -418,6 +421,25 @@ try {
     })
     if (res.error) pass(name, 'ditolak')
     else fail(name, 'BOCOR: akun berhasil dibuat tanpa login')
+  }
+  {
+    const name = 'Tanpa login membaca tabel link uji coba (trial_links)'
+    const res = await anon.from('trial_links').select('*').limit(1)
+    if (isMissing(res.error)) skip(name, 'belum ada (migration 20261111000000 belum dijalankan)')
+    else if (isDenied(res.error) || res.error?.code === 'PGRST301' || (!res.error && res.data.length === 0)) pass(name, 'ditolak / 0 baris')
+    else if (res.error) check(name, `error lain: ${short(res.error)}`)
+    else fail(name, 'BOCOR: link terbaca tanpa login')
+  }
+  {
+    const name = 'Tanpa login daftar lewat link uji coba palsu (claim_trial_link)'
+    const res = await anon.rpc('claim_trial_link', {
+      p_token: `${MARK}-kode-palsu`,
+      p_email: `${MARK}-link@contoh.invalid`,
+      p_password: 'UjiPemisahan123',
+    })
+    if (isMissing(res.error)) skip(name, 'belum ada (migration 20261111000000 belum dijalankan)')
+    else if (res.error) pass(name, 'ditolak')
+    else fail(name, 'BOCOR: akun dibuat dengan kode link palsu')
   }
 } finally {
   await cleanup(true)

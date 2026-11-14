@@ -102,6 +102,11 @@ menghapus data.
 > aplikasi tetap jalan tanpa batas; tanpa deploy, batas data tetap ditegakkan database (pesannya saja
 > yang kurang rapi).
 
+> Sudah setup sebelum 11 November 2026? Jalankan sekali file `20261111000000_trial_links.sql` (aman diulang)
+> **setelah** `20261029000000_store_name_by_customer.sql`, **sebelum deploy**. Isinya **link uji coba**: pengelola
+> membuat link di halaman Buat akun, calon pelanggan mendaftar sendiri dengan email + password (OPERASI.md
+> bagian 2). Tanpa SQL ini tombol **Buat link uji coba** menampilkan pesan gangguan sistem.
+
 > Sudah setup sebelum 3 November 2026? Jalankan sekali file `20261103000000_trial_simulation_10.sql` (aman
 > diulang). Batas Simulasi Harga akun uji coba jadi **10 produk** (sebelumnya 50; jatah tambahan per toko tetap
 > berlaku). Jalankan **sebelum atau bersamaan dengan deploy**. Lama uji coba bawaan (7 hari) ada di aplikasi.
@@ -408,11 +413,11 @@ Tanpa baris di `store_members` orang asing hanya melihat data kosong, tapi tetap
 
 **Cara cepat (disarankan): halaman Pengelola.** Butuh migration `20261026000000_platform_admin.sql` dan
 akunmu dijadikan pengelola sekali (`select public.admin_set_platform_admin('email-kamu@contoh.com');`).
-Setelah itu muncul ikon kunci di kanan atas aplikasi. Isi email, password (atau tekan **Buat acak**), nama
-toko, dan tanggal berakhir (bawaan 7 hari), lalu **Buat akun uji coba**. Akun langsung aktif tanpa
-verifikasi email, tokonya ditandai "Uji coba", dan aplikasi menyiapkan teks WhatsApp berisi alamat
-login, email, dan password. Email yang sudah terdaftar ditolak. Detail di [OPERASI.md](OPERASI.md)
-bagian 2.
+Setelah itu muncul ikon kunci di kanan atas aplikasi. **Uji coba:** di **Buat akun** tekan **Buat link uji
+coba** (butuh `20261111000000_trial_links.sql`) dan kirim link-nya; calon pelanggan mengisi email + password
+sendiri dan langsung masuk ke toko uji coba 7 hari. **Sudah membayar:** kartu **Akun berlangganan** (email,
+password acak, tanggal berakhir), lalu kirim teks login yang disiapkan aplikasi. Email yang sudah terdaftar
+ditolak. Detail di [OPERASI.md](OPERASI.md) bagian 2.
 
 **Cara manual (SQL Editor),** misalnya untuk menambah toko kedua ke akun yang sudah ada:
 

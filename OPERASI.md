@@ -68,28 +68,47 @@ select public.admin_purge_client_errors(90);
 tanpa toko sendiri hanya melihat menu **Pelanggan** dan **Buat akun**; pengelola yang juga punya toko tetap
 melihat menu toko, dan membuka Pelanggan lewat ikon kunci di kanan atas.
 
-**Akun baru: Buat akun.** Pilih **Jenis akun**: **Uji coba 7 hari** (dengan batas uji coba) atau **Langsung
-berlangganan** (tanpa batas; tombol **1 bulan** / **1 tahun** mengisi tanggal berakhir). Akun berlangganan butuh
-migration `20261030000000_platform_create_account.sql`. Isi:
+**Uji coba: link.** Halaman **Buat akun** → kartu **Link uji coba**. Pilih **Bisa dipakai** (1 orang untuk
+dikirim langsung lewat chat; 10 / 50 orang untuk grup atau postingan) dan **Link berlaku** (7 / 30 hari),
+lalu **Buat link uji coba**. Muncul teks siap kirim berisi link-nya: **Salin teks** atau **Kirim lewat
+WhatsApp**. Link hanya tampil saat itu (yang disimpan database hanya sidik/hash-nya); kalau hilang, buat link
+baru. Butuh migration `20261111000000_trial_links.sql`.
 
-- **Email** calon pelanggan. Email yang sudah terdaftar ditolak (mis. orang yang dulu pernah uji coba);
-  perpanjang tokonya lewat SQL di bawah.
+Orang yang membuka link mengisi email dan password **sendiri**, lalu langsung masuk. Yang terbentuk:
+akun (tanpa verifikasi email, tanpa banner "ganti password"), toko **Uji coba** 7 hari (hari ini ikut
+dihitung) dengan batas uji coba, nama toko diisi pemiliknya saat pertama masuk (sementara "Toko " + bagian
+depan email). Email yang sudah terdaftar ditolak. Toko itu muncul di **Pelanggan** seperti akun uji coba
+biasa.
+
+Di bawah tombol ada **Link yang masih aktif** (untuk berapa orang, berapa yang sudah daftar, berlaku
+sampai). **Matikan** kalau link tersebar ke tempat yang salah; akun yang sudah daftar tetap jalan. Link
+untuk banyak orang = siapa pun yang memegangnya bisa membuat akun sampai kuotanya habis, jadi pakai kuota
+sekecil yang perlu.
+
+Catatan: email tidak diverifikasi. Orang bisa mendaftar dengan email yang bukan miliknya (atau salah
+ketik); kalau pemilik email asli nanti mau daftar, hapus toko dan akun salah itu dulu (bagian 4).
+
+**Akun berlangganan: Buat akun.** Kartu **Akun berlangganan** untuk pelanggan yang sudah membayar (tanpa
+batas uji coba; tombol **1 bulan** / **1 tahun** mengisi tanggal berakhir). Butuh migration
+`20261030000000_platform_create_account.sql`. Isi:
+
+- **Email** pelanggan. Email yang sudah terdaftar ditolak (mis. orang yang dulu pernah uji coba): pakai
+  **Jadikan berlangganan** di halaman Pelanggan.
 - **Password**: sudah terisi acak (10 huruf & angka yang tidak mirip, mudah diketik). **Buat acak**
   untuk yang lain, atau ketik sendiri (minimal 8 karakter).
 - **Nama toko**: boleh dikosongkan. Saat pertama login, pemilik akun diminta mengisi nama tokonya di Shopee
   (jendela yang tidak bisa dilewati, hanya bisa diisi sekali). Sampai itu, di daftar tertulis "Toko " +
-  bagian depan email. Butuh migration `20261029000000_store_name_by_customer.sql`; tanpa itu nama dari
-  email dipakai seterusnya seperti dulu. Pelanggan salah ketik nama:
+  bagian depan email. Pelanggan salah ketik nama:
   `update public.stores set name = 'Nama Benar' where id = 5;`
-- **Bisa dipakai sampai**: bawaan **7 hari** (hari ini ikut dihitung, jadi dibuat 1 November → aktif
-  sampai akhir 7 November WIB). Akun uji coba yang dibuat sebelum 29 Oktober 2026 tetap memakai tanggal
-  berakhirnya sendiri (dulu 30 hari). Setelah itu toko otomatis jadi baca saja.
+- **Berlangganan sampai**: hari ini ikut dihitung. Setelah itu toko otomatis jadi baca saja.
 
-Tekan **Buat akun uji coba**. Akun langsung aktif (tanpa verifikasi email), toko ditandai **Uji coba**,
-lalu muncul teks siap kirim: alamat login, email, password, dan tanggal berakhir. **Salin teks** atau
-**Kirim lewat WhatsApp** (memilih kontak di WhatsApp). Password hanya tampil saat itu; setelah halaman
-ditutup tidak bisa dilihat lagi (pakai `admin_reset_password` di bawah kalau hilang). Pelanggan melihat
+Tekan **Buat akun berlangganan**. Akun langsung aktif (tanpa verifikasi email), lalu muncul teks siap
+kirim: alamat login, email, password, dan tanggal berakhir. Password hanya tampil saat itu; setelah halaman
+ditutup tidak bisa dilihat lagi (pakai **Reset password** di Pelanggan kalau hilang). Pelanggan melihat
 banner kuning "ganti password" sampai ia menggantinya sendiri.
+
+Sejak 11 November 2026 pengelola tidak lagi mengetik email calon pelanggan uji coba: untuk satu orang,
+buat link untuk 1 orang lalu kirim lewat chat.
 
 Di bawahnya, **Semua toko** menampilkan per toko: email pemilik, status (Aktif sisa X hari / Baca saja),
 dan **login terakhir**. Isi toko (pesanan, untung, HPP) tidak terlihat di sini. Pakai untuk follow up:

@@ -59,6 +59,7 @@ declare
   daftar text;
   kueri  text;
   ok_kontrol boolean;
+  v_link_status text;
 begin
   select u.id, u.email into a_user, a_email
   from auth.users u
@@ -104,12 +105,13 @@ begin
     ('20261102000000_trial_simulation_bonus.sql',  to_regprocedure('public.platform_add_trial_simulations(bigint, integer)') is not null),
     ('20261103000000_trial_simulation_10.sql',     exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
                                                      where s.nspname = 'public' and p.proname = 'trial_simulation_limit'
-                                                       and p.prosrc like '%select 10%'))
+                                                       and p.prosrc like '%select 10%')),
+    ('20261111000000_trial_links.sql',             to_regprocedure('public.claim_trial_link(text, text, text)') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261103000000_trial_simulation_10.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261111000000_trial_links.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -217,6 +219,9 @@ begin
                             'is_platform_admin', 'platform_create_trial', 'platform_list_customers',
                             'platform_create_account', 'platform_subscribe_store', 'platform_reset_password',
                             'platform_add_trial_simulations', 'platform_trial_simulation_usage',
+                            'platform_create_trial_link', 'platform_list_trial_links', 'platform_revoke_trial_link',
+                            -- Terbuka TANPA login, tapi hanya bekerja dengan kode link yang benar; diuji di bagian 3.
+                            'trial_link_status', 'claim_trial_link',
                             -- Memeriksa keanggotaan toko sendiri; diuji di bagian 2c.
                             'use_trial_simulation',
                             -- Hanya anggota toko, hanya sekali (name_pending); diuji di bagian 2c dan 2g.
@@ -468,7 +473,15 @@ begin
         ('Bukan pengelola: lihat pemakaian simulasi semua toko (platform_trial_simulation_usage)',
          'select count(*) from public.platform_trial_simulation_usage()'),
         ('Bukan pengelola: lihat daftar pelanggan (platform_list_customers)',
-         'select count(*) from public.platform_list_customers()')
+         'select count(*) from public.platform_list_customers()'),
+        ('Bukan pengelola: buat link uji coba (platform_create_trial_link)',
+         'select count(*) from (select public.platform_create_trial_link(1000, 90)) x'),
+        ('Bukan pengelola: lihat link uji coba (platform_list_trial_links)',
+         'select count(*) from public.platform_list_trial_links()'),
+        ('Bukan pengelola: matikan link uji coba (platform_revoke_trial_link)',
+         'select public.platform_revoke_trial_link(1)'),
+        ('Bukan pengelola: panggil pembuat akun internal (create_store_account)',
+         'select count(*) from (select public.create_store_account(''uji-pemisahan-tolak4@contoh.invalid'', ''UjiPemisahan123'', ''UJI-PEMISAHAN J'', current_date + 7, true)) x')
       ) as x (nama, kueri)
     loop
       begin
@@ -726,6 +739,69 @@ begin
         v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
     end;
     v_uji := v_uji || 'Tanpa login: upload penghasilan'::text;
+
+    -- 3b. Link uji coba tanpa login: kode asal-asalan ditolak; kode asli membuat akun uji coba SATU kali
+    --     (link untuk 1 orang), dan akun itu tidak bisa dipakai membuat toko kedua.
+    begin
+      execute 'select public.trial_link_status(''kode-asal-asalan'')' into kueri;
+      begin
+        execute 'select public.claim_trial_link(''kode-asal-asalan'', ''uji-pemisahan-anon@contoh.invalid'', ''UjiPemisahan123'')' into sisa;
+        n := 1;
+      exception when invalid_parameter_value then
+        n := 0;
+      end;
+      v_status := v_status || case when n = 0 and kueri = 'invalid' then 'LULUS' else 'GAGAL' end;
+      v_ket := v_ket || case when n = 0 and kueri = 'invalid' then 'kode salah ditolak' else format('status %s, akun terbuat %s', kueri, n) end;
+    exception when others then
+      v_status := v_status || 'CEK'::text;
+      v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+    end;
+    v_uji := v_uji || 'Tanpa login: daftar lewat link uji coba palsu'::text;
+
+    begin
+      -- Pengelola membuat link untuk 1 orang.
+      reset role;
+      execute 'insert into public.platform_admins (user_id) values ($1) on conflict do nothing' using a_user;
+      perform set_config('request.jwt.claim.sub', a_user::text, true);
+      perform set_config('request.jwt.claims', json_build_object('sub', a_user, 'role', 'authenticated')::text, true);
+      set local role authenticated;
+      execute 'select public.platform_create_trial_link(1, 7) ->> ''token''' into kueri;
+      -- Calon pelanggan membuka link tanpa login.
+      reset role;
+      perform set_config('request.jwt.claim.sub', '', true);
+      perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+      set local role anon;
+      daftar := 'uji-pemisahan-' || substr(md5(random()::text), 1, 8) || '@contoh.invalid';
+      execute 'select public.claim_trial_link($1, $2, ''UjiPemisahan123'')' into sisa using kueri, upper(daftar);
+      begin
+        execute 'select public.claim_trial_link($1, $2, ''UjiPemisahan123'')'
+          into sisa using kueri, 'uji-pemisahan-' || substr(md5(random()::text), 1, 8) || '@contoh.invalid';
+        n2 := 1;  -- jatah 1 orang terpakai dua kali: celah
+      exception when invalid_parameter_value then
+        n2 := 0;
+      end;
+      execute 'select public.trial_link_status($1)' into v_link_status using kueri;
+      reset role;
+      select count(*) into n from auth.users u
+        join public.store_members sm on sm.user_id = u.id and sm.role = 'owner'
+        join public.stores s on s.id = sm.store_id
+        where u.email = daftar and u.encrypted_password like '$2%' and u.email_confirmed_at is not null
+          and (u.raw_user_meta_data ->> 'password_changed')::boolean
+          and s.trial and s.name_pending and s.trial_link_id is not null
+          and s.active_until = (now() at time zone 'Asia/Jakarta')::date + 6;
+      select count(*) into m from public.stores s
+        join public.trial_links l on l.id = s.trial_link_id
+        where l.token_hash = public.trial_link_hash(kueri) and l.used_count = 1;
+      v_status := v_status || case when n = 1 and n2 = 0 and m = 1 and v_link_status = 'used_up' then 'LULUS' else 'GAGAL' end;
+      v_ket := v_ket || case when n = 1 and n2 = 0 and m = 1 and v_link_status = 'used_up'
+                             then 'akun uji coba 7 hari terbentuk (nama toko diisi pemilik); pemakaian kedua ditolak'
+                             else format('akun lengkap %s, pemakaian kedua berhasil %s, akun baru %s, status link %s', n, n2, m, v_link_status) end;
+    exception when others then
+      reset role;
+      v_status := v_status || 'CEK'::text;
+      v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+    end;
+    v_uji := v_uji || 'Tanpa login: daftar lewat link uji coba untuk 1 orang (kontrol)'::text;
 
     reset role;
     raise exception using errcode = 'UJ000';

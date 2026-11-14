@@ -256,6 +256,12 @@ export function buildQuickExport(input: { storeName: string; createdAt: string; 
           'rendah kalau yang laku variasi murah, atau terlalu tinggi kalau yang laku variasi mahal.',
       )
     }
+    const missing = products.filter((p) => p.missingHppVariants.length > 0)
+    if (missing.length > 0) {
+      out.push('')
+      out.push('Variasi yang terjual tapi belum punya HPP di halaman HPP (HPP produknya belum termasuk variasi ini):')
+      for (const p of missing) out.push(`- ${p.name}: ${p.missingHppVariants.join(', ')}`)
+    }
     if (products.some((p) => p.priceSource === 'iklan')) {
       out.push('')
       out.push('"(perkiraan)" = harga jual dihitung dari omzet ÷ terjual di data iklan, karena belum ada data pesanan.')

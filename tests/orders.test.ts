@@ -3,7 +3,7 @@ import path from 'node:path'
 import * as XLSX from 'xlsx'
 import { describe, expect, it } from 'vitest'
 import { ParseError } from '../src/lib/parsers/common'
-import { parseOrdersFile, parseOrdersWorkbook } from '../src/lib/parsers/orders'
+import { orderExportTabWarning, parseOrdersFile, parseOrdersWorkbook } from '../src/lib/parsers/orders'
 import { BUYER_PRIVATE_COLUMNS, statusGroup } from '../src/lib/shopeeColumns'
 
 const FIXTURE = path.join(import.meta.dirname, 'fixtures/orders_dummy.xlsx')
@@ -180,5 +180,24 @@ describe('statusGroup', () => {
     expect(statusGroup('Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga 2026-11-04.')).toBe('selesai')
     expect(statusGroup('Sedang Dikirim')).toBe('proses')
     expect(statusGroup('Batal')).toBe('batal')
+  })
+})
+
+describe('orderExportTabWarning', () => {
+  it('tab Semua dan nama file lain tidak diperingatkan', () => {
+    expect(orderExportTabWarning('Order.all.20261108_20261114.xlsx')).toBeNull()
+    expect(orderExportTabWarning('pesanan november.xlsx')).toBeNull()
+  })
+
+  it('export dari satu tab menyebut nama tabnya', () => {
+    const w = orderExportTabWarning('Order.toship.20261108_20261114.xlsx')
+    expect(w?.code).toBe('not_all_tab')
+    expect(w?.message).toContain('"Perlu Dikirim"')
+    expect(w?.message).toContain('tab Semua')
+    expect(orderExportTabWarning('Order.completed.20261101_20261130 (1).xlsx')?.message).toContain('"Selesai"')
+  })
+
+  it('tab yang tidak dikenal tetap diperingatkan', () => {
+    expect(orderExportTabWarning('Order.lainnya.20261108_20261114.xlsx')?.message).toContain('tab tertentu')
   })
 })
