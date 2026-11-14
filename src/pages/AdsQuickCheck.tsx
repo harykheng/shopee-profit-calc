@@ -1,13 +1,14 @@
 // Cek cepat iklan: lihat apakah iklan beberapa hari terakhir jalan bagus. File iklan dibaca di browser dan
 // TIDAK disimpan; HPP, potongan, target, dan pesanan diambil dari data toko yang sudah tersimpan. Export pesanan
 // untuk tanggal yang sama boleh dipilih di sini: disimpan seperti di halaman Upload, lalu hasilnya dihitung ulang.
-import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Alert, Card, ErrorBox, Spinner, Stamp, linkClass, type StampTone } from '../components/ui'
 import { IconUpload, IconX } from '../components/icons'
 import { RupiahInput } from '../components/pickers'
 import { AdsHowTo, adsProblem, formatPeriod, groupAdsFiles, parseAdsFiles, type ParsedAdsFile } from '../components/adsUpload'
 import { saveOrderItems } from '../lib/api'
 import { notifyDataChanged } from '../lib/events'
+import { hrefFor } from '../lib/router'
 import { ParseError } from '../lib/parsers/common'
 import { analyzeUnsavedAds, loadAdsContext, type AdsContext, type Loaded } from '../lib/adsLoad'
 import { productKey, type AdProductResult, type AdVerdict } from '../lib/adsMath'
@@ -108,18 +109,21 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
   /** Baca & simpan export pesanan (sama dengan halaman Upload). Berhenti di file pertama yang gagal. */
   const saveOrdersFiles = async (storeId: number, files: File[]): Promise<OrdersSave> => {
     let orderCount = 0
+    const notAllTab: string[] = []
     for (const file of files) {
       try {
-        const { parseOrdersFile } = await import('../lib/parsers/orders')
+        const { orderExportTabWarning, parseOrdersFile } = await import('../lib/parsers/orders')
         const result = parseOrdersFile(await file.arrayBuffer())
         await saveOrderItems(storeId, result.items)
         orderCount += result.orderCount
+        const warning = orderExportTabWarning(file.name)
+        if (warning) notAllTab.push(warning.message)
       } catch (error) {
         return { kind: 'error', fileName: file.name, error }
       }
     }
     notifyDataChanged()
-    return { kind: 'saved', fileNames: files.map((f) => f.name), orderCount, stillMissing: [] }
+    return { kind: 'saved', fileNames: files.map((f) => f.name), orderCount, stillMissing: [], notAllTab }
   }
 
   /** Tandai periode yang masih tanpa pesanan setelah export pesanan disimpan. */
@@ -204,6 +208,32 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
       setOrdersSave({ kind: 'error', fileName: file.name, error })
     }
   }
+
+  // Setelah tautan "Isi HPP per variasi" dibuka (tab baru), data toko dimuat ulang saat pemilik kembali ke tab
+  // ini, supaya HPP yang baru diisi langsung dipakai tanpa memilih file iklan lagi.
+  const stateRef = useRef(state)
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
+  const hppOpened = useRef(false)
+  useEffect(() => {
+    const onVisible = async () => {
+      const current = stateRef.current
+      if (document.visibilityState !== 'visible' || !hppOpened.current || !store || current.kind !== 'done') return
+      hppOpened.current = false
+      try {
+        const periods = await Promise.all(
+          current.periods.map(async (p) => ({ ...p, ctx: await loadAdsContext(store.id, p.start, p.end) })),
+        )
+        // Jangan menimpa kalau pemilik sudah memilih file lain selama dimuat.
+        if (stateRef.current === current) setState({ ...current, periods })
+      } catch {
+        // Gagal memuat ulang: hasil lama tetap tampil; pemilik bisa memilih file lagi.
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [store])
 
   const reset = () => {
     setState({ kind: 'idle' })
@@ -322,7 +352,12 @@ export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose
                 <PeriodSummary period={latest} label={previous ? 'Terbaru' : undefined} compare={previous} />
               </div>
 
-              <ProductList latest={latest} previous={previous} onTempHpp={setTempHpp} />
+              <ProductList
+                latest={latest}
+                previous={previous}
+                onTempHpp={setTempHpp}
+                onOpenHpp={() => (hppOpened.current = true)}
+              />
 
               <section className="rounded-2xl bg-tint p-4">
                 <p className="font-semibold">Mau bertanya lebih dalam ke Claude?</p>
@@ -372,7 +407,8 @@ function downloadExport(store: Store | null, checked: CheckedPeriod[]) {
 type OrdersSave =
   | { kind: 'idle' }
   | { kind: 'saving'; fileName: string }
-  | { kind: 'saved'; fileNames: string[]; orderCount: number; stillMissing: string[] }
+  /** notAllTab = peringatan export dari satu tab saja (mis. Perlu Dikirim), bukan tab Semua. */
+  | { kind: 'saved'; fileNames: string[]; orderCount: number; stillMissing: string[]; notAllTab: string[] }
   | { kind: 'error'; fileName: string; error: unknown }
 
 /**
@@ -408,13 +444,23 @@ function OrdersBox({ checked, save, onFile }: { checked: CheckedPeriod[]; save: 
 
   return (
     <div className="space-y-3">
-      {save.kind === 'saved' && (
-        <Alert tone={save.stillMissing.length > 0 ? 'warning' : 'success'} title="Export pesanan tersimpan">
-          {formatNumber(save.orderCount)} pesanan dari {save.fileNames.join(', ')} disimpan; hasil di bawah sudah
-          memakainya.
-          {save.stillMissing.length > 0 &&
-            ` Tapi tidak ada pesanan yang dibuat pada ${save.stillMissing.join(' dan ')}. Pastikan tanggal export pesanan sama dengan data iklan.`}
+      {save.kind === 'saved' && save.notAllTab.length > 0 ? (
+        <Alert tone="warning" title="Export pesanan belum lengkap">
+          <p>{save.notAllTab[0]}</p>
+          <p className="mt-1">
+            {formatNumber(save.orderCount)} pesanan dari {save.fileNames.join(', ')} tetap disimpan, tapi hasil di
+            bawah belum memakai pesanan lain di tanggal itu.
+          </p>
         </Alert>
+      ) : (
+        save.kind === 'saved' && (
+          <Alert tone={save.stillMissing.length > 0 ? 'warning' : 'success'} title="Export pesanan tersimpan">
+            {formatNumber(save.orderCount)} pesanan dari {save.fileNames.join(', ')} disimpan; hasil di bawah sudah
+            memakainya.
+            {save.stillMissing.length > 0 &&
+              ` Tapi tidak ada pesanan yang dibuat pada ${save.stillMissing.join(' dan ')}. Pastikan tanggal export pesanan sama dengan data iklan.`}
+          </Alert>
+        )
       )}
       {missing.length > 0 ? (
         <Alert tone="warning" title="Pesanan tanggal ini belum ada, label Stop/Lanjut belum pasti">
@@ -515,10 +561,12 @@ function ProductList({
   latest,
   previous,
   onTempHpp,
+  onOpenHpp,
 }: {
   latest: CheckedPeriod
   previous: CheckedPeriod | null
   onTempHpp: OnTempHpp
+  onOpenHpp: () => void
 }) {
   const before = new Map((previous?.data.analysis.products ?? []).map((p) => [p.code, p]))
   const products = quickProducts(latest.data.analysis)
@@ -526,7 +574,7 @@ function ProductList({
   return (
     <ul className="grid gap-4 md:grid-cols-2">
       {products.map((p) => (
-        <ProductRow key={p.code} p={p} before={before.get(p.code)} onTempHpp={onTempHpp} />
+        <ProductRow key={p.code} p={p} before={before.get(p.code)} onTempHpp={onTempHpp} onOpenHpp={onOpenHpp} />
       ))}
     </ul>
   )
@@ -536,10 +584,12 @@ function ProductRow({
   p,
   before,
   onTempHpp,
+  onOpenHpp,
 }: {
   p: AdProductResult
   before: AdProductResult | undefined
   onTempHpp: OnTempHpp
+  onOpenHpp: () => void
 }) {
   const v = QUICK[p.verdict]
   // HPP dari halaman HPP / pesanan tidak ada (atau sedang memakai isian sementara): boleh diisi di sini.
@@ -569,7 +619,12 @@ function ProductRow({
           detail={before ? `sebelumnya ${roas(before.realRoas)}` : undefined}
         />
         <Metric label="Balik modal butuh ROAS" value={p.bepRoas !== null ? roas(p.bepRoas) : p.unitProfit === null ? '–' : 'tidak mungkin'} />
+        {/* HPP sementara sudah terlihat di kolom isiannya, jadi tidak diulang di sini. */}
+        {p.hpp !== null && !p.hppTemp && (
+          <Metric className="col-span-2" label="HPP per barang" value={formatRupiah(p.hpp)} detail={hppDetail(p)} />
+        )}
       </dl>
+      {p.missingHppVariants.length > 0 && <MissingHpp p={p} onOpen={onOpenHpp} />}
       {p.hppAvgVariants > 1 && (
         <p className="mt-3 rounded-xl border border-sun bg-sun-tint p-3 text-sm text-ink">
           <strong>Belum pasti.</strong> HPP = rata-rata {p.hppAvgVariants} variasi, karena pesanan tanggal ini belum
@@ -586,8 +641,10 @@ function ProductRow({
           />
           <p className="mt-1 text-xs text-ink-3">
             {p.hppTemp
-              ? 'Dipakai hanya di Cek cepat, diingat di browser ini. Isi HPP resmi di halaman HPP.'
-              : p.hppAvgVariants > 1
+              ? 'Dipakai hanya di Cek cepat untuk semua variasi, diingat di browser ini. Isi HPP resmi per variasi di halaman HPP.'
+              : p.missingHppVariants.length > 0
+                ? 'Atau isi perkiraan modal per barang di sini (satu angka untuk semua variasi). Tidak disimpan ke halaman HPP.'
+                : p.hppAvgVariants > 1
                 ? 'Kalau tahu variasi mana yang laku, isi HPP rata-ratanya di sini. Tidak disimpan ke halaman HPP.'
                 : 'Produk ini belum punya HPP. Isi perkiraan modal per barang untuk melihat Lanjut/Stop. Tidak disimpan ke halaman HPP.'}
           </p>
@@ -598,9 +655,68 @@ function ProductRow({
   )
 }
 
-function Metric({ label, value, detail, extra }: { label: string; value: string; detail?: string; extra?: ReactNode }) {
+/** Asal HPP di kartu produk, supaya jelas HPP yang mana yang dipakai. */
+function hppDetail(p: AdProductResult): string {
+  if (p.hppSource === 'pesanan') {
+    const base =
+      p.hppSoldVariants > 1
+        ? `rata-rata ${formatNumber(p.hppSoldVariants)} variasi yang terjual (sesuai jumlahnya), dari halaman HPP`
+        : 'variasi yang terjual, dari halaman HPP'
+    return p.hppIncomplete ? `${base}; belum termasuk variasi tanpa HPP` : base
+  }
+  if (p.hppSource === 'produk') {
+    return p.hppAvgVariants > 1
+      ? `rata-rata ${formatNumber(p.hppAvgVariants)} variasi di halaman HPP (pesanannya belum ada)`
+      : 'dari halaman HPP (pesanannya belum ada)'
+  }
+  return ''
+}
+
+/** Variasi yang terjual di periode ini tapi belum punya HPP, dengan tautan ke halaman HPP (tab baru). */
+function MissingHpp({ p, onOpen }: { p: AdProductResult; onOpen: () => void }) {
+  const names = p.missingHppVariants
+  const shown = names.slice(0, 5)
   return (
-    <div className="min-w-0">
+    <div className="mt-3 rounded-xl border border-sun bg-sun-tint p-3 text-sm text-ink">
+      <p>
+        <strong>
+          {names.length === 1 ? 'Variasi terjual ini belum punya HPP' : `${formatNumber(names.length)} variasi terjual belum punya HPP`}:
+        </strong>{' '}
+        {shown.join(', ')}
+        {names.length > shown.length && `, dan ${formatNumber(names.length - shown.length)} lainnya`}.
+      </p>
+      <p className="mt-1">
+        {p.hppSource === 'pesanan'
+          ? 'HPP di atas hanya dari variasi lain, jadi untung dan label produk ini belum pasti. '
+          : 'Untung dan label produk ini belum bisa dihitung dari HPP resmi. '}
+        <a href={hrefFor('hpp', { cari: productKey(p.name) })} target="_blank"
+          rel="noopener"
+          onClick={onOpen}
+          className={linkClass}
+        >
+          Isi HPP per variasi di halaman HPP
+        </a>
+        ; hasil di sini dihitung ulang saat kamu kembali ke halaman ini.
+      </p>
+    </div>
+  )
+}
+
+function Metric({
+  label,
+  value,
+  detail,
+  extra,
+  className = '',
+}: {
+  label: string
+  value: string
+  detail?: string
+  extra?: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`min-w-0 ${className}`}>
       <dt className="text-ink-3">{label}</dt>
       <dd className="num text-base font-semibold text-ink">
         {value}

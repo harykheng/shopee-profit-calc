@@ -279,6 +279,7 @@ npm run build
 | (8 Nov) | Cek cepat iklan: tombol **Download untuk Claude (.md)** (`src/lib/adsQuickExport.ts`): ringkasan + 2 tabel per produk (hasil iklan; untung & target ROAS), definisi rumus, peringatan data beberapa hari, pertanyaan pembuka. Dibuat di browser, tanpa data pembeli; berisi HPP/untung toko. Tanpa SQL. |
 | (8 Nov) | Cek cepat: tombol **Pilih export pesanan** di dalam Cek cepat kalau pesanan tanggal itu belum ada (disimpan lewat `saveOrderItems` seperti Upload, lalu `loadAdsContext` dimuat ulang). Produk tanpa pesanan yang HPP-nya rata-rata beberapa variasi ditandai (`hppAvgVariants`, dari `fallbackVariants`) dan boleh ditimpa HPP sementara; tanda juga di file .md. Tanpa SQL. |
 | (8 Nov) | Cek cepat: pemilih file menerima data iklan (.csv) + export pesanan (.xlsx) sekaligus (pesanan disimpan dulu, lalu dihitung). Peringatan pesanan kosong jadi kotak kuning berjudul; kalau pesanan sudah ada, ada tombol **Perbarui pesanan**. Tanpa SQL. |
+| (14 Nov) | Cek cepat: kartu produk menampilkan **HPP per barang** + asalnya (`hppSource`: pesanan / produk / sementara, `hppSoldVariants`). Variasi terjual tanpa HPP disebut namanya (`missingHppVariants`, dari `variant_name`/`sku` baris pesanan; juga di file .md) dengan tautan tab baru ke `#/hpp?cari=…` (HppPage `initialSearch`); data toko dimuat ulang saat tab Cek cepat terlihat lagi. Export pesanan dari tab selain Semua (`Order.toship…` dll., `orderExportTabWarning`) tetap disimpan tapi diperingatkan, di Upload dan Cek cepat. Tanpa SQL. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 

@@ -48,6 +48,9 @@ export interface AdOrderLine {
   subtotal: number
   /** HPP per unit (snapshot, atau HPP produk sekarang). */
   hpp: number | null
+  /** SKU & nama variasi, untuk menyebut variasi terjual yang belum punya HPP. Boleh kosong. */
+  sku?: string
+  variant_name?: string
 }
 
 export interface AdProductResult {
@@ -86,6 +89,16 @@ export interface AdProductResult {
    * variasi yang terjual). 0 = HPP dari pesanan, satu variasi, atau isian sementara.
    */
   hppAvgVariants: number
+  /**
+   * Asal HPP: 'pesanan' = HPP variasi yang terjual (halaman HPP / snapshot), rata-rata tertimbang qty;
+   * 'produk' = produk ini tidak ada pesanan di periode, jadi HPP dari halaman HPP (rata-rata variasinya);
+   * 'sementara' = isian Cek cepat; null = belum ada HPP.
+   */
+  hppSource: 'pesanan' | 'produk' | 'sementara' | null
+  /** Jumlah variasi terjual yang HPP-nya ikut dihitung (hanya untuk hppSource 'pesanan'). */
+  hppSoldVariants: number
+  /** Nama variasi terjual (atau SKU kalau tanpa nama variasi) yang belum punya HPP di halaman HPP. */
+  missingHppVariants: string[]
   /** Potongan Shopee (0–1) yang dipakai untuk produk ini: asli dari laporan, atau rata-rata toko yang disesuaikan admin produk. */
   feeRate: number
   /**
@@ -365,11 +378,16 @@ export function analyzeAds(input: {
     const withHpp = hppLines.filter((l) => l.hpp !== null)
     const hppQty = withHpp.reduce((s, l) => s + l.qty, 0)
     let hpp = hppQty > 0 ? withHpp.reduce((s, l) => s + l.qty * (l.hpp as number), 0) / hppQty : null
+    let hppSource: AdProductResult['hppSource'] = hpp !== null ? 'pesanan' : null
+    const variantOf = (l: AdOrderLine) => l.variant_name || l.sku || ''
+    const hppSoldVariants = new Set(withHpp.map(variantOf)).size
+    const missingHppVariants = [...new Set(hppLines.filter((l) => l.hpp === null).map(variantOf))].filter(Boolean)
     let hppAvgVariants = 0
     if (hpp === null && hppLines.length === 0) {
       hpp = input.fallbackHpp?.get(key) ?? null
       const variants = input.fallbackVariants?.get(key) ?? 0
       if (hpp !== null && variants > 1) hppAvgVariants = variants
+      if (hpp !== null) hppSource = 'produk'
     }
     // HPP sementara (Cek cepat) mengisi HPP yang kosong, atau menggantikan rata-rata beberapa variasi.
     const tempValue = hpp === null || hppAvgVariants > 1 ? input.tempHpp?.get(key) : undefined
@@ -377,6 +395,7 @@ export function analyzeAds(input: {
     if (hppTemp) {
       hpp = tempValue
       hppAvgVariants = 0
+      hppSource = 'sementara'
     }
     // Hanya relevan kalau ada barang yang benar-benar terjual.
     const hppIncomplete = kept.length > 0 && withHpp.length < hppLines.length
@@ -416,6 +435,9 @@ export function analyzeAds(input: {
       hppTemp,
       hppIncomplete,
       hppAvgVariants,
+      hppSource,
+      hppSoldVariants: hppSource === 'pesanan' ? hppSoldVariants : 0,
+      missingHppVariants,
       feeRate: productFee,
       // Dengan hanya satu produk yang diketahui tidak ada pembanding, jadi potongannya tidak bergeser:
       // jujur disebut rata-rata toko.

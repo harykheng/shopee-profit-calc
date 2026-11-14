@@ -135,9 +135,11 @@ export function UploadPage({
           'Ini file CSV. Untuk export pesanan, pilih file Excel (.xlsx). File CSV data iklan di-upload di kotak "3. Data iklan".',
         )
       }
-      const { parseOrdersFile } = await import('../lib/parsers/orders')
+      const { orderExportTabWarning, parseOrdersFile } = await import('../lib/parsers/orders')
       const result = parseOrdersFile(await file.arrayBuffer())
-      setOrders({ fileName: file.name, result })
+      // Export dari satu tab saja (mis. Perlu Dikirim) tetap boleh disimpan, tapi diperingatkan paling atas.
+      const tabWarning = orderExportTabWarning(file.name)
+      setOrders({ fileName: file.name, result: tabWarning ? { ...result, warnings: [tabWarning, ...result.warnings] } : result })
     } catch (error) {
       setOrders({ fileName: file.name, error })
     }

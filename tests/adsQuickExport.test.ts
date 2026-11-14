@@ -24,6 +24,9 @@ const product = (p: Partial<AdProductResult>): AdProductResult => ({
   hppTemp: false,
   hppIncomplete: false,
   hppAvgVariants: 0,
+  hppSource: null,
+  hppSoldVariants: 0,
+  missingHppVariants: [],
   feeRate: 0.15,
   feeSource: 'rata-rata',
   unitProfit: null,
@@ -158,6 +161,17 @@ describe('buildQuickExport', () => {
     })
     expect(text).toContain('Rp40.000 (rata-rata 3 variasi)')
     expect(text).toContain('variasi yang terjual belum diketahui')
+  })
+
+  it('menyebut variasi terjual yang belum punya HPP', () => {
+    const partial = product({ ...dot, hppTemp: false, hppSource: 'pesanan', hppIncomplete: true, missingHppVariants: ['100g', '200g'] })
+    const text = buildQuickExport({
+      storeName: 'T',
+      createdAt: '2026-11-08',
+      periods: [period('2026-11-01', '2026-11-07', [partial])],
+    })
+    expect(text).toContain('belum punya HPP di halaman HPP')
+    expect(text).toContain(`- ${partial.name}: 100g, 200g`)
   })
 
   it('kosong kalau tidak ada periode', () => {
