@@ -3,6 +3,7 @@ import type { AdRow, AdsParseResult } from './parsers/ads'
 import type { SettingsPercent, StoreSettingsRow } from './storeSettings'
 import type { IncomeParseResult } from './parsers/income'
 import type { IncomeBreakdownRow } from './recapMath'
+import type { SetupCounts } from './onboarding'
 import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
 import { addMonths, monthEnd, wibDay } from './format'
@@ -56,27 +57,26 @@ function errorTextOf(err: unknown): string {
 }
 
 /** Sudah sampai mana toko ini mengisi data. Dipakai untuk panduan awal di halaman Rekap. */
-export interface SetupProgress {
-  hasOrders: boolean
-  hasIncome: boolean
-  hasProducts: boolean
-  /** Ada produk yang HPP-nya masih kosong. */
-  hasMissingHpp: boolean
-}
+/** Langkah awal toko (panduan pengguna baru, lihat lib/onboarding.ts). */
+export type SetupProgress = SetupCounts
 
 export async function fetchSetupProgress(storeId: number): Promise<SetupProgress> {
-  const any = async (table: 'order_items' | 'income' | 'products', missingHpp = false) => {
-    let q = supabase.from(table).select('id').eq('store_id', storeId)
+  const any = async (table: 'order_items' | 'income') =>
+    check(await supabase.from(table).select('id').eq('store_id', storeId).limit(1)).length > 0
+  const count = async (missingHpp: boolean) => {
+    let q = supabase.from('products').select('id', { count: 'exact', head: true }).eq('store_id', storeId)
     if (missingHpp) q = q.is('hpp', null)
-    return check(await q.limit(1)).length > 0
+    const res = await q
+    if (res.error) throw res.error
+    return res.count ?? 0
   }
-  const [hasOrders, hasIncome, hasProducts, hasMissingHpp] = await Promise.all([
+  const [hasOrders, hasIncome, productCount, missingHppCount] = await Promise.all([
     any('order_items'),
     any('income'),
-    any('products'),
-    any('products', true),
+    count(false),
+    count(true),
   ])
-  return { hasOrders, hasIncome, hasProducts, hasMissingHpp }
+  return { hasOrders, hasIncome, productCount, missingHppCount }
 }
 
 // --- Upload -----------------------------------------------------------------

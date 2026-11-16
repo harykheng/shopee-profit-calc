@@ -49,6 +49,17 @@ Hal penting yang perlu diingat:
   Biaya). Di laptop menunya ada di **bar atas**; di HP/iPad keenam menu ada di **bawah layar**.
   Aplikasi langsung terbuka di **Rekap**, dan angka **untung bersih** tampil paling atas.
 
+**Pertama kali memakai: 3 langkah.** Toko yang baru mulai disambut panduan di halaman Rekap:
+**Upload laporan Shopee → Masukkan HPP → Lihat hasil keuntungan**. Langkah yang sudah beres diberi
+centang hijau (dicek dari data yang tersimpan, jadi tetap benar walau pindah dari laptop ke HP), dan tombol
+di langkah yang sedang dikerjakan langsung membuka halamannya. Selama panduan ini tampil, halaman Upload dan
+HPP menampilkan satu baris "Langkah 2 dari 3 …" dengan tombol ke langkah berikutnya. Begitu laporan dan
+semua HPP terisi, Rekap langsung menampilkan untung bersih, dengan kartu hijau **3 dari 3 langkah selesai**
+di hari itu. Setelah itu panduan tidak muncul lagi; kekurangan data bulan berikutnya diingatkan oleh
+pengingat otomatis (di bawah).
+
+---
+
 ---
 
 ## 2. Rutinitas tiap awal bulan (ringkas)

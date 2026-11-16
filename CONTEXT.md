@@ -6,7 +6,7 @@ dulu sebelum mengubah kode. Untuk **pemakai aplikasi**: [PANDUAN.md](PANDUAN.md)
 toko, pantau error): [OPERASI.md](OPERASI.md). Fakta produk: [PRODUCT.md](PRODUCT.md). Sistem desain:
 [DESIGN.md](DESIGN.md).
 
-Terakhir diperbarui: 11 November 2026 (link uji coba).
+Terakhir diperbarui: 16 November 2026 (panduan 3 langkah pengguna baru).
 
 ---
 
@@ -101,6 +101,8 @@ src/lib/feeCategories.ts    Kategori biaya admin per toko
 src/lib/storeSettings.ts    Pengaturan hitungan per toko (target untung, retur)
 src/lib/trialLinks.ts       Link uji coba: alamat #/coba?kode=…, cek isian daftar, teks undangan, ringkasan link
 src/lib/trialAccounts.ts    Halaman Pengelola: password acak, tanggal bawaan (7 hari), cek isian, teks WhatsApp, status pelanggan
+src/lib/onboarding.ts       Panduan pengguna baru (Upload → HPP → Lihat hasil): langkah dari data toko + tanda kecil di localStorage
+src/components/Onboarding.tsx  Hook useOnboarding (dimuat di App), panduan lengkap di Rekap, baris langkah di Upload & HPP
 src/lib/trialLimits.ts      Batas uji coba: bulan yang diisi upload, cek 1 bulan, kunci jatah simulasi per produk, pesan
 src/components/trialSim.tsx Hook jatah simulasi uji coba (Satu produk & Grup iklan) + pesan jatah habis
 src/lib/errors.ts           Pesan error ramah + petunjuk migration yang belum dijalankan (untuk pengelola)
@@ -212,7 +214,7 @@ order (bawaan Rp1.250) + packaging. Saran harga dari modal (`priceLadder`), Grup
 
 | Halaman | Isi |
 |---|---|
-| Rekap | 4 bab: Untung + diagnosa, Dari omzet sampai untung, Iklan bulan itu, Pesanan & produk (tab). Bisa beberapa bulan. |
+| Rekap | Toko baru: **panduan 3 langkah** di atas (Upload laporan → Masukkan HPP → Lihat hasil), lihat `onboardingView`. 4 bab: Untung + diagnosa, Dari omzet sampai untung, Iklan bulan itu, Pesanan & produk (tab). Bisa beberapa bulan. |
 | Iklan | Ringkasan untung/rugi iklan, kartu per produk dengan label & sumber potongan, gabungan beberapa bulan, Cek cepat. |
 | Simulasi Harga | Satu produk (termasuk saran harga dari modal, kategori admin) dan Grup iklan. |
 | Upload | 1. Export pesanan (.xlsx) · 2. Laporan penghasilan (.xlsx "Sudah Dilepas" atau .pdf) · 3. Data iklan (.csv). Preview, satu tombol simpan. File salah kotak diberi pesan jelas. |
@@ -279,6 +281,7 @@ npm run build
 | (8 Nov) | Cek cepat iklan: tombol **Download untuk Claude (.md)** (`src/lib/adsQuickExport.ts`): ringkasan + 2 tabel per produk (hasil iklan; untung & target ROAS), definisi rumus, peringatan data beberapa hari, pertanyaan pembuka. Dibuat di browser, tanpa data pembeli; berisi HPP/untung toko. Tanpa SQL. |
 | (8 Nov) | Cek cepat: tombol **Pilih export pesanan** di dalam Cek cepat kalau pesanan tanggal itu belum ada (disimpan lewat `saveOrderItems` seperti Upload, lalu `loadAdsContext` dimuat ulang). Produk tanpa pesanan yang HPP-nya rata-rata beberapa variasi ditandai (`hppAvgVariants`, dari `fallbackVariants`) dan boleh ditimpa HPP sementara; tanda juga di file .md. Tanpa SQL. |
 | (8 Nov) | Cek cepat: pemilih file menerima data iklan (.csv) + export pesanan (.xlsx) sekaligus (pesanan disimpan dulu, lalu dihitung). Peringatan pesanan kosong jadi kotak kuning berjudul; kalau pesanan sudah ada, ada tombol **Perbarui pesanan**. Tanpa SQL. |
+| (16 Nov) | **Panduan pengguna baru** (`src/lib/onboarding.ts`, `src/components/Onboarding.tsx`): Upload laporan Shopee → Masukkan HPP → Lihat hasil keuntungan, menggantikan layar "3 langkah" lama di Rekap kosong (yang hilang setelah file pertama sehingga langkah HPP tidak pernah terlihat). Langkah dari data (`fetchSetupProgress`: ada pesanan, ada penghasilan, jumlah produk & HPP kosong). Tampil kalau belum ada pesanan/penghasilan, atau HPP belum ada sama sekali / panduan sudah pernah tampil di perangkat ini (`localStorage onboarding:<toko>`); toko lama dengan produk baru tanpa HPP tidak kena (urusan pengingat bulanan). Selesai = upload + HPP lengkap → Rekap langsung tampil + kartu "3 dari 3 langkah selesai" di hari itu. Selama panduan tampil, kartu pengingat bulanan disembunyikan; Upload & HPP menampilkan baris langkah. Simpan HPP kini memanggil `notifyDataChanged`. Tanpa SQL. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 
