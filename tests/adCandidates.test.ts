@@ -87,6 +87,10 @@ describe('findAdCandidates', () => {
     expect(by.Mahal.status).toBe('berat')
     expect(by.Mahal.targetRoas).toBeCloseTo(50)
     expect(by.Tipis.status).toBe('tidak_mungkin')
+    // Untung 3% → harga untuk untung 20%: 82.000 ÷ (1 − 15% − 20%) = 126.154.
+    expect(by.Tipis.margin).toBeCloseTo(0.03)
+    expect(by.Tipis.idealPrice).toBeCloseTo(82_000 / 0.65)
+    expect(by.Serum.idealPrice).toBeNull()
     // 3 dari 10 diretur (30%) → terjual bersih 7.
     expect(by.Retur.status).toBe('banyak_retur')
     expect(by.Retur.sold).toBe(7)

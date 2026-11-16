@@ -394,15 +394,20 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
 // --- Calon iklan ----------------------------------------------------------------
 
 /** Alasan singkat kenapa produk yang belum diiklankan tidak (atau belum) disarankan. */
-function candidateReason(c: AdCandidate, referenceRoas: number | null): string {
+function candidateReason(c: AdCandidate, referenceRoas: number | null, priceMargin: number): string {
   const target = c.shopeeTargetRoas !== null ? formatRoas(roundUp1(c.shopeeTargetRoas)) : null
   switch (c.status) {
     case 'layak':
       return ''
     case 'berat':
       return `Butuh target ROAS ${target}, lebih tinggi dari ROAS nyata iklan tokomu (${formatRoas(referenceRoas)}). Naikkan harga dulu, atau coba dengan budget kecil.`
-    case 'tidak_mungkin':
-      return 'Untung per barang terlalu tipis, iklan pasti di bawah target untung.'
+    case 'tidak_mungkin': {
+      const profit = `${formatRupiah(c.unitProfit)} (${formatPercent((c.margin ?? 0) * 100)})`
+      const price = c.idealPrice !== null ? ` Supaya untung ${formatPercent(priceMargin * 100)}, jual ±${formatRupiah(roundUpPrice(c.idealPrice))}.` : ''
+      return (c.unitProfit ?? 0) <= 0
+        ? `Sudah rugi ${formatRupiah(Math.abs(c.unitProfit ?? 0))} per barang bahkan tanpa iklan. Masalahnya di harga, bukan iklan.${price}`
+        : `Untung per barang hanya ${profit} bahkan tanpa iklan, jadi iklan pasti di bawah target. Masalahnya di harga, bukan iklan.${price}`
+    }
     case 'banyak_retur':
       return `${formatPercent(c.lostShare * 100)} pesanannya batal/retur. Iklan ikut membayar pesanan yang tidak jadi.`
     case 'hpp_kosong':
@@ -446,7 +451,7 @@ function CandidatesCard({ data }: { data: Loaded }) {
         <IconInfo size={16} className="mt-0.5 shrink-0 text-accent" />
         <span>
           Ini hanya cek untung. Aplikasi tidak tahu berapa orang yang melihat produkmu, jadi belum tentu laku saat
-          diiklankan. Mulai dengan budget kecil, isi target ROAS di bawah, lalu cek lagi di halaman ini setelah 1–2 minggu.
+          diiklankan. Mulai dengan budget kecil, lalu cek lagi di halaman ini setelah 1–2 minggu.
         </span>
       </p>
       {maybeAdvertised && (
@@ -459,6 +464,15 @@ function CandidatesCard({ data }: { data: Loaded }) {
         </p>
       )}
 
+      {layak.length > 0 && (
+        <p className="mt-2 flex gap-2 text-sm text-ink-2">
+          <IconInfo size={16} className="mt-0.5 shrink-0 text-accent" />
+          <span>
+            <strong>Target ROAS minimal</strong> = batas bawah supaya masih untung {adsPct}. Makin tinggi angka yang kamu isi
+            di Shopee, makin hemat iklannya dan makin besar untung per barang, tapi biasanya makin sedikit yang terjual.
+          </span>
+        </p>
+      )}
       {layak.length > 0 && (
         <ul className="tear mt-4 divide-y divide-line pt-2">
           {layak.map((c) => (
@@ -474,7 +488,7 @@ function CandidatesCard({ data }: { data: Loaded }) {
                 {c.hppIncomplete && <p className="text-sm text-warn">Sebagian variasi belum ada HPP-nya.</p>}
               </div>
               <div className="text-right">
-                <p className="text-sm text-ink-3">Target ROAS di Shopee</p>
+                <p className="text-sm text-ink-3">Target ROAS minimal di Shopee</p>
                 <p className="num text-lg font-bold">{formatRoas(roundUp1(c.shopeeTargetRoas ?? 0))}</p>
               </div>
             </li>
@@ -494,15 +508,22 @@ function CandidatesCard({ data }: { data: Loaded }) {
                 <p className="line-clamp-2 font-medium leading-snug" title={c.name}>
                   {c.name}
                 </p>
-                <p className="text-sm text-ink-2">{candidateReason(c, referenceRoas)}</p>
+                <p className="text-sm text-ink-2">{candidateReason(c, referenceRoas, data.targets.priceMargin)}</p>
               </li>
             ))}
           </ul>
-          {rest.some((c) => c.status === 'hpp_kosong') && (
-            <Button variant="secondary" className="mt-3" onClick={() => navigate('hpp', { kosong: '1' })}>
-              Isi HPP
-            </Button>
-          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {rest.some((c) => c.status === 'tidak_mungkin') && (
+              <Button variant="secondary" onClick={() => navigate('simulasi')}>
+                Cari harga baru di Simulasi Harga
+              </Button>
+            )}
+            {rest.some((c) => c.status === 'hpp_kosong') && (
+              <Button variant="secondary" onClick={() => navigate('hpp', { kosong: '1' })}>
+                Isi HPP
+              </Button>
+            )}
+          </div>
         </details>
       )}
     </Card>

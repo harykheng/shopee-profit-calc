@@ -461,11 +461,14 @@ Produk disarankan kalau:
 - target ROAS-nya (untuk untung 5% setelah iklan) **lebih kecil dari ROAS nyata iklan tokomu** di
   periode itu. Artinya, kalau iklannya sebagus rata-rata iklan tokomu, produk ini masih untung.
 
-Urutannya: yang paling laku tanpa iklan di atas. Angka di kanan adalah **target ROAS** untuk diisi di
-Shopee saat membuat iklan baru.
+Urutannya: yang paling laku tanpa iklan di atas. Angka di kanan adalah **target ROAS minimal** untuk
+diisi di Shopee saat membuat iklan baru: batas bawah supaya masih untung 5%. Makin tinggi angka yang
+diisi, makin hemat iklannya dan makin besar untung per barang, tapi biasanya makin sedikit yang terjual.
 
 Produk lain ada di **"N produk lain belum disarankan"**, masing-masing dengan alasannya (ROAS yang
 dibutuhkan terlalu tinggi, untung terlalu tipis, banyak batal/retur, HPP kosong, atau baru laku sedikit).
+Kalau alasannya **untung terlalu tipis**, masalahnya ada di harga, bukan di iklan: untung per barang
+(sebelum iklan) dan harga jual untuk untung 20% ditampilkan, plus tombol ke **Simulasi Harga**.
 
 **Penting:** ini hanya cek **untung**, bukan jaminan laku. Aplikasi tidak tahu berapa orang yang
 melihat atau mengeklik produkmu. Mulai dengan budget kecil, lalu lihat hasilnya di halaman ini setelah

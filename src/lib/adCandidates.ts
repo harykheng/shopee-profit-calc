@@ -47,8 +47,10 @@ export interface AdCandidate {
   lostShare: number
   /** ROAS nyata minimal supaya untung sesuai target toko setelah iklan. */
   targetRoas: number | null
-  /** Angka untuk diisi di Shopee (dengan cadangan batal & retur). */
+  /** Angka minimal untuk diisi di Shopee (dengan cadangan batal & retur). */
   shopeeTargetRoas: number | null
+  /** Harga jual supaya untung sesuai target harga toko (diisi kalau margin di bawahnya), sama dengan kartu iklan. */
+  idealPrice: number | null
   status: CandidateStatus
 }
 
@@ -125,6 +127,11 @@ export function findAdCandidates(input: {
     const unitProfit = price !== null && hpp !== null ? price * (1 - fee.rate) - hpp : null
     const margin = unitProfit !== null && price ? unitProfit / price : null
     const { targetRoas, shopeeTargetRoas } = targetRoasFromMargin(margin, stats.lostShare, targets.adsProfit)
+    const idealDenominator = 1 - fee.rate - targets.priceMargin
+    const idealPrice =
+      hpp !== null && margin !== null && margin < targets.priceMargin && idealDenominator > 0
+        ? hpp / idealDenominator
+        : null
 
     let status: CandidateStatus
     if (sold < MIN_SALES_FOR_VERDICT) status = 'sedikit'
@@ -146,6 +153,7 @@ export function findAdCandidates(input: {
       lostShare: stats.lostShare,
       targetRoas,
       shopeeTargetRoas,
+      idealPrice,
       status,
     })
   }
