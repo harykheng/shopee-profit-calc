@@ -75,6 +75,8 @@ export interface TrialLinkRow {
   used_count: number
   expires_at: string
   created_at: string
+  /** Sumber yang diisi pengelola ("Instagram"). null kalau kosong atau SQL 20261116 belum dijalankan. */
+  source?: string | null
 }
 
 /** "Untuk 10 orang · 3 sudah daftar · berlaku sampai 18 Nov 2026" */

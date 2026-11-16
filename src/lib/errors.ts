@@ -6,6 +6,11 @@ const SYSTEM_TROUBLE = 'Ada gangguan di sistem kami. Coba lagi sebentar lagi; ka
 
 /** Error karena migration belum dijalankan: [kata kunci, nama file SQL]. */
 const MISSING_MIGRATIONS: [match: (lower: string) => boolean, file: string][] = [
+  // Link dengan sumber (versi 3 parameter) dan catatan aktivitas; sebelum "trial_link" di bawah.
+  [
+    (l) => l.includes('p_source') || l.includes('log_activity') || l.includes('activity_events') || l.includes('platform_activity_summary'),
+    '20261116000000_activity_events.sql',
+  ],
   // Sebelum platform_create_trial: "platform_create_trial_link" juga memuat kata itu.
   [(l) => l.includes('trial_link'), '20261111000000_trial_links.sql'],
   [(l) => l.includes('platform_create_account'), '20261030000000_platform_create_account.sql'],

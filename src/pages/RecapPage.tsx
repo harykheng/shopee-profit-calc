@@ -22,6 +22,7 @@ import {
   fetchStoreSettings,
   type SetupProgress,
   fillMissingHpp,
+  logActivity,
   recalcHpp,
   type CreatedItem,
   type UnmatchedIncomeOrder,
@@ -199,6 +200,12 @@ export function RecapPage({
   const ordersPending = !!data && data.months.length === 0 && orders === null
   const isEmpty =
     data && data.months.length === 0 && orders && !('error' in orders) && orders.groups.length === 0
+  // Catatan "melihat hasil rekap" untuk pengelola: hanya kalau Rekap-nya ada isinya (database membatasi 1 per 10 menit).
+  const hasReport =
+    !!data && (data.months.length > 0 || (!!orders && !('error' in orders) && orders.groups.length > 0))
+  useEffect(() => {
+    if (hasReport && storeId) logActivity(storeId, 'profit_report_viewed')
+  }, [hasReport, storeId, from, end])
 
   return (
     <>

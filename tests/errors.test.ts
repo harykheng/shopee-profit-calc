@@ -10,6 +10,8 @@ describe('friendlyError: database belum diperbarui', () => {
     ['column "order_no" of relation "income_adjustments" does not exist', '20261020000000_income_orders.sql'],
     ['column products.admin_pct does not exist', '20261007000000_product_fee_settings.sql'],
     ['function save_ad_report does not exist', '20261006000000_ads.sql'],
+    ['Could not find the function public.platform_create_trial_link(p_max_uses, p_source, p_valid_days) in the schema cache', '20261116000000_activity_events.sql'],
+    ['Could not find the function public.platform_create_trial_link(p_max_uses, p_valid_days) in the schema cache', '20261111000000_trial_links.sql'],
   ]
 
   it.each(cases)('pesan pelanggan tidak membocorkan SQL/Supabase: %s', (message, file) => {

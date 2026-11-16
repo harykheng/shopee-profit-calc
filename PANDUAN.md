@@ -761,3 +761,8 @@ Data tokomu adalah milikmu. Di halaman Akun, **Minta salinan data** dan **Minta 
 membuka WhatsApp ke pengelola dengan pesan yang sudah berisi akun dan tokomu. Pengelola memprosesnya
 secara manual setelah memastikan permintaan itu benar dari pemilik akun. Penghapusan tidak bisa
 dibatalkan, jadi minta salinan dulu kalau kamu masih membutuhkan datanya.
+
+**Catatan pemakaian.** Aplikasi mencatat **kapan** kamu masuk, berhasil upload, dan membuka Rekap, supaya
+pengelola tahu bagian mana yang sudah dicoba dan bisa membantu kalau kamu tersendat. Yang dicatat hanya nama
+kegiatan dan waktunya; isi laporan, angka untung, produk, dan data pembeli **tidak** ikut dicatat. Catatan
+ini ikut di salinan data dan ikut terhapus saat data dihapus.
