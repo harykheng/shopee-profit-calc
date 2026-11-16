@@ -5,6 +5,7 @@ import {
   addTrialSimulations,
   createAccount,
   createTrialLink,
+  fetchActivitySummary,
   fetchCustomers,
   fetchTrialLinks,
   revokeTrialLink,
@@ -13,6 +14,7 @@ import {
   subscribeStore,
   type TrialSimUsage,
 } from '../lib/api'
+import { SOURCE_MAX_LENGTH, activityDetail, activityVerdict, countTried, normalizeSource, type ActivitySummary } from '../lib/activity'
 import { APP_NAME } from '../lib/brand'
 import { adminHint, friendlyError } from '../lib/errors'
 import { formatDate } from '../lib/format'
@@ -81,10 +83,12 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
   const [customers, setCustomers] = useState<CustomerRow[] | null>(null)
   const [listError, setListError] = useState<string | null>(null)
   const [simUsage, setSimUsage] = useState<Map<number, TrialSimUsage> | null>(null)
+  const [activity, setActivity] = useState<Map<number, ActivitySummary> | null>(null)
 
   const load = useCallback(() => {
-    // Pemakaian simulasi hanya pelengkap: kalau gagal, daftar tetap tampil tanpa itu.
+    // Pemakaian simulasi & aktivitas hanya pelengkap: kalau gagal, daftar tetap tampil tanpa itu.
     fetchTrialSimUsage().then(setSimUsage)
+    fetchActivitySummary().then(setActivity)
     fetchCustomers()
       .then((rows) => {
         setCustomers(rows)
@@ -96,6 +100,9 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
 
   const counts = customers ? countByGroup(customers) : null
   const summary = customers ? summarizeCustomers(customers) : null
+  // Uji coba aktif yang sudah benar-benar mencoba (upload laporan atau lebih jauh).
+  const activeTrialIds = customers ? customers.filter((r) => customerGroup(r) === 'trial').map((r) => r.store_id) : []
+  const tried = activity ? countTried(activeTrialIds, activity) : null
 
   return (
     <>
@@ -109,9 +116,10 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
           <p className="max-w-[40ch] font-display text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">
             <span className="hl">{counts.paid} berlangganan</span>, {counts.trial} sedang uji coba.
           </p>
-          {(summary.neverLoggedIn > 0 || counts.ended > 0) && (
+          {(summary.neverLoggedIn > 0 || counts.ended > 0 || (tried !== null && counts.trial > 0)) && (
             <p className="mt-2 text-lg text-ink-2">
               {[
+                tried !== null && counts.trial > 0 ? `${tried} dari ${counts.trial} uji coba sudah upload laporan` : null,
                 summary.neverLoggedIn > 0 ? `${summary.neverLoggedIn} akun uji coba belum pernah login` : null,
                 counts.ended > 0 ? `${counts.ended} toko sudah berakhir (baca saja)` : null,
               ]
@@ -131,7 +139,7 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
         ) : !customers ? (
           <Spinner />
         ) : (
-          <CustomerList rows={customers} simUsage={simUsage} onChanged={load} />
+          <CustomerList rows={customers} simUsage={simUsage} activity={activity} onChanged={load} />
         )}
       </Card>
     </>
@@ -195,6 +203,8 @@ function PillChoice<T extends number>({
 function TrialLinkCard() {
   const [maxUses, setMaxUses] = useState<(typeof LINK_USE_OPTIONS)[number]>(1)
   const [days, setDays] = useState<(typeof LINK_DAY_OPTIONS)[number]>(7)
+  const [source, setSource] = useState('')
+  const sourceId = useId()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<string | null>(null)
@@ -211,7 +221,7 @@ function TrialLinkCard() {
     setBusy(true)
     setError(null)
     try {
-      const link = await createTrialLink(maxUses, days)
+      const link = await createTrialLink(maxUses, days, normalizeSource(source))
       setCreated(linkInviteMessage({ appName: APP_NAME, url: signupUrl(window.location.origin, link.token) }))
       load()
     } catch (err) {
@@ -270,6 +280,20 @@ function TrialLinkCard() {
             onChange={setDays}
             format={(n) => `${n} hari`}
           />
+          <label htmlFor={sourceId} className="mt-4 block font-semibold">
+            Sumber <span className="font-normal text-ink-3">(boleh kosong)</span>
+          </label>
+          <input
+            id={sourceId}
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            maxLength={SOURCE_MAX_LENGTH}
+            placeholder="mis. Instagram, Grup FB, teman"
+            className={`${inputClass} mt-1.5`}
+          />
+          <span className="mt-1 block text-sm text-ink-3">
+            Tampil di daftar Pelanggan, supaya kelihatan pendaftar dari mana yang benar-benar mencoba.
+          </span>
           <Button onClick={create} disabled={busy} className="mt-6">
             {busy ? 'Membuat link…' : 'Buat link uji coba'}
           </Button>
@@ -290,6 +314,7 @@ function TrialLinkCard() {
               <li key={l.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
                 <span className="text-ink-2">
                   {linkSummary(l)}
+                  {l.source && <span className="text-ink-3"> · {l.source}</span>}
                   <span className="text-ink-3"> · dibuat {formatDate(l.created_at)}</span>
                 </span>
                 <Button variant="secondary" onClick={() => revoke(l.id)} disabled={revoking !== null}>
@@ -545,10 +570,12 @@ function sortRows(rows: CustomerRow[], filter: Filter): CustomerRow[] {
 function CustomerList({
   rows,
   simUsage,
+  activity,
   onChanged,
 }: {
   rows: CustomerRow[]
   simUsage: Map<number, TrialSimUsage> | null
+  activity: Map<number, ActivitySummary> | null
   onChanged: () => void
 }) {
   const counts = countByGroup(rows)
@@ -597,6 +624,7 @@ function CustomerList({
               onSubscription={() => setSubscribing(r)}
               onResetPassword={() => setResetting(r)}
               simUsage={r.trial ? (simUsage?.get(r.store_id) ?? null) : null}
+              activity={activity?.get(r.store_id) ?? null}
               onAddSimulations={() => setAddingSims(r)}
             />
           ))}
@@ -644,6 +672,7 @@ function CustomerItem({
   onSubscription,
   onResetPassword,
   simUsage,
+  activity,
   onAddSimulations,
 }: {
   row: CustomerRow
@@ -651,6 +680,8 @@ function CustomerItem({
   onResetPassword: () => void
   /** Hanya toko uji coba, dan hanya kalau SQL 20261102 sudah dijalankan. */
   simUsage: TrialSimUsage | null
+  /** null kalau SQL 20261116 belum dijalankan. */
+  activity: ActivitySummary | null
   onAddSimulations: () => void
 }) {
   const status = customerStatus(row.active_until)
@@ -667,6 +698,7 @@ function CustomerItem({
         <p className="text-ink-2 [overflow-wrap:anywhere]">
           {row.owner_emails.length ? row.owner_emails.join(', ') : 'Belum ada akun yang terhubung'}
         </p>
+        {activity && <ActivityLine activity={activity} trial={row.trial} />}
       </div>
       <div className="text-sm sm:text-right">
         <p className={`font-semibold ${statusColor}`}>
@@ -701,6 +733,22 @@ function CustomerItem({
         </div>
       </div>
     </li>
+  )
+}
+
+/** Sudah sejauh mana akun ini mencoba aplikasinya (hanya nama aktivitas & waktu, tanpa isi toko). */
+function ActivityLine({ activity, trial }: { activity: ActivitySummary; trial: boolean }) {
+  const verdict = activityVerdict(activity)
+  const detail = activityDetail(activity)
+  return (
+    <div className="mt-1 text-sm">
+      <p className={trial && verdict.followUp ? 'font-semibold text-warn' : 'font-semibold text-ink-2'}>{verdict.label}</p>
+      {(detail || activity.source) && (
+        <p className="text-ink-3 [overflow-wrap:anywhere]">
+          {[detail, activity.source ? `Sumber: ${activity.source}` : null].filter(Boolean).join(' · ')}
+        </p>
+      )}
+    </div>
   )
 }
 

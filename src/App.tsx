@@ -10,7 +10,7 @@ import { formatDate } from './lib/format'
 import { expiryNotice, subscriptionStatus } from './lib/subscription'
 import { needsPasswordChange } from './lib/password'
 import { setErrorContext } from './lib/reportError'
-import { fetchIsPlatformAdmin, fetchStores } from './lib/api'
+import { fetchIsPlatformAdmin, fetchStores, logActivity } from './lib/api'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import type { Store } from './lib/types'
 import { LoginPage } from './pages/LoginPage'
@@ -202,6 +202,12 @@ function MainApp({ user }: { user: User }) {
   const selectedStore = stores?.find((s) => s.id === storeId) ?? null
   // Laporan error hanya membawa toko yang terbukti milik akun ini (id dari localStorage bisa basi).
   useEffect(() => setErrorContext({ storeId: selectedStore ? selectedStore.id : null }), [selectedStore])
+  // Catatan "masuk aplikasi" untuk pengelola (apakah akun uji coba benar-benar dipakai). Database hanya
+  // menyimpan satu per 30 menit, jadi memuat ulang halaman tidak membuat catatan dobel.
+  const selectedStoreId = selectedStore?.id ?? null
+  useEffect(() => {
+    if (selectedStoreId !== null) logActivity(selectedStoreId, 'trial_logged_in')
+  }, [selectedStoreId])
   const subscription = subscriptionStatus(selectedStore?.active_until)
   // Layar penuh menggantikan semua halaman: belum punya toko, atau langganan toko terpilih habis.
   const expired = subscription.state === 'expired' && selectedStore !== null
@@ -434,6 +440,7 @@ function MainApp({ user }: { user: User }) {
                 storeId={storeId}
                
                 onlyMissingInitially={params.get('kosong') === '1'}
+                initialSearch={params.get('cari') ?? ''}
               />
             )}
             {route === 'biaya' && (
