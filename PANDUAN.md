@@ -449,6 +449,31 @@ Kalau tertulis **"tidak mungkin"** di saran target ROAS, artinya untung per bara
 Iklan tidak akan bisa memberi untung 5% (atau ROAS yang dibutuhkan di atas 50). Solusinya
 **naikkan harga**; harga yang dibutuhkan ditampilkan di kartu.
 
+### Produk yang belum diiklankan: mana yang cocok dicoba?
+
+Di bawah kartu iklan ada kotak **"N produk belum diiklankan, tapi untungnya cukup untuk diiklankan"**.
+Isinya produk yang terjual di periode itu **tanpa iklan**. Butuh export pesanan periode yang sama.
+
+Produk disarankan kalau:
+- sudah laku minimal 3 tanpa iklan (batal & retur tidak dihitung),
+- HPP sudah diisi,
+- batal + retur tidak lebih dari 20%,
+- target ROAS-nya (untuk untung 5% setelah iklan) **lebih kecil dari ROAS nyata iklan tokomu** di
+  periode itu. Artinya, kalau iklannya sebagus rata-rata iklan tokomu, produk ini masih untung.
+
+Urutannya: yang paling laku tanpa iklan di atas. Angka di kanan adalah **target ROAS minimal** untuk
+diisi di Shopee saat membuat iklan baru: batas bawah supaya masih untung 5%. Makin tinggi angka yang
+diisi, makin hemat iklannya dan makin besar untung per barang, tapi biasanya makin sedikit yang terjual.
+
+Produk lain ada di **"N produk lain belum disarankan"**, masing-masing dengan alasannya (ROAS yang
+dibutuhkan terlalu tinggi, untung terlalu tipis, banyak batal/retur, HPP kosong, atau baru laku sedikit).
+Kalau alasannya **untung terlalu tipis**, masalahnya ada di harga, bukan di iklan: untung per barang
+(sebelum iklan) dan harga jual untuk untung 20% ditampilkan, plus tombol ke **Simulasi Harga**.
+
+**Penting:** ini hanya cek **untung**, bukan jaminan laku. Aplikasi tidak tahu berapa orang yang
+melihat atau mengeklik produkmu. Mulai dengan budget kecil, lalu lihat hasilnya di halaman ini setelah
+1–2 minggu (pakai **Cek cepat**).
+
 ### Dari mana angka-angkanya?
 
 - **Potongan Shopee asli per produk.** Kalau laporan Excel "Sudah Dilepas" sudah di-upload, potongan

@@ -6,7 +6,7 @@ dulu sebelum mengubah kode. Untuk **pemakai aplikasi**: [PANDUAN.md](PANDUAN.md)
 toko, pantau error): [OPERASI.md](OPERASI.md). Fakta produk: [PRODUCT.md](PRODUCT.md). Sistem desain:
 [DESIGN.md](DESIGN.md).
 
-Terakhir diperbarui: 11 November 2026 (link uji coba).
+Terakhir diperbarui: 16 November 2026 (calon iklan).
 
 ---
 
@@ -95,6 +95,7 @@ src/lib/monthStatus.ts      Status bulan "Angka final / Belum lengkap"
 src/lib/recapMath.ts        Hitungan Rekap: perkiraan/untung pesanan, rincian omzet (incomeBreakdown),
                             untung per produk (productRows/sortProducts), diagnosa Bab 1 (recapInsights)
 src/lib/adsMath.ts          Iklan per produk, potongan asli per Kode Produk, simulasi harga, grup iklan
+src/lib/adCandidates.ts     Calon iklan: produk terjual yang belum diiklankan, apakah untungnya cukup untuk diiklankan
 src/lib/adsLoad.ts          Memuat data untuk analisis iklan (halaman Iklan, Cek cepat, bab Iklan di Rekap)
 src/lib/adsQuickExport.ts   Label Cek cepat + file .md hasil Cek cepat untuk dibagikan ke Claude
 src/lib/feeCategories.ts    Kategori biaya admin per toko
@@ -204,6 +205,14 @@ di export pesanan (`income_order_match`).
   Export pesanan tanggal yang sama boleh dipilih di sana, sekaligus dengan CSV iklan (disimpan seperti Upload). Tanpa pesanan, HPP produk
   bervariasi = rata-rata variasi dan ditandai "Belum pasti".
 
+**Calon iklan** (`findAdCandidates`, kotak di bawah kartu iklan, hanya kalau export pesanan ada): produk
+yang terjual di periode itu dan **belum punya biaya iklan**. Layak kalau terjual bersih ≥ 3, HPP ada, batal +
+retur ≤ 20% (`MAX_LOST_SHARE_FOR_ADS`), dan target ROAS (untung toko setelah iklan) ≤ **ROAS nyata iklan toko**
+periode itu (tanpa biaya iklan: semua yang mungkin dianggap layak). Potongan memakai aturan yang sama dengan
+iklan (`resolveProductFee`; ID Produk dicari dari nama di laporan penghasilan). Urut: paling laku tanpa iklan.
+Sengaja hanya cek untung: tanpa data dilihat/klik (export Performa Produk belum dibaca), jadi tidak ada
+"perkiraan untung kalau diiklankan". Tahap 2 (belum): parser Performa Produk untuk konversi, butuh tabel baru.
+
 **Simulasi Harga** — potongan per komponen: admin % × harga + XTRA 4% × harga + biaya proses tetap per
 order (bawaan Rp1.250) + packaging. Saran harga dari modal (`priceLadder`), Grup iklan
 (`simulateAdGroup`, tidak disimpan).
@@ -280,6 +289,7 @@ npm run build
 | (8 Nov) | Cek cepat: tombol **Pilih export pesanan** di dalam Cek cepat kalau pesanan tanggal itu belum ada (disimpan lewat `saveOrderItems` seperti Upload, lalu `loadAdsContext` dimuat ulang). Produk tanpa pesanan yang HPP-nya rata-rata beberapa variasi ditandai (`hppAvgVariants`, dari `fallbackVariants`) dan boleh ditimpa HPP sementara; tanda juga di file .md. Tanpa SQL. |
 | (8 Nov) | Cek cepat: pemilih file menerima data iklan (.csv) + export pesanan (.xlsx) sekaligus (pesanan disimpan dulu, lalu dihitung). Peringatan pesanan kosong jadi kotak kuning berjudul; kalau pesanan sudah ada, ada tombol **Perbarui pesanan**. Tanpa SQL. |
 | (14 Nov) | Cek cepat: kartu produk menampilkan **HPP per barang** + asalnya (`hppSource`: pesanan / produk / sementara, `hppSoldVariants`). Variasi terjual tanpa HPP disebut namanya (`missingHppVariants`, dari `variant_name`/`sku` baris pesanan; juga di file .md) dengan tautan tab baru ke `#/hpp?cari=…` (HppPage `initialSearch`); data toko dimuat ulang saat tab Cek cepat terlihat lagi. Export pesanan dari tab selain Semua (`Order.toship…` dll., `orderExportTabWarning`) tetap disimpan tapi diperingatkan, di Upload dan Cek cepat. Tanpa SQL. |
+| (16 Nov) | Iklan: kotak **calon iklan** (produk belum diiklankan yang untungnya cukup, patokan ROAS nyata toko), `src/lib/adCandidates.ts`. Potongan & statistik pesanan per produk dipisah jadi `resolveProductFee` / `orderLineStats` (hasil `analyzeAds` sama). Tanpa SQL. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 

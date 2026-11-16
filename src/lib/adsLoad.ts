@@ -18,6 +18,7 @@ import {
   type AdsAnalysis,
   type Targets,
 } from './adsMath'
+import { findAdCandidates, type AdCandidates } from './adCandidates'
 import { productFeeComponents } from './feeCategories'
 import { addMonths, formatMonth, monthEnd, wibDay } from './format'
 import type { AdsParseResult } from './parsers/ads'
@@ -44,6 +45,8 @@ export interface Loaded {
   hasOrders: boolean
   /** Untuk gabungan beberapa bulan: hasil per bulan. */
   perMonth?: { month: string; analysis: AdsAnalysis }[]
+  /** Produk terjual yang belum diiklankan, dinilai apakah untungnya cukup untuk diiklankan. */
+  candidates: AdCandidates
 }
 
 /** Muat & hitung analisis iklan satu periode tersimpan (dipakai halaman Iklan dan bab Iklan di Rekap). */
@@ -146,9 +149,10 @@ function computeAdsAnalysis(
   })
   const rate = feeRate ?? DEFAULT_FEE_RATE
   const actualFees = actualFeeRates(productIncome, monthStart)
+  const orders = items.map(toLine)
   const analysis = analyzeAds({
     reports,
-    orders: items.map(toLine),
+    orders,
     feeRate: rate,
     fallbackHpp,
     fallbackVariants,
@@ -177,6 +181,22 @@ function computeAdsAnalysis(
           }),
         }))
       : undefined
-  return { targets, analysis, feeRate: rate, feeFrom, hasOrders: items.length > 0, perMonth }
+  // ID Produk per nama (dari laporan penghasilan) supaya produk tanpa iklan juga memakai potongan aslinya.
+  const idLines = new Map<string, { id: string; lines: number }>()
+  for (const r of productIncome) {
+    const k = productKey(r.product_name ?? '')
+    if (!k || (idLines.get(k)?.lines ?? -1) >= Number(r.lines)) continue
+    idLines.set(k, { id: r.product_id, lines: Number(r.lines) })
+  }
+  const candidates = findAdCandidates({
+    orders,
+    analysis,
+    feeRate: rate,
+    feeComponents,
+    actualFees,
+    productIds: new Map([...idLines].map(([k, v]) => [k, v.id])),
+    targets,
+  })
+  return { targets, analysis, feeRate: rate, feeFrom, hasOrders: items.length > 0, perMonth, candidates }
 }
 

@@ -246,6 +246,62 @@ export function referenceFeeComponent(
   return [...components.values()].reduce((s, c) => s + c, 0) / components.size
 }
 
+/**
+ * Potongan Shopee satu produk: asli dari laporan (per Kode Produk) kalau ada; kalau tidak, rata-rata toko digeser
+ * sesuai porsi admin produk terhadap pembanding; kalau tidak ada juga, rata-rata toko apa adanya.
+ * `componentsCount` = jumlah produk yang porsi adminnya diketahui (dengan hanya 1, tidak ada pembanding).
+ */
+export function resolveProductFee(input: {
+  feeRate: number
+  actualFee?: number
+  component?: number
+  refComponent: number | null
+  componentsCount: number
+}): { rate: number; source: AdProductResult['feeSource'] } {
+  const { feeRate, actualFee, component, refComponent, componentsCount } = input
+  if (actualFee !== undefined) return { rate: actualFee, source: 'aktual' }
+  if (component === undefined || refComponent === null) return { rate: feeRate, source: 'rata-rata' }
+  return {
+    rate: Math.min(Math.max(feeRate + component - refComponent, 0), MAX_PRODUCT_FEE_RATE),
+    // Dengan hanya satu produk yang diketahui tidak ada pembanding, jadi potongannya tidak bergeser:
+    // jujur disebut rata-rata toko.
+    source: componentsCount >= 2 ? 'produk' : 'rata-rata',
+  }
+}
+
+/** Ringkasan baris pesanan satu produk: qty batal/retur, harga rata-rata, dan HPP rata-rata tertimbang qty. */
+export function orderLineStats(lines: AdOrderLine[]) {
+  const allQty = lines.reduce((s, l) => s + l.qty, 0)
+  const kept = lines.filter((l) => l.status_group !== 'batal')
+  const keptQty = kept.reduce((s, l) => s + l.qty, 0)
+  const batalQty = allQty - keptQty
+  // Retur: pesanan tetap Selesai, tapi barangnya kembali dan uangnya tidak jadi.
+  const returQty = kept.reduce((s, l) => s + Math.min(Math.max(l.returned_qty ?? 0, 0), l.qty), 0)
+  const keptSubtotal = kept.reduce((s, l) => s + l.subtotal, 0)
+  // HPP rata-rata tertimbang qty (pesanan yang tidak batal; kalau tidak ada, semua pesanan).
+  const hppLines = (kept.length > 0 ? kept : lines).filter((l) => l.qty > 0)
+  const withHpp = hppLines.filter((l) => l.hpp !== null)
+  const hppQty = withHpp.reduce((s, l) => s + l.qty, 0)
+  return {
+    allQty,
+    keptQty,
+    batalQty,
+    batalShare: allQty > 0 ? batalQty / allQty : 0,
+    returQty,
+    /** Porsi yang tidak jadi penjualan (0–1): batal + retur. */
+    lostShare: allQty > 0 ? (batalQty + returQty) / allQty : 0,
+    keptSubtotal,
+    /** Harga jual rata-rata dari pesanan yang tidak batal; null kalau tidak ada. */
+    price: keptQty > 0 ? keptSubtotal / keptQty : null,
+    hpp: hppQty > 0 ? withHpp.reduce((s, l) => s + l.qty * (l.hpp as number), 0) / hppQty : null,
+    /** Baris yang dipakai untuk HPP (tidak batal; kalau semua batal, semua baris). */
+    hppLines,
+    hppLineCount: hppLines.length,
+    /** Sebagian barang yang terjual belum ada HPP-nya. */
+    hppIncomplete: kept.length > 0 && withHpp.length < hppLines.length,
+  }
+}
+
 const ORDER: Record<AdVerdict, number> = { takedown: 0, kurang: 1, hpp_kosong: 2, hero: 3, aman: 4, belum_cukup: 5 }
 
 export function analyzeAds(input: {
@@ -349,41 +405,31 @@ export function analyzeAds(input: {
     if (a.spend <= 0) continue
     const key = productKey(a.name)
     const component = components.get(key)
-    const actualFee = input.actualFees?.get(code)
-    const productFee =
-      actualFee !== undefined
-        ? actualFee
-        : component !== undefined && refComponent !== null
-          ? Math.min(Math.max(feeRate + component - refComponent, 0), MAX_PRODUCT_FEE_RATE)
-          : feeRate
+    const fee = resolveProductFee({
+      feeRate,
+      actualFee: input.actualFees?.get(code),
+      component,
+      refComponent,
+      componentsCount: components.size,
+    })
+    const productFee = fee.rate
     const lines = ordersByKey.get(key) ?? []
-    const allQty = lines.reduce((s, l) => s + l.qty, 0)
-    const kept = lines.filter((l) => l.status_group !== 'batal')
-    const keptQty = kept.reduce((s, l) => s + l.qty, 0)
-    const batalQty = allQty - keptQty
-    const batalShare = allQty > 0 ? batalQty / allQty : 0
-    // Retur: pesanan tetap Selesai, tapi barangnya kembali dan uangnya tidak jadi. Shopee tetap menghitungnya
-    // sebagai konversi iklan, jadi dikurangi seperti pesanan batal.
-    const returQty = kept.reduce((s, l) => s + Math.min(Math.max(l.returned_qty ?? 0, 0), l.qty), 0)
-    const lostShare = allQty > 0 ? (batalQty + returQty) / allQty : 0
+    const stats = orderLineStats(lines)
+    const { batalQty, batalShare, returQty, lostShare } = stats
+    // Shopee tetap menghitung pesanan batal & retur sebagai konversi iklan, jadi dikurangi.
     const netSold = a.sold * (1 - lostShare)
     const netGmv = a.gmv * (1 - lostShare)
 
-    const keptSubtotal = kept.reduce((s, l) => s + l.subtotal, 0)
-    const priceSource = keptQty > 0 ? 'pesanan' : a.sold > 0 ? 'iklan' : null
-    const price = priceSource === 'pesanan' ? keptSubtotal / keptQty : priceSource === 'iklan' ? a.gmv / a.sold : null
+    const priceSource = stats.price !== null ? 'pesanan' : a.sold > 0 ? 'iklan' : null
+    const price = stats.price ?? (priceSource === 'iklan' ? a.gmv / a.sold : null)
 
-    // HPP rata-rata tertimbang qty (pesanan yang tidak batal; kalau tidak ada, semua pesanan).
-    const hppLines = (kept.length > 0 ? kept : lines).filter((l) => l.qty > 0)
-    const withHpp = hppLines.filter((l) => l.hpp !== null)
-    const hppQty = withHpp.reduce((s, l) => s + l.qty, 0)
-    let hpp = hppQty > 0 ? withHpp.reduce((s, l) => s + l.qty * (l.hpp as number), 0) / hppQty : null
+    let hpp = stats.hpp
     let hppSource: AdProductResult['hppSource'] = hpp !== null ? 'pesanan' : null
     const variantOf = (l: AdOrderLine) => l.variant_name || l.sku || ''
-    const hppSoldVariants = new Set(withHpp.map(variantOf)).size
-    const missingHppVariants = [...new Set(hppLines.filter((l) => l.hpp === null).map(variantOf))].filter(Boolean)
+    const hppSoldVariants = new Set(stats.hppLines.filter((l) => l.hpp !== null).map(variantOf)).size
+    const missingHppVariants = [...new Set(stats.hppLines.filter((l) => l.hpp === null).map(variantOf))].filter(Boolean)
     let hppAvgVariants = 0
-    if (hpp === null && hppLines.length === 0) {
+    if (hpp === null && stats.hppLineCount === 0) {
       hpp = input.fallbackHpp?.get(key) ?? null
       const variants = input.fallbackVariants?.get(key) ?? 0
       if (hpp !== null && variants > 1) hppAvgVariants = variants
@@ -398,7 +444,7 @@ export function analyzeAds(input: {
       hppSource = 'sementara'
     }
     // Hanya relevan kalau ada barang yang benar-benar terjual.
-    const hppIncomplete = kept.length > 0 && withHpp.length < hppLines.length
+    const hppIncomplete = stats.hppIncomplete
 
     const unitProfit = price !== null && hpp !== null ? price * (1 - productFee) - hpp : null
     const margin = unitProfit !== null && price ? unitProfit / price : null
@@ -439,9 +485,7 @@ export function analyzeAds(input: {
       hppSoldVariants: hppSource === 'pesanan' ? hppSoldVariants : 0,
       missingHppVariants,
       feeRate: productFee,
-      // Dengan hanya satu produk yang diketahui tidak ada pembanding, jadi potongannya tidak bergeser:
-      // jujur disebut rata-rata toko.
-      feeSource: actualFee !== undefined ? 'aktual' : component !== undefined && components.size >= 2 ? 'produk' : 'rata-rata',
+      feeSource: fee.source,
       unitProfit,
       margin,
       bepRoas,

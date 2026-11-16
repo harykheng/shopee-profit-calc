@@ -6,6 +6,7 @@ import { QUICK_CHECK_TRIAL_NOTE } from '../lib/trialLimits'
 import { fetchAdReports } from '../lib/api'
 import { MIN_LINES_FOR_ACTUAL_FEE, fullMonthOf, type AdProductResult, type AdVerdict, type AdsAnalysis, type Targets } from '../lib/adsMath'
 import { loadAdsAnalysis, type Loaded, type Period } from '../lib/adsLoad'
+import type { AdCandidate, CandidateStatus } from '../lib/adCandidates'
 import { addMonths, formatMonth, formatNumber, formatPercent, formatRupiah, formatRupiahShort, monthEnd } from '../lib/format'
 import { formatPeriod, periodKey } from '../components/adsUpload'
 import { navigate } from '../lib/router'
@@ -383,8 +384,149 @@ function Analysis({ storeId, period }: { storeId: number; period: Period }) {
         </details>
       )}
 
+      {filter === 'semua' && data.hasOrders && <CandidatesCard data={data} />}
+
       <HowToRead feeRate={data.feeRate} targets={data.targets} />
     </div>
+  )
+}
+
+// --- Calon iklan ----------------------------------------------------------------
+
+/** Alasan singkat kenapa produk yang belum diiklankan tidak (atau belum) disarankan. */
+function candidateReason(c: AdCandidate, referenceRoas: number | null, priceMargin: number): string {
+  const target = c.shopeeTargetRoas !== null ? formatRoas(roundUp1(c.shopeeTargetRoas)) : null
+  switch (c.status) {
+    case 'layak':
+      return ''
+    case 'berat':
+      return `Butuh target ROAS ${target}, lebih tinggi dari ROAS nyata iklan tokomu (${formatRoas(referenceRoas)}). Naikkan harga dulu, atau coba dengan budget kecil.`
+    case 'tidak_mungkin': {
+      const profit = `${formatRupiah(c.unitProfit)} (${formatPercent((c.margin ?? 0) * 100)})`
+      const price = c.idealPrice !== null ? ` Supaya untung ${formatPercent(priceMargin * 100)}, jual ±${formatRupiah(roundUpPrice(c.idealPrice))}.` : ''
+      return (c.unitProfit ?? 0) <= 0
+        ? `Sudah rugi ${formatRupiah(Math.abs(c.unitProfit ?? 0))} per barang bahkan tanpa iklan. Masalahnya di harga, bukan iklan.${price}`
+        : `Untung per barang hanya ${profit} bahkan tanpa iklan, jadi iklan pasti di bawah target. Masalahnya di harga, bukan iklan.${price}`
+    }
+    case 'banyak_retur':
+      return `${formatPercent(c.lostShare * 100)} pesanannya batal/retur. Iklan ikut membayar pesanan yang tidak jadi.`
+    case 'hpp_kosong':
+      return 'HPP belum diisi, jadi untungnya belum bisa dihitung.'
+    case 'sedikit':
+      return `Baru laku ${formatNumber(c.sold)}, tunggu data lebih banyak.`
+  }
+}
+
+const REST_ORDER: CandidateStatus[] = ['berat', 'tidak_mungkin', 'banyak_retur', 'hpp_kosong', 'sedikit']
+
+/**
+ * Produk yang terjual tapi belum diiklankan: mana yang untungnya cukup untuk diiklankan.
+ * Hanya cek untung; aplikasi tidak punya data dilihat/klik, jadi tidak menjanjikan laku.
+ */
+function CandidatesCard({ data }: { data: Loaded }) {
+  const { referenceRoas, candidates, maybeAdvertised } = data.candidates
+  if (candidates.length === 0) return null
+  const layak = candidates.filter((c) => c.status === 'layak')
+  const rest = REST_ORDER.flatMap((s) => candidates.filter((c) => c.status === s))
+  const adsPct = formatPercent(data.targets.adsProfit * 100)
+  return (
+    <Card
+      title={
+        layak.length > 0
+          ? `${formatNumber(layak.length)} produk belum diiklankan, tapi untungnya cukup untuk diiklankan`
+          : 'Belum ada produk lain yang untungnya cukup untuk diiklankan'
+      }
+    >
+      <p className="text-ink-2">
+        {referenceRoas !== null ? (
+          <>
+            Patokannya ROAS nyata iklan tokomu periode ini: <strong className="num">{formatRoas(referenceRoas)}</strong>.{' '}
+            {layak.length > 0 ? `Produk di bawah cukup ROAS lebih kecil dari itu untuk tetap untung ${adsPct}, dan sudah laku tanpa iklan.` : null}
+          </>
+        ) : (
+          `Belum ada biaya iklan periode ini sebagai patokan, jadi semua produk yang masih bisa untung ${adsPct} setelah iklan ikut disarankan.`
+        )}
+      </p>
+      <p className="mt-2 flex gap-2 text-sm text-ink-2">
+        <IconInfo size={16} className="mt-0.5 shrink-0 text-accent" />
+        <span>
+          Ini hanya cek untung. Aplikasi tidak tahu berapa orang yang melihat produkmu, jadi belum tentu laku saat
+          diiklankan. Mulai dengan budget kecil, lalu cek lagi di halaman ini setelah 1–2 minggu.
+        </span>
+      </p>
+      {maybeAdvertised && (
+        <p className="mt-2 flex gap-2 text-sm text-warn">
+          <IconAlertCircle size={16} className="mt-0.5 shrink-0" />
+          <span>
+            Ada biaya iklan yang belum dirinci per produk (lihat peringatan di atas), jadi sebagian produk di sini mungkin
+            sebenarnya sudah ikut diiklankan.
+          </span>
+        </p>
+      )}
+
+      {layak.length > 0 && (
+        <p className="mt-2 flex gap-2 text-sm text-ink-2">
+          <IconInfo size={16} className="mt-0.5 shrink-0 text-accent" />
+          <span>
+            <strong>Target ROAS minimal</strong> = batas bawah supaya masih untung {adsPct}. Makin tinggi angka yang kamu isi
+            di Shopee, makin hemat iklannya dan makin besar untung per barang, tapi biasanya makin sedikit yang terjual.
+          </span>
+        </p>
+      )}
+      {layak.length > 0 && (
+        <ul className="tear mt-4 divide-y divide-line pt-2">
+          {layak.map((c) => (
+            <li key={c.name} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-3">
+              <div className="min-w-0 flex-1 basis-60">
+                <p className="line-clamp-2 font-semibold leading-snug" title={c.name}>
+                  {c.name}
+                </p>
+                <p className="num text-sm text-ink-2">
+                  Laku {formatNumber(c.sold)} tanpa iklan · untung per barang {formatRupiah(c.unitProfit)} (
+                  {formatPercent((c.margin ?? 0) * 100)})
+                </p>
+                {c.hppIncomplete && <p className="text-sm text-warn">Sebagian variasi belum ada HPP-nya.</p>}
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-ink-3">Target ROAS minimal di Shopee</p>
+                <p className="num text-lg font-bold">{formatRoas(roundUp1(c.shopeeTargetRoas ?? 0))}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {rest.length > 0 && (
+        <details className="mt-4 border-t border-line pt-2">
+          <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-semibold">
+            {formatNumber(rest.length)} produk lain belum disarankan
+            <IconChevronDown size={16} className="chev shrink-0" />
+          </summary>
+          <ul className="mt-2 divide-y divide-line">
+            {rest.map((c) => (
+              <li key={c.name} className="py-2">
+                <p className="line-clamp-2 font-medium leading-snug" title={c.name}>
+                  {c.name}
+                </p>
+                <p className="text-sm text-ink-2">{candidateReason(c, referenceRoas, data.targets.priceMargin)}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {rest.some((c) => c.status === 'tidak_mungkin') && (
+              <Button variant="secondary" onClick={() => navigate('simulasi')}>
+                Cari harga baru di Simulasi Harga
+              </Button>
+            )}
+            {rest.some((c) => c.status === 'hpp_kosong') && (
+              <Button variant="secondary" onClick={() => navigate('hpp', { kosong: '1' })}>
+                Isi HPP
+              </Button>
+            )}
+          </div>
+        </details>
+      )}
+    </Card>
   )
 }
 
