@@ -139,6 +139,8 @@ function computeAdsAnalysis(
 
   const toLine = (i: (typeof items)[number]) => ({
     product_name: i.product_name,
+    sku: i.sku,
+    variant_name: i.variant_name ?? '',
     status_group: i.status_group,
     qty: Number(i.qty),
     returned_qty: Number(i.returned_qty ?? 0),

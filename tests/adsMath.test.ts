@@ -265,6 +265,50 @@ describe('analyzeAds', () => {
     expect(withOrders?.hpp).toBe(9_000)
     expect(withOrders?.hppAvgVariants).toBe(0)
     expect(withOrders?.hppTemp).toBe(false)
+    expect(withOrders?.hppSource).toBe('pesanan')
+    expect(avg?.hppSource).toBe('produk')
+    expect(t?.hppSource).toBe('sementara')
+  })
+
+  it('asal HPP & variasi terjual yang belum punya HPP', () => {
+    const line = (variant: string, qty: number, hpp: number | null) => ({
+      product_name: 'Tabur',
+      status_group: 'selesai' as const,
+      qty,
+      subtotal: qty * 25_000,
+      hpp,
+      sku: `TBR-${variant}`,
+      variant_name: variant,
+    })
+    const base = { reports: [reports[1]], feeRate: 0.15 }
+    const tabur = (r: ReturnType<typeof analyzeAds>) => r.products.find((p) => p.code === 'T')
+
+    // Dua variasi ber-HPP: rata-rata tertimbang qty, dari pesanan.
+    const both = tabur(analyzeAds({ ...base, orders: [line('50g', 3, 8_000), line('100g', 1, 12_000), line('50g', 1, 8_000)] }))
+    expect(both?.hpp).toBe(8_800)
+    expect(both?.hppSource).toBe('pesanan')
+    expect(both?.hppSoldVariants).toBe(2)
+    expect(both?.missingHppVariants).toEqual([])
+
+    // Satu variasi belum ada HPP: tetap dihitung dari yang ada, variasinya disebut.
+    const partial = tabur(analyzeAds({ ...base, orders: [line('50g', 2, 8_000), line('100g', 1, null)] }))
+    expect(partial?.hpp).toBe(8_000)
+    expect(partial?.hppIncomplete).toBe(true)
+    expect(partial?.missingHppVariants).toEqual(['100g'])
+
+    // Semua variasi terjual belum ada HPP: HPP sementara mengisi, variasinya tetap disebut.
+    const none = tabur(
+      analyzeAds({ ...base, orders: [line('100g', 1, null)], tempHpp: new Map([['tabur', 10_000]]) }),
+    )
+    expect(none?.hpp).toBe(10_000)
+    expect(none?.hppSource).toBe('sementara')
+    expect(none?.hppSoldVariants).toBe(0)
+    expect(none?.missingHppVariants).toEqual(['100g'])
+
+    // Tanpa nama variasi: SKU dipakai sebagai penanda.
+    const noName = tabur(analyzeAds({ ...base, orders: [{ ...line('', 1, null), sku: 'TBR' }] }))
+    expect(noName?.hppSource).toBe(null)
+    expect(noName?.missingHppVariants).toEqual(['TBR'])
   })
 })
 
