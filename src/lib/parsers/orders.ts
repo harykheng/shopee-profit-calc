@@ -60,6 +60,40 @@ const NOT_ORDER_EXPORT =
   'File ini sepertinya bukan export pesanan Shopee. ' +
   'Pastikan file diambil dari Seller Centre → Pesanan Saya → Export.'
 
+/** Nama tab Pesanan Saya dari nama file export Shopee ("Order.toship.20261108_20261114.xlsx"). */
+const ORDER_TAB_LABEL: Record<string, string> = {
+  unpaid: 'Belum Bayar',
+  toship: 'Perlu Dikirim',
+  shipping: 'Dikirim',
+  completed: 'Selesai',
+  cancelled: 'Pembatalan',
+  canceled: 'Pembatalan',
+  cancel: 'Pembatalan',
+  return: 'Pengembalian',
+  returnrefund: 'Pengembalian',
+  return_refund: 'Pengembalian',
+  refund: 'Pengembalian',
+}
+
+/**
+ * Peringatan kalau export pesanan diambil dari satu tab saja (mis. "Order.toship…" = Perlu Dikirim), bukan
+ * tab Semua ("Order.all…"). Isinya tetap benar dan boleh disimpan, tapi pesanan lain di tanggal yang sama
+ * tidak ikut: variasi yang terjual, batal, dan retur jadi tidak lengkap. Nama file lain (sudah diganti
+ * pemilik, dsb.) tidak diperingatkan karena tabnya tidak bisa diketahui.
+ */
+export function orderExportTabWarning(fileName: string): ParseWarning | null {
+  const tab = /^Order\.([A-Za-z_]+)\.\d{8}_\d{8}/i.exec(fileName.trim())?.[1]?.toLowerCase()
+  if (!tab || tab === 'all') return null
+  const label = ORDER_TAB_LABEL[tab]
+  return {
+    code: 'not_all_tab',
+    message:
+      `File ini diambil dari tab ${label ? `"${label}"` : 'tertentu'} saja, bukan tab "Semua". Pesanan dengan ` +
+      'status lain di tanggal yang sama tidak ikut, jadi variasi yang terjual, pesanan batal, dan retur belum ' +
+      'lengkap. Export ulang dari Pesanan Saya → tab Semua → Export.',
+  }
+}
+
 /** Baca file .xlsx export pesanan Shopee. Melempar ParseError dengan pesan ramah. */
 export function parseOrdersFile(data: ArrayBuffer | Uint8Array): OrdersParseResult {
   let workbook: XLSX.WorkBook

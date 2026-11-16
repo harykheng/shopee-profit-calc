@@ -432,6 +432,7 @@ function MainApp({ user }: { user: User }) {
                 storeId={storeId}
                
                 onlyMissingInitially={params.get('kosong') === '1'}
+                initialSearch={params.get('cari') ?? ''}
               />
             )}
             {route === 'biaya' && (
