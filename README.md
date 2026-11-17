@@ -107,6 +107,12 @@ menghapus data.
 > membuat link di halaman Buat akun, calon pelanggan mendaftar sendiri dengan email + password (OPERASI.md
 > bagian 2). Tanpa SQL ini tombol **Buat link uji coba** menampilkan pesan gangguan sistem.
 
+> Sudah setup sebelum 16 November 2026? Jalankan sekali file `20261116000000_activity_events.sql` (aman diulang)
+> **setelah** `20261111000000_trial_links.sql`. Isinya **catatan aktivitas** (daftar, masuk, upload, buka Rekap,
+> sudah bayar; tanpa isi laporan) untuk daftar Pelanggan, dan isian **Sumber** di link uji coba (OPERASI.md
+> bagian 2). Boleh sebelum atau sesudah deploy: tanpa SQL ini aplikasi tetap jalan tanpa catatan, dan link
+> dengan Sumber terisi menampilkan pesan gangguan sistem.
+
 > Sudah setup sebelum 3 November 2026? Jalankan sekali file `20261103000000_trial_simulation_10.sql` (aman
 > diulang). Batas Simulasi Harga akun uji coba jadi **10 produk** (sebelumnya 50; jatah tambahan per toko tetap
 > berlaku). Jalankan **sebelum atau bersamaan dengan deploy**. Lama uji coba bawaan (7 hari) ada di aplikasi.

@@ -106,12 +106,13 @@ begin
     ('20261103000000_trial_simulation_10.sql',     exists (select 1 from pg_proc p join pg_namespace s on s.oid = p.pronamespace
                                                      where s.nspname = 'public' and p.proname = 'trial_simulation_limit'
                                                        and p.prosrc like '%select 10%')),
-    ('20261111000000_trial_links.sql',             to_regprocedure('public.claim_trial_link(text, text, text)') is not null)
+    ('20261111000000_trial_links.sql',             to_regprocedure('public.claim_trial_link(text, text, text)') is not null),
+    ('20261116000000_activity_events.sql',         to_regclass('public.activity_events') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261111000000_trial_links.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261116000000_activity_events.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -151,7 +152,8 @@ begin
         ('fee_categories',     'insert into public.fee_categories (store_id, name, admin_pct) values ($1, ''UJI kategori'', 5)'),
         ('store_settings',     'insert into public.store_settings (store_id, ads_target_profit_pct) values ($1, 10)'),
         ('client_errors',      'insert into public.client_errors (store_id, kind, message, fingerprint) values ($1, ''handled'', ''uji'', ''uji'')'),
-        ('trial_simulations',  'insert into public.trial_simulations (store_id, day, item_key) values ($1, $2, ''uji'')')
+        ('trial_simulations',  'insert into public.trial_simulations (store_id, day, item_key) values ($1, $2, ''uji'')'),
+        ('activity_events',    'insert into public.activity_events (store_id, event) values ($1, ''trial_logged_in'')')
       ) as x (nama, kueri)
     loop
       begin
@@ -220,10 +222,13 @@ begin
                             'platform_create_account', 'platform_subscribe_store', 'platform_reset_password',
                             'platform_add_trial_simulations', 'platform_trial_simulation_usage',
                             'platform_create_trial_link', 'platform_list_trial_links', 'platform_revoke_trial_link',
+                            'platform_activity_summary',
                             -- Terbuka TANPA login, tapi hanya bekerja dengan kode link yang benar; diuji di bagian 3.
                             'trial_link_status', 'claim_trial_link',
                             -- Memeriksa keanggotaan toko sendiri; diuji di bagian 2c.
                             'use_trial_simulation',
+                            -- Hanya anggota toko, hanya 3 aktivitas; diuji di bagian 2c dan 2e.
+                            'log_activity',
                             -- Hanya anggota toko, hanya sekali (name_pending); diuji di bagian 2c dan 2g.
                             'set_store_name')
       and (has_function_privilege('authenticated', p.oid, 'EXECUTE') or has_function_privilege('anon', p.oid, 'EXECUTE'));
@@ -374,7 +379,9 @@ begin
         ('Pakai jatah simulasi toko lain (use_trial_simulation)',
          'select (public.use_trial_simulation($1, ''uji'') ->> ''used'')::bigint'),
         ('Isi nama toko lain (set_store_name)',
-         'select public.set_store_name($1, ''UJI-PEMISAHAN NAMA'')::bigint')
+         'select public.set_store_name($1, ''UJI-PEMISAHAN NAMA'')::bigint'),
+        ('Catat aktivitas atas nama toko lain (log_activity)',
+         'select public.log_activity($1, ''report_uploaded'')::bigint')
       ) as x (nama, kueri)
     loop
       -- Kontrol ke toko A: $1 = toko A, $2 = laporan iklan A, $3 dan $4 = akun sendiri.
@@ -424,7 +431,8 @@ begin
       select x.nama, x.kueri from (values
         ('Daftarkan diri ke toko lain', 'insert into public.store_members (store_id, user_id, role) values ($1, $2, ''owner'')'),
         ('Buat toko sendiri',           'insert into public.stores (name) values (''UJI-PEMISAHAN C'')'),
-        ('Jadikan diri sendiri pengelola', 'insert into public.platform_admins (user_id) values ($2)')
+        ('Jadikan diri sendiri pengelola', 'insert into public.platform_admins (user_id) values ($2)'),
+        ('Tulis catatan aktivitas langsung ke tabel', 'insert into public.activity_events (store_id, user_id, event) values ($1, $2, ''subscription_paid'')')
       ) as x (nama, kueri)
     loop
       begin
@@ -480,6 +488,12 @@ begin
          'select count(*) from public.platform_list_trial_links()'),
         ('Bukan pengelola: matikan link uji coba (platform_revoke_trial_link)',
          'select public.platform_revoke_trial_link(1)'),
+        ('Bukan pengelola: buat link uji coba dengan sumber (platform_create_trial_link, 3 parameter)',
+         'select count(*) from (select public.platform_create_trial_link(1000, 90, ''uji'')) x'),
+        ('Bukan pengelola: lihat aktivitas semua toko (platform_activity_summary)',
+         'select count(*) from public.platform_activity_summary()'),
+        ('Bukan pengelola: catat "sudah bayar" untuk tokonya sendiri (log_activity)',
+         'select public.log_activity(' || sa || ', ''subscription_paid'')'),
         ('Bukan pengelola: panggil pembuat akun internal (create_store_account)',
          'select count(*) from (select public.create_store_account(''uji-pemisahan-tolak4@contoh.invalid'', ''UjiPemisahan123'', ''UJI-PEMISAHAN J'', current_date + 7, true)) x')
       ) as x (nama, kueri)
@@ -802,6 +816,21 @@ begin
       v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
     end;
     v_uji := v_uji || 'Tanpa login: daftar lewat link uji coba untuk 1 orang (kontrol)'::text;
+
+    -- 3c. Pendaftaran lewat link di atas tercatat sebagai aktivitas "daftar" (trial_registered) atas nama pemiliknya.
+    begin
+      reset role;
+      execute 'select count(*) from public.activity_events e
+                 join public.store_members sm on sm.store_id = e.store_id and sm.user_id = e.user_id and sm.role = ''owner''
+                 join auth.users u on u.id = sm.user_id
+               where u.email = $1 and e.event = ''trial_registered''' into n using daftar;
+      v_status := v_status || case when n = 1 then 'LULUS' else 'GAGAL' end;
+      v_ket := v_ket || case when n = 1 then 'tercatat 1 kali' else format('tercatat %s kali', n) end;
+    exception when others then
+      v_status := v_status || 'CEK'::text;
+      v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+    end;
+    v_uji := v_uji || 'Catatan aktivitas: daftar lewat link tercatat'::text;
 
     reset role;
     raise exception using errcode = 'UJ000';

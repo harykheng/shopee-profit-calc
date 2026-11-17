@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, useSyncExternalStore, type PointerEvent, type ReactNode } from 'react'
 import { MonthSelect } from '../components/pickers'
-import { Alert, Button, ButtonLink, Card, ErrorBox, FitLine, Kicker, Modal, NotaTotal, ScrollX, Spinner, Stamp, linkClass } from '../components/ui'
-import { IconAlertCircle, IconArrowRight, IconCheck, IconChevronDown, IconInfo, IconUpload } from '../components/icons'
+import { Alert, Button, ButtonLink, ErrorBox, FitLine, Kicker, Modal, NotaTotal, ScrollX, Spinner, Stamp, linkClass } from '../components/ui'
+import { IconAlertCircle, IconArrowRight, IconCheck, IconChevronDown, IconInfo } from '../components/icons'
 import {
   countItemsWithoutCreatedAt,
   fetchAdReports,
@@ -18,10 +18,9 @@ import {
   fetchReturnWindowItems,
   fetchUnmatchedIncomeOrders,
   fetchIncomeBreakdown,
-  fetchSetupProgress,
   fetchStoreSettings,
-  type SetupProgress,
   fillMissingHpp,
+  logActivity,
   recalcHpp,
   type CreatedItem,
   type UnmatchedIncomeOrder,
@@ -51,6 +50,7 @@ import { wibToday } from '../lib/subscription'
 import { fullMonthOf } from '../lib/adsMath'
 import { loadAdsAnalysis, type Period as AdsPeriod } from '../lib/adsLoad'
 import { useCountUp } from '../components/motion'
+import { OnboardingFinished, OnboardingGuide, type OnboardingState } from '../components/Onboarding'
 import type {
   DailyReconciliation,
   MonthlyRecap,
@@ -91,10 +91,13 @@ export function RecapPage({
   stores,
   storeId,
   readOnly = false,
+  onboarding = { status: 'ready', view: { kind: 'none' } },
 }: {
   stores: Store[]
   storeId: number | null
   readOnly?: boolean
+  /** Panduan pengguna baru (dimuat di App, dipakai juga di Upload & HPP). */
+  onboarding?: OnboardingState
 }) {
   const lastMonth = addMonths(currentMonth(), -1)
   const [from, setFrom] = useState(lastMonth)
@@ -199,9 +202,26 @@ export function RecapPage({
   const ordersPending = !!data && data.months.length === 0 && orders === null
   const isEmpty =
     data && data.months.length === 0 && orders && !('error' in orders) && orders.groups.length === 0
+  // Catatan "melihat hasil rekap" untuk pengelola: hanya kalau Rekap-nya ada isinya (database membatasi 1 per 10 menit).
+  const hasReport =
+    !!data && (data.months.length > 0 || (!!orders && !('error' in orders) && orders.groups.length > 0))
+  useEffect(() => {
+    if (hasReport && storeId) logActivity(storeId, 'profit_report_viewed')
+  }, [hasReport, storeId, from, end])
+
+  const guide = onboarding.status === 'ready' && onboarding.view.kind === 'guide' ? onboarding.view.steps : null
+  const finished = onboarding.status === 'ready' && onboarding.view.kind === 'finished'
+  // Belum ada satu file pun: pilihan bulan dan Rekap kosong tidak berguna, cukup panduannya.
+  if (guide && !guide.ordersDone && !guide.incomeDone) return <OnboardingGuide steps={guide} storeName={storeName} />
 
   return (
     <>
+      {guide && (
+        <div className="mb-12">
+          <OnboardingGuide steps={guide} storeName={storeName} />
+        </div>
+      )}
+      {finished && <OnboardingFinished storeName={storeName} />}
       <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-3">
         <MonthSelect value={from} onChange={setFrom} label={multi ? 'Dari' : 'Bulan'} />
         {multi && <MonthSelect value={to} onChange={setTo} label="Sampai" />}
@@ -231,7 +251,7 @@ export function RecapPage({
 
       {!rangeValid ? null : error ? (
         <ErrorBox error={error} />
-      ) : !data || ordersPending ? (
+      ) : !data || ordersPending || (isEmpty && onboarding.status === 'loading') ? (
         <Spinner />
       ) : isEmpty ? (
         readOnly ? (
@@ -239,7 +259,7 @@ export function RecapPage({
             Belum ada penghasilan, pesanan, atau biaya untuk {storeName} di {period}.
           </Alert>
         ) : (
-          <EmptyRecap storeId={storeId} storeName={storeName} period={period} />
+          <EmptyRecap storeName={storeName} period={period} />
         )
       ) : (
         <ReadOnlyContext.Provider value={readOnly}>
@@ -306,120 +326,18 @@ export function RecapPage({
   )
 }
 
-/**
- * Rekap kosong untuk periode yang dipilih. Toko yang belum punya data sama sekali dapat langkah awal
- * (upload → HPP); toko yang sudah punya data di bulan lain hanya diberi tahu bulan ini kosong.
- */
-function EmptyRecap({ storeId, storeName, period }: { storeId: number | null; storeName: string; period: string }) {
-  const [progress, setProgress] = useState<SetupProgress | null>(null)
-  const [error, setError] = useState<unknown>(null)
-
-  useEffect(() => {
-    if (!storeId) return
-    let cancelled = false
-    setProgress(null)
-    setError(null)
-    fetchSetupProgress(storeId)
-      .then((p) => !cancelled && setProgress(p))
-      .catch((e) => !cancelled && setError(e))
-    return () => {
-      cancelled = true
-    }
-  }, [storeId])
-
-  if (error) return <ErrorBox error={error} />
-  // Tunggu dulu: menampilkan "Belum ada data" sebentar lalu berganti jadi panduan akan terlihat berkedip.
-  if (!progress) return <Spinner />
-
-  if (progress.hasOrders || progress.hasIncome) {
-    return (
-      <Alert tone="info" title={`Belum ada data di ${period}`}>
-        <p>
-          {storeName} belum punya penghasilan, pesanan, atau biaya di bulan ini. Pilih bulan lain di atas, atau upload
-          data bulan ini.
-        </p>
-        <p className="mt-3">
-          <ButtonLink href="#/upload" variant="secondary">Upload data</ButtonLink>
-        </p>
-      </Alert>
-    )
-  }
-
-  const hppDone = progress.hasProducts && !progress.hasMissingHpp
-  // Untuk pelanggan baru, ini layar pertama setelah masuk: kalimat jawaban dulu, satu tombol utama, lalu langkahnya.
+/** Rekap kosong untuk periode yang dipilih. Toko yang benar-benar baru melihat panduan 3 langkah di atasnya. */
+function EmptyRecap({ storeName, period }: { storeName: string; period: string }) {
   return (
-    <section className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-start lg:gap-12">
-      <div>
-        <Kicker>Rekap {period}</Kicker>
-        <h1 className="mt-3 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
-          Mulai dengan <span className="hl">3 langkah</span> ini.
-        </h1>
-        <p className="mt-4 max-w-xl text-lg leading-relaxed text-ink-2">
-          Untung bersih {storeName} muncul di sini setelah laporan Shopee di-upload dan HPP diisi. Setelah itu, tiap
-          bulan cukup upload file terbaru.
-        </p>
-        <ButtonLink href="#/upload" className="mt-6 font-display font-bold">
-          <IconUpload size={18} />
-          Upload laporan
-        </ButtonLink>
-      </div>
-      <Card title="Yang perlu disiapkan">
-        <ol className="divide-y divide-line">
-          <SetupStep n={1} title="Export pesanan (.xlsx)" action={null}>
-            Seller Centre → Pesanan Saya → Export, status <strong className="text-ink">Semua</strong>.
-          </SetupStep>
-          <SetupStep n={2} title="Laporan penghasilan (.xlsx)" action={null}>
-            Seller Centre → Keuangan → Penghasilan Saya → <strong className="text-ink">Sudah Dilepas</strong> → Export.
-            PDF laporan bulanan juga bisa.
-          </SetupStep>
-          <SetupStep
-            n={3}
-            title="HPP (modal) tiap produk"
-            done={hppDone}
-            action={progress.hasProducts && !hppDone ? <ButtonLink href="#/hpp?kosong=1" variant="secondary">Isi HPP</ButtonLink> : null}
-          >
-            {progress.hasProducts
-              ? 'Supaya untung dihitung setelah dikurangi modal.'
-              : 'Daftar produknya muncul otomatis setelah export pesanan di-upload.'}
-          </SetupStep>
-        </ol>
-      </Card>
-    </section>
-  )
-}
-
-function SetupStep({
-  n,
-  title,
-  done = false,
-  action,
-  children,
-}: {
-  n: number
-  title: string
-  done?: boolean
-  action: ReactNode
-  children: ReactNode
-}) {
-  return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 py-4 first:pt-0 last:pb-0">
-      <span
-        aria-hidden="true"
-        className={`num flex size-9 shrink-0 items-center justify-center rounded-full font-display text-lg font-bold ${
-          done ? 'bg-gain text-white' : 'bg-ink text-paper'
-        }`}
-      >
-        {done ? <IconCheck size={18} strokeWidth={3} /> : n}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="font-semibold">
-          {title}
-          {done && <span className="sr-only"> (sudah)</span>}
-        </p>
-        <p className="text-sm text-ink-2">{children}</p>
-      </div>
-      {!done && action}
-    </li>
+    <Alert tone="info" title={`Belum ada data di ${period}`}>
+      <p>
+        {storeName} belum punya penghasilan, pesanan, atau biaya di bulan ini. Pilih bulan lain di atas, atau upload
+        data bulan ini.
+      </p>
+      <p className="mt-3">
+        <ButtonLink href="#/upload" variant="secondary">Upload data</ButtonLink>
+      </p>
+    </Alert>
   )
 }
 

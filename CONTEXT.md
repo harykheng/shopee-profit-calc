@@ -6,7 +6,7 @@ dulu sebelum mengubah kode. Untuk **pemakai aplikasi**: [PANDUAN.md](PANDUAN.md)
 toko, pantau error): [OPERASI.md](OPERASI.md). Fakta produk: [PRODUCT.md](PRODUCT.md). Sistem desain:
 [DESIGN.md](DESIGN.md).
 
-Terakhir diperbarui: 11 November 2026 (link uji coba).
+Terakhir diperbarui: 16 November 2026 (calon iklan; catatan aktivitas uji coba; panduan 3 langkah pengguna baru).
 
 ---
 
@@ -95,12 +95,16 @@ src/lib/monthStatus.ts      Status bulan "Angka final / Belum lengkap"
 src/lib/recapMath.ts        Hitungan Rekap: perkiraan/untung pesanan, rincian omzet (incomeBreakdown),
                             untung per produk (productRows/sortProducts), diagnosa Bab 1 (recapInsights)
 src/lib/adsMath.ts          Iklan per produk, potongan asli per Kode Produk, simulasi harga, grup iklan
+src/lib/adCandidates.ts     Calon iklan: produk terjual yang belum diiklankan, apakah untungnya cukup untuk diiklankan
 src/lib/adsLoad.ts          Memuat data untuk analisis iklan (halaman Iklan, Cek cepat, bab Iklan di Rekap)
 src/lib/adsQuickExport.ts   Label Cek cepat + file .md hasil Cek cepat untuk dibagikan ke Claude
 src/lib/feeCategories.ts    Kategori biaya admin per toko
 src/lib/storeSettings.ts    Pengaturan hitungan per toko (target untung, retur)
 src/lib/trialLinks.ts       Link uji coba: alamat #/coba?kode=…, cek isian daftar, teks undangan, ringkasan link
 src/lib/trialAccounts.ts    Halaman Pengelola: password acak, tanggal bawaan (7 hari), cek isian, teks WhatsApp, status pelanggan
+src/lib/activity.ts         Catatan aktivitas: tahap (belum dipakai → sudah bayar), rincian untuk Pelanggan, sumber link
+src/lib/onboarding.ts       Panduan pengguna baru (Upload → HPP → Lihat hasil): langkah dari data toko + tanda kecil di localStorage
+src/components/Onboarding.tsx  Hook useOnboarding (dimuat di App), panduan lengkap di Rekap, baris langkah di Upload & HPP
 src/lib/trialLimits.ts      Batas uji coba: bulan yang diisi upload, cek 1 bulan, kunci jatah simulasi per produk, pesan
 src/components/trialSim.tsx Hook jatah simulasi uji coba (Satu produk & Grup iklan) + pesan jatah habis
 src/lib/errors.ts           Pesan error ramah + petunjuk migration yang belum dijalankan (untuk pengelola)
@@ -134,6 +138,7 @@ Migration (jalankan berurutan; file baru ditandai):
 | **`20261022000000_income_monthly_breakdown.sql`** | View `income_monthly_breakdown` (Bab 2 Rekap dari omzet) |
 | **`20261023000000_admin_reset_password.sql`** | Fungsi admin `admin_reset_password(email, password)` untuk SQL Editor: ganti password (bcrypt), hapus penanda `password_changed` supaya banner muncul lagi, keluarkan semua sesi. Tidak dipakai aplikasi |
 | **`20261111000000_trial_links.sql`** | Tabel `trial_links` (hanya hash SHA-256 kode, kuota 1–1000, berlaku 1–90 hari, bisa dimatikan; tanpa hak untuk aplikasi), `stores.trial_link_id`. Isi `platform_create_trial` dipindah ke `create_store_account` (internal, tertutup; `platform_create_trial` 4 parameter = cek pengelola + panggil itu, perilaku sama). Pengelola: `platform_create_trial_link`, `platform_list_trial_links`, `platform_revoke_trial_link`. **Tanpa login**: `trial_link_status(kode)` dan `claim_trial_link(kode, email, password)` (kunci baris link, toko uji coba 7 hari WIB, `name_pending`, `password_changed`). Jalankan **sebelum** deploy |
+| **`20261116000000_activity_events.sql`** | Tabel `activity_events` (toko, akun, nama kegiatan, waktu; **tanpa** isi laporan; tanpa hak untuk aplikasi). Trigger di `stores`: `trial_registered` (trial_link_id terisi) dan `subscription_paid` (uji coba → berlangganan / tanggal berakhir maju). `log_activity(toko, kegiatan)` untuk aplikasi (anggota toko; hanya `trial_logged_in`, `report_uploaded`, `profit_report_viewed`; maks. 1 per 30/1/10 menit, 500/hari/toko). `platform_activity_summary()` (pengelola). `trial_links.source` + `platform_create_trial_link(jumlah, hari, sumber)`; `platform_list_trial_links` ikut mengembalikan `source` (dibuat ulang). Ekspor/hapus admin ikut. Boleh sebelum/sesudah deploy |
 | **`20261103000000_trial_simulation_10.sql`** | `trial_simulation_limit()` = **10** (sebelumnya 50). Jalankan sebelum/bersamaan deploy |
 | **`20261102000000_trial_simulation_bonus.sql`** | `stores.trial_sim_bonus`; `use_trial_simulation` memakai batas 50 + bonus toko; `platform_add_trial_simulations(id, n)` (pengelola, 1–1000, menumpuk) dan `platform_trial_simulation_usage()` (pemakaian per toko uji coba). Boleh sebelum/sesudah deploy |
 | **`20261101000000_platform_reset_password.sql`** | `platform_reset_password(email, password)`: hanya pengelola, hanya akun yang anggota toko, **menolak akun pengelola** (supaya tidak bisa saling ambil alih); memanggil `admin_reset_password`. Tombol **Reset password** di Pelanggan. Boleh sebelum/sesudah deploy |
@@ -204,6 +209,14 @@ di export pesanan (`income_order_match`).
   Export pesanan tanggal yang sama boleh dipilih di sana, sekaligus dengan CSV iklan (disimpan seperti Upload). Tanpa pesanan, HPP produk
   bervariasi = rata-rata variasi dan ditandai "Belum pasti".
 
+**Calon iklan** (`findAdCandidates`, kotak di bawah kartu iklan, hanya kalau export pesanan ada): produk
+yang terjual di periode itu dan **belum punya biaya iklan**. Layak kalau terjual bersih ≥ 3, HPP ada, batal +
+retur ≤ 20% (`MAX_LOST_SHARE_FOR_ADS`), dan target ROAS (untung toko setelah iklan) ≤ **ROAS nyata iklan toko**
+periode itu (tanpa biaya iklan: semua yang mungkin dianggap layak). Potongan memakai aturan yang sama dengan
+iklan (`resolveProductFee`; ID Produk dicari dari nama di laporan penghasilan). Urut: paling laku tanpa iklan.
+Sengaja hanya cek untung: tanpa data dilihat/klik (export Performa Produk belum dibaca), jadi tidak ada
+"perkiraan untung kalau diiklankan". Tahap 2 (belum): parser Performa Produk untuk konversi, butuh tabel baru.
+
 **Simulasi Harga** — potongan per komponen: admin % × harga + XTRA 4% × harga + biaya proses tetap per
 order (bawaan Rp1.250) + packaging. Saran harga dari modal (`priceLadder`), Grup iklan
 (`simulateAdGroup`, tidak disimpan).
@@ -212,7 +225,7 @@ order (bawaan Rp1.250) + packaging. Saran harga dari modal (`priceLadder`), Grup
 
 | Halaman | Isi |
 |---|---|
-| Rekap | 4 bab: Untung + diagnosa, Dari omzet sampai untung, Iklan bulan itu, Pesanan & produk (tab). Bisa beberapa bulan. |
+| Rekap | Toko baru: **panduan 3 langkah** di atas (Upload laporan → Masukkan HPP → Lihat hasil), lihat `onboardingView`. 4 bab: Untung + diagnosa, Dari omzet sampai untung, Iklan bulan itu, Pesanan & produk (tab). Bisa beberapa bulan. |
 | Iklan | Ringkasan untung/rugi iklan, kartu per produk dengan label & sumber potongan, gabungan beberapa bulan, Cek cepat. |
 | Simulasi Harga | Satu produk (termasuk saran harga dari modal, kategori admin) dan Grup iklan. |
 | Upload | 1. Export pesanan (.xlsx) · 2. Laporan penghasilan (.xlsx "Sudah Dilepas" atau .pdf) · 3. Data iklan (.csv). Preview, satu tombol simpan. File salah kotak diberi pesan jelas. |
@@ -271,6 +284,7 @@ npm run build
 | (1 Nov) | Pelanggan: tombol **Reset password** (password acak + teks WhatsApp; akun pengelola ditolak). SQL 20261101. |
 | (2 Nov) | Pelanggan: pemakaian simulasi tiap toko uji coba + tombol **Tambah jatah simulasi** (per toko). SQL 20261102. |
 | (11 Nov) | Uji coba lewat **link**: pengelola menekan Buat link, calon pelanggan daftar sendiri (email + password sendiri, tanpa banner ganti password) dan langsung masuk ke Rekap. Form uji coba manual dihapus; akun berlangganan tetap dibuat pengelola. Email tidak diverifikasi (sama seperti sebelumnya). SQL 20261111. |
+| (16 Nov) | **Catatan aktivitas**: daftar, masuk, upload, buka Rekap, sudah bayar (nama kegiatan + waktu saja). Pelanggan menampilkan tahap tiap toko (kuning = perlu di-follow up), rincian, dan sumber; kalimat atas menyebut berapa uji coba yang sudah upload. Isian **Sumber** di Buat link. Aplikasi mengirim lewat `logActivity` (tidak ditunggu, gagal = diam). "Sudah bayar" = pengelola menandai, bukan bukti transfer. SQL 20261116. |
 | (3 Nov) | Uji coba diubah pemilik: **7 hari** (bawaan form, `DEFAULT_TRIAL_DAYS`), data tetap 1 bulan, Simulasi **10 produk**. SQL 20261103. |
 | (3 Nov) | Pratinjau tautan (Open Graph) untuk deploy HitungCuan: `public/og/hitungcuan.png` (sumber `scripts/og/`, `npm run og`), meta tag dari `shareMeta()` di vite.config.ts, alamat dari `VITE_SITE_URL` (default app.studioharel.id). Tanpa SQL. |
 | (3 Nov) | Status export **"Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga …"** (dana sudah bisa cair) dihitung **selesai** (`statusGroup`, `RECEIVED_STATUS_PREFIX`); tanpa Waktu Pesanan Selesai tetap `proses`. Sebelumnya uangnya masuk tapi modalnya tidak. Data lama: upload ulang export pesanan (SQL backfill di 20261005 belum mengenal status ini, jangan dijalankan ulang). Kalimat "uang cair belum ketemu pesanannya" kini menyebut langkah yang tepat (`missingOrdersAction`). Tanpa SQL. |
@@ -279,6 +293,9 @@ npm run build
 | (8 Nov) | Cek cepat iklan: tombol **Download untuk Claude (.md)** (`src/lib/adsQuickExport.ts`): ringkasan + 2 tabel per produk (hasil iklan; untung & target ROAS), definisi rumus, peringatan data beberapa hari, pertanyaan pembuka. Dibuat di browser, tanpa data pembeli; berisi HPP/untung toko. Tanpa SQL. |
 | (8 Nov) | Cek cepat: tombol **Pilih export pesanan** di dalam Cek cepat kalau pesanan tanggal itu belum ada (disimpan lewat `saveOrderItems` seperti Upload, lalu `loadAdsContext` dimuat ulang). Produk tanpa pesanan yang HPP-nya rata-rata beberapa variasi ditandai (`hppAvgVariants`, dari `fallbackVariants`) dan boleh ditimpa HPP sementara; tanda juga di file .md. Tanpa SQL. |
 | (8 Nov) | Cek cepat: pemilih file menerima data iklan (.csv) + export pesanan (.xlsx) sekaligus (pesanan disimpan dulu, lalu dihitung). Peringatan pesanan kosong jadi kotak kuning berjudul; kalau pesanan sudah ada, ada tombol **Perbarui pesanan**. Tanpa SQL. |
+| (14 Nov) | Cek cepat: kartu produk menampilkan **HPP per barang** + asalnya (`hppSource`: pesanan / produk / sementara, `hppSoldVariants`). Variasi terjual tanpa HPP disebut namanya (`missingHppVariants`, dari `variant_name`/`sku` baris pesanan; juga di file .md) dengan tautan tab baru ke `#/hpp?cari=…` (HppPage `initialSearch`); data toko dimuat ulang saat tab Cek cepat terlihat lagi. Export pesanan dari tab selain Semua (`Order.toship…` dll., `orderExportTabWarning`) tetap disimpan tapi diperingatkan, di Upload dan Cek cepat. Tanpa SQL. |
+| (16 Nov) | Iklan: kotak **calon iklan** (produk belum diiklankan yang untungnya cukup, patokan ROAS nyata toko), `src/lib/adCandidates.ts`. Potongan & statistik pesanan per produk dipisah jadi `resolveProductFee` / `orderLineStats` (hasil `analyzeAds` sama). Tanpa SQL. |
+| (16 Nov) | **Panduan pengguna baru** (`src/lib/onboarding.ts`, `src/components/Onboarding.tsx`): Upload laporan Shopee → Masukkan HPP → Lihat hasil keuntungan, menggantikan layar "3 langkah" lama di Rekap kosong (yang hilang setelah file pertama sehingga langkah HPP tidak pernah terlihat). Langkah dari data (`fetchSetupProgress`: ada pesanan, ada penghasilan, jumlah produk & HPP kosong). Tampil kalau belum ada pesanan/penghasilan, atau HPP belum ada sama sekali / panduan sudah pernah tampil di perangkat ini (`localStorage onboarding:<toko>`); toko lama dengan produk baru tanpa HPP tidak kena (urusan pengingat bulanan). Selesai = upload + HPP lengkap → Rekap langsung tampil + kartu "3 dari 3 langkah selesai" di hari itu. Selama panduan tampil, kartu pengingat bulanan disembunyikan; Upload & HPP menampilkan baris langkah. Simpan HPP kini memanggil `notifyDataChanged`. Tanpa SQL. |
 | (17 Nov) | Data sample Cek cepat evaluasi 11.11: `npm run sample:1111` (`scripts/make-sample-1111.mjs`) → `sample-store/cek-cepat-1111/` (export pesanan 1–14 Nov + data iklan 2 periode 7 hari). Katalog/SKU/HPP sama dengan `npm run sample`; skenario: harga promo menaikkan ROAS balik modal (Sunscreen turun ke Lanjut, pantau; Micellar Stop), batal tinggi (Paket Hemat Stop), iklan tanpa penjualan (Hair Serum Stop), produk baru tanpa HPP (Glow Kit, Isi HPP). Tanpa SQL, tanpa perubahan aplikasi. |
 
 ## 11. Keputusan & ide yang belum dikerjakan

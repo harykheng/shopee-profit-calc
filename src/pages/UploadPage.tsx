@@ -13,7 +13,7 @@ import {
   type ParsedAdsFile,
   type SavedAdsPeriod,
 } from '../components/adsUpload'
-import { fetchProducts, fetchTrialMonthsUsed, findAdShopElsewhere, saveIncomeReport, saveOrderItems } from '../lib/api'
+import { fetchProducts, fetchTrialMonthsUsed, findAdShopElsewhere, logActivity, saveIncomeReport, saveOrderItems } from '../lib/api'
 import { QUICK_CHECK_TRIAL_NOTE, trialMonthsNotice, trialUploadCheck, trialUploadProblem, uploadMonths } from '../lib/trialLimits'
 import { notifyDataChanged } from '../lib/events'
 import { ROUTES, navigate } from '../lib/router'
@@ -135,9 +135,11 @@ export function UploadPage({
           'Ini file CSV. Untuk export pesanan, pilih file Excel (.xlsx). File CSV data iklan di-upload di kotak "3. Data iklan".',
         )
       }
-      const { parseOrdersFile } = await import('../lib/parsers/orders')
+      const { orderExportTabWarning, parseOrdersFile } = await import('../lib/parsers/orders')
       const result = parseOrdersFile(await file.arrayBuffer())
-      setOrders({ fileName: file.name, result })
+      // Export dari satu tab saja (mis. Perlu Dikirim) tetap boleh disimpan, tapi diperingatkan paling atas.
+      const tabWarning = orderExportTabWarning(file.name)
+      setOrders({ fileName: file.name, result: tabWarning ? { ...result, warnings: [tabWarning, ...result.warnings] } : result })
     } catch (error) {
       setOrders({ fileName: file.name, error })
     }
@@ -279,6 +281,7 @@ export function UploadPage({
     } finally {
       if (savedSomething) {
         notifyDataChanged()
+        logActivity(store.id, 'report_uploaded')
         setTrialVersion((v) => v + 1)
       }
       setSaving(false)

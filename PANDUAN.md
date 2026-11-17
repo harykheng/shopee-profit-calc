@@ -49,6 +49,17 @@ Hal penting yang perlu diingat:
   Biaya). Di laptop menunya ada di **bar atas**; di HP/iPad keenam menu ada di **bawah layar**.
   Aplikasi langsung terbuka di **Rekap**, dan angka **untung bersih** tampil paling atas.
 
+**Pertama kali memakai: 3 langkah.** Toko yang baru mulai disambut panduan di halaman Rekap:
+**Upload laporan Shopee → Masukkan HPP → Lihat hasil keuntungan**. Langkah yang sudah beres diberi
+centang hijau (dicek dari data yang tersimpan, jadi tetap benar walau pindah dari laptop ke HP), dan tombol
+di langkah yang sedang dikerjakan langsung membuka halamannya. Selama panduan ini tampil, halaman Upload dan
+HPP menampilkan satu baris "Langkah 2 dari 3 …" dengan tombol ke langkah berikutnya. Begitu laporan dan
+semua HPP terisi, Rekap langsung menampilkan untung bersih, dengan kartu hijau **3 dari 3 langkah selesai**
+di hari itu. Setelah itu panduan tidak muncul lagi; kekurangan data bulan berikutnya diingatkan oleh
+pengingat otomatis (di bawah).
+
+---
+
 ---
 
 ## 2. Rutinitas tiap awal bulan (ringkas)
@@ -88,6 +99,9 @@ Toko yang baru mulai tidak ditagih untuk bulan yang memang belum pernah dipakai.
   cair di awal bulan sering berasal dari pesanan akhir bulan sebelumnya.
 - Status **Semua** (bukan hanya Selesai), supaya aplikasi juga tahu pesanan yang batal atau masih
   dikirim. Ini dipakai di tab "Semua pesanan" dan untuk menghitung ROAS nyata di halaman Iklan.
+  File dari tab Semua bernama **`Order.all…`**. Kalau namanya `Order.toship…` (tab Perlu Dikirim),
+  `Order.completed…` (tab Selesai), dan sebagainya, aplikasi tetap menyimpannya tetapi memberi peringatan
+  kuning: pesanan dengan status lain di tanggal itu tidak ikut. Export ulang dari tab **Semua**.
 - Status **"Pesanan diterima, namun Pembeli masih dapat mengajukan pengembalian hingga …"** dihitung
   sebagai **selesai** (uangnya sudah bisa cair). Rincian status di Rekap memberi catatan **"N pesanan
   masih bisa diretur pembeli sampai …"**: angkanya sudah bisa dipakai, tapi bisa bergeser sedikit kalau
@@ -336,6 +350,17 @@ baru atau mengganti target ROAS.
   belum pasti"** dengan tombol **Pilih export pesanan**. Hasil langsung dihitung ulang tanpa memilih file
   iklan lagi. Kalau pesanan sudah ada tapi pesanan hari terakhir belum ikut, pakai tombol **Perbarui
   pesanan**.
+- **HPP per barang** di tiap kartu menunjukkan HPP yang dipakai dan asalnya:
+  - **"variasi yang terjual, dari halaman HPP"** atau **"rata-rata N variasi yang terjual"**: HPP tiap
+    variasi yang laku di pesanan, dirata-rata sesuai jumlah terjualnya. Ini yang paling tepat.
+  - **"dari halaman HPP (pesanannya belum ada)"**: belum ada pesanan produk ini di tanggal itu.
+  - Kalau kamu memakai **HPP sementara**, baris ini tidak muncul; angkanya ada di kolom isian.
+- **Variasi terjual yang belum punya HPP** disebut namanya di kotak kuning, dengan tautan **Isi HPP per
+  variasi di halaman HPP** (terbuka di tab baru, langsung dicari nama produknya). Setelah HPP diisi dan kamu
+  kembali ke tab Cek cepat, hasilnya dihitung ulang sendiri, tanpa memilih file lagi.
+- **Export pesanan dari tab selain Semua** (mis. file `Order.toship…` dari tab Perlu Dikirim) tetap
+  disimpan, tetapi muncul kotak kuning **"Export pesanan belum lengkap"**: pesanan yang sudah dikirim,
+  selesai, atau batal di tanggal itu tidak ikut, jadi variasi yang terjual dan pesanan batal belum lengkap.
 - **Produk dengan beberapa variasi** (mis. 50g, 85g, 150g) yang pesanannya belum ada diberi tanda **Belum
   pasti**: HPP-nya diambil dari rata-rata semua variasi, padahal belum tentu variasi itu yang laku. Label
   Stop/Lanjut-nya bisa salah. Pilih export pesanan, atau isi **HPP sementara** kalau kamu tahu variasi
@@ -345,6 +370,8 @@ baru atau mengganti target ROAS.
   dan label Lanjut/Stop langsung muncul. Angka ini hanya dipakai di Cek cepat dan **diingat di browser
   ini** (untuk cek berikutnya), tidak masuk ke halaman HPP. Kosongkan kolomnya untuk menghapus. HPP resmi
   tetap diisi di halaman HPP setelah export pesanan di-upload.
+  HPP sementara adalah **satu angka untuk semua variasi** produk itu. Kalau variasinya beda modal, lebih
+  tepat isi HPP tiap variasi di halaman HPP lewat tautan di kartu, lalu kosongkan HPP sementaranya.
 - **Angkanya cenderung terlalu bagus.** Pesanan batal dan retur biasanya baru kelihatan 1–2 minggu
   kemudian. Pakai untuk melihat arah, bukan untung akhir.
 - Makin pendek periodenya, makin sering hasilnya **Belum cukup data**. Itu jawaban yang jujur: tunggu
@@ -432,6 +459,31 @@ Produk yang **belum ada penjualan** dan biayanya masih kecil dikumpulkan di bagi
 Kalau tertulis **"tidak mungkin"** di saran target ROAS, artinya untung per barang terlalu tipis.
 Iklan tidak akan bisa memberi untung 5% (atau ROAS yang dibutuhkan di atas 50). Solusinya
 **naikkan harga**; harga yang dibutuhkan ditampilkan di kartu.
+
+### Produk yang belum diiklankan: mana yang cocok dicoba?
+
+Di bawah kartu iklan ada kotak **"N produk belum diiklankan, tapi untungnya cukup untuk diiklankan"**.
+Isinya produk yang terjual di periode itu **tanpa iklan**. Butuh export pesanan periode yang sama.
+
+Produk disarankan kalau:
+- sudah laku minimal 3 tanpa iklan (batal & retur tidak dihitung),
+- HPP sudah diisi,
+- batal + retur tidak lebih dari 20%,
+- target ROAS-nya (untuk untung 5% setelah iklan) **lebih kecil dari ROAS nyata iklan tokomu** di
+  periode itu. Artinya, kalau iklannya sebagus rata-rata iklan tokomu, produk ini masih untung.
+
+Urutannya: yang paling laku tanpa iklan di atas. Angka di kanan adalah **target ROAS minimal** untuk
+diisi di Shopee saat membuat iklan baru: batas bawah supaya masih untung 5%. Makin tinggi angka yang
+diisi, makin hemat iklannya dan makin besar untung per barang, tapi biasanya makin sedikit yang terjual.
+
+Produk lain ada di **"N produk lain belum disarankan"**, masing-masing dengan alasannya (ROAS yang
+dibutuhkan terlalu tinggi, untung terlalu tipis, banyak batal/retur, HPP kosong, atau baru laku sedikit).
+Kalau alasannya **untung terlalu tipis**, masalahnya ada di harga, bukan di iklan: untung per barang
+(sebelum iklan) dan harga jual untuk untung 20% ditampilkan, plus tombol ke **Simulasi Harga**.
+
+**Penting:** ini hanya cek **untung**, bukan jaminan laku. Aplikasi tidak tahu berapa orang yang
+melihat atau mengeklik produkmu. Mulai dengan budget kecil, lalu lihat hasilnya di halaman ini setelah
+1–2 minggu (pakai **Cek cepat**).
 
 ### Dari mana angka-angkanya?
 
@@ -761,3 +813,8 @@ Data tokomu adalah milikmu. Di halaman Akun, **Minta salinan data** dan **Minta 
 membuka WhatsApp ke pengelola dengan pesan yang sudah berisi akun dan tokomu. Pengelola memprosesnya
 secara manual setelah memastikan permintaan itu benar dari pemilik akun. Penghapusan tidak bisa
 dibatalkan, jadi minta salinan dulu kalau kamu masih membutuhkan datanya.
+
+**Catatan pemakaian.** Aplikasi mencatat **kapan** kamu masuk, berhasil upload, dan membuka Rekap, supaya
+pengelola tahu bagian mana yang sudah dicoba dan bisa membantu kalau kamu tersendat. Yang dicatat hanya nama
+kegiatan dan waktunya; isi laporan, angka untung, produk, dan data pembeli **tidak** ikut dicatat. Catatan
+ini ikut di salinan data dan ikut terhapus saat data dihapus.

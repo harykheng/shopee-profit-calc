@@ -20,18 +20,22 @@ export function HppPage({
   stores,
   storeId,
   onlyMissingInitially,
+  initialSearch = '',
 }: {
   stores: Store[]
   storeId: number | null
   onlyMissingInitially: boolean
+  /** Isi kotak cari dari tautan (mis. Cek cepat iklan: "#/hpp?cari=nama produk"). */
+  initialSearch?: string
 }) {
   const [products, setProducts] = useState<Product[] | null>(null)
   const [loadError, setLoadError] = useState<unknown>(null)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(initialSearch)
   const [onlyMissing, setOnlyMissing] = useState(onlyMissingInitially)
   const [status, setStatus] = useState<Record<number, RowStatus>>({})
 
   useEffect(() => setOnlyMissing(onlyMissingInitially), [onlyMissingInitially])
+  useEffect(() => setSearch(initialSearch), [initialSearch])
 
   useEffect(() => {
     if (!storeId) return
@@ -53,11 +57,12 @@ export function HppPage({
 
   const visible = useMemo(() => {
     if (!products) return []
-    const q = search.trim().toLowerCase()
+    // Spasi ganda diabaikan, supaya nama dari data iklan tetap ketemu.
+    const q = search.trim().replace(/\s+/g, ' ').toLowerCase()
     return products
       // Baris yang baru diisi tetap tampil walau filter "belum ada HPP" aktif.
       .filter((p) => !onlyMissing || p.hpp === null || status[p.id] !== undefined)
-      .filter((p) => !q || `${p.product_name} ${p.variant_name} ${p.sku}`.toLowerCase().includes(q))
+      .filter((p) => !q || `${p.product_name} ${p.variant_name} ${p.sku}`.replace(/\s+/g, ' ').toLowerCase().includes(q))
   }, [products, search, onlyMissing, status])
 
   const save = async (product: Product, hpp: number | null) => {
@@ -66,6 +71,8 @@ export function HppPage({
       const updated = await updateHpp(product.id, hpp)
       setProducts((list) => list?.map((p) => (p.id === updated.id ? updated : p)) ?? null)
       setStatus((s) => ({ ...s, [product.id]: { state: 'saved' } }))
+      // Panduan langkah awal & pengingat bulanan ikut diperbarui (mis. "Langkah 2 selesai").
+      notifyDataChanged()
       // Pesanan selesai yang HPP-nya masih kosong langsung memakai HPP ini, supaya Rekap tidak perlu
       // "Hitung ulang HPP". Kalau gagal, Rekap mengisinya sendiri saat dibuka.
       if (storeId && updated.hpp !== null) {
