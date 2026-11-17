@@ -280,6 +280,10 @@ npm run build                # build production ke dist/
 - Data sample toko testing (palsu, 2 bulan: pesanan, penghasilan, iklan, SQL isi HPP):
   `npm run sample -- "Nama Toko"` → folder `sample-store/` (di-gitignore). Urutan upload dan hasil
   yang seharusnya muncul ada di `sample-store/BACA-DULU.txt`.
+- Data sample **Cek cepat evaluasi 11.11** (palsu; minggu biasa 1–7 Nov vs minggu 11.11 8–14 Nov,
+  harga promo, pesanan batal, produk baru tanpa HPP): `npm run sample:1111 -- "Nama Toko"` → folder
+  `sample-store/cek-cepat-1111/`. Pakai toko yang sudah berisi data `npm run sample` (HPP & potongan
+  diambil dari sana). Label yang seharusnya muncul ada di `BACA-DULU.txt` folder itu.
 - Untuk menguji dengan file Shopee asli, taruh file di folder `sample-data/` (sudah di-gitignore,
   **jangan pernah di-commit**). `tests/sampleData.local.test.ts` otomatis berjalan kalau folder itu
   ada, dan dilewati kalau tidak ada.
@@ -289,7 +293,7 @@ npm run build                # build production ke dist/
 ### SheetJS
 
 `xlsx` (SheetJS) membaca export pesanan (.xlsx) di halaman Upload, dan dipakai
-`scripts/make-fixtures.mjs` serta `scripts/make-sample-store.mjs` untuk membuat file contoh.
+`scripts/make-fixtures.mjs`, `scripts/make-sample-store.mjs`, serta `scripts/make-sample-1111.mjs` untuk membuat file contoh.
 
 Registry npm berhenti di `xlsx@0.18.5`, yang punya celah keamanan (prototype pollution dan ReDoS).
 Versi resmi terbaru hanya ada di CDN SheetJS, jadi paketnya **disimpan di repo**:

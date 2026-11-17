@@ -279,6 +279,7 @@ npm run build
 | (8 Nov) | Cek cepat iklan: tombol **Download untuk Claude (.md)** (`src/lib/adsQuickExport.ts`): ringkasan + 2 tabel per produk (hasil iklan; untung & target ROAS), definisi rumus, peringatan data beberapa hari, pertanyaan pembuka. Dibuat di browser, tanpa data pembeli; berisi HPP/untung toko. Tanpa SQL. |
 | (8 Nov) | Cek cepat: tombol **Pilih export pesanan** di dalam Cek cepat kalau pesanan tanggal itu belum ada (disimpan lewat `saveOrderItems` seperti Upload, lalu `loadAdsContext` dimuat ulang). Produk tanpa pesanan yang HPP-nya rata-rata beberapa variasi ditandai (`hppAvgVariants`, dari `fallbackVariants`) dan boleh ditimpa HPP sementara; tanda juga di file .md. Tanpa SQL. |
 | (8 Nov) | Cek cepat: pemilih file menerima data iklan (.csv) + export pesanan (.xlsx) sekaligus (pesanan disimpan dulu, lalu dihitung). Peringatan pesanan kosong jadi kotak kuning berjudul; kalau pesanan sudah ada, ada tombol **Perbarui pesanan**. Tanpa SQL. |
+| (17 Nov) | Data sample Cek cepat evaluasi 11.11: `npm run sample:1111` (`scripts/make-sample-1111.mjs`) → `sample-store/cek-cepat-1111/` (export pesanan 1–14 Nov + data iklan 2 periode 7 hari). Katalog/SKU/HPP sama dengan `npm run sample`; skenario: harga promo menaikkan ROAS balik modal (Sunscreen turun ke Lanjut, pantau; Micellar Stop), batal tinggi (Paket Hemat Stop), iklan tanpa penjualan (Hair Serum Stop), produk baru tanpa HPP (Glow Kit, Isi HPP). Tanpa SQL, tanpa perubahan aplikasi. |
 
 ## 11. Keputusan & ide yang belum dikerjakan
 
