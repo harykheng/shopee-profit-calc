@@ -13,6 +13,7 @@
     "fixtures": "node scripts/make-fixtures.mjs",
     "sample": "node scripts/make-sample-store.mjs",
     "sample:1111": "node scripts/make-sample-1111.mjs",
+    "sample:2produk": "node scripts/make-sample-2produk.mjs",
     "og": "node scripts/make-og.mjs",
     "check:tenants": "node --env-file-if-exists=.env.local scripts/check-tenant-isolation.mjs"
   },
