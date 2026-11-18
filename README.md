@@ -107,6 +107,12 @@ menghapus data.
 > membuat link di halaman Buat akun, calon pelanggan mendaftar sendiri dengan email + password (OPERASI.md
 > bagian 2). Tanpa SQL ini tombol **Buat link uji coba** menampilkan pesan gangguan sistem.
 
+> Sudah setup sebelum 18 November 2026? Jalankan sekali file `20261118000000_platform_reset_store_data.sql`
+> (aman diulang) **setelah** `20261102000000_trial_simulation_bonus.sql`. Isinya tombol **Reset data** di halaman
+> Pelanggan (hanya pengelola): mengosongkan pesanan, penghasilan, produk & HPP, biaya, iklan, dan simulasi terpakai
+> satu toko; nama toko, akun, dan langganan tetap (OPERASI.md bagian 2). Boleh sebelum atau sesudah deploy: tanpa
+> SQL ini tombolnya menampilkan pesan gangguan sistem.
+
 > Sudah setup sebelum 16 November 2026? Jalankan sekali file `20261116000000_activity_events.sql` (aman diulang)
 > **setelah** `20261111000000_trial_links.sql`. Isinya **catatan aktivitas** (daftar, masuk, upload, buka Rekap,
 > sudah bayar; tanpa isi laporan) untuk daftar Pelanggan, dan isian **Sumber** di link uji coba (OPERASI.md

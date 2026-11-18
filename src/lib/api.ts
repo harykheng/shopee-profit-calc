@@ -11,6 +11,7 @@ import { MAX_SHIFT_DAYS } from './monthStatus'
 import type { CustomerRow, TrialForm } from './trialAccounts'
 import type { ActivitySummary, AppActivity } from './activity'
 import { toLinkState, type TrialLinkRow, type TrialLinkState } from './trialLinks'
+import { toResetCounts, type StoreResetCounts } from './storeReset'
 import type { AdSource } from './shopeeColumns'
 import type {
   AdReport,
@@ -821,6 +822,18 @@ export async function claimTrialLink(token: string, email: string, password: str
 /** Pengelola: jadikan toko uji coba berlangganan sampai tanggal itu (SQL 20261031). */
 export async function subscribeStore(storeId: number, activeUntil: string): Promise<void> {
   check(await supabase.rpc('platform_subscribe_store', { p_store_id: storeId, p_active_until: activeUntil }))
+}
+
+/**
+ * Pengelola: hapus isi toko (pesanan, penghasilan, produk & HPP, biaya, iklan, jatah simulasi terpakai). Nama toko,
+ * akun, langganan, dan pengaturan tetap. `confirmName` harus sama dengan nama toko. SQL 20261118.
+ */
+export async function resetStoreData(storeId: number, confirmName: string): Promise<StoreResetCounts> {
+  const r = check(await supabase.rpc('platform_reset_store_data', { p_store_id: storeId, p_confirm_name: confirmName })) as Record<
+    string,
+    unknown
+  >
+  return toResetCounts(r)
 }
 
 /** Pengelola: reset password pemilik toko (bukan akun pengelola). SQL 20261101. */

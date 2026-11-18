@@ -11,6 +11,7 @@ import {
   revokeTrialLink,
   fetchTrialSimUsage,
   resetCustomerPassword,
+  resetStoreData,
   subscribeStore,
   type TrialSimUsage,
 } from '../lib/api'
@@ -29,6 +30,7 @@ import {
   type TrialLinkRow,
 } from '../lib/trialLinks'
 import { wibToday } from '../lib/subscription'
+import { confirmNameMatches, resetSummary } from '../lib/storeReset'
 import {
   DEFAULT_TRIAL_DAYS,
   countByGroup,
@@ -582,6 +584,7 @@ function CustomerList({
   const [subscribing, setSubscribing] = useState<CustomerRow | null>(null)
   const [resetting, setResetting] = useState<CustomerRow | null>(null)
   const [addingSims, setAddingSims] = useState<CustomerRow | null>(null)
+  const [wiping, setWiping] = useState<CustomerRow | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>(counts.trial > 0 ? 'trial' : counts.paid > 0 ? 'paid' : 'all')
   const shown = useMemo(
@@ -626,11 +629,23 @@ function CustomerList({
               simUsage={r.trial ? (simUsage?.get(r.store_id) ?? null) : null}
               activity={activity?.get(r.store_id) ?? null}
               onAddSimulations={() => setAddingSims(r)}
+              onResetData={() => setWiping(r)}
             />
           ))}
         </ul>
       )}
       {resetting && <ResetPasswordDialog row={resetting} onClose={() => setResetting(null)} />}
+      {wiping && (
+        <ResetDataDialog
+          row={wiping}
+          onClose={() => setWiping(null)}
+          onDone={(text) => {
+            setDone(text)
+            setWiping(null)
+            onChanged()
+          }}
+        />
+      )}
       {addingSims && (
         <AddSimulationsDialog
           row={addingSims}
@@ -661,7 +676,8 @@ function CustomerList({
         />
       )}
       <p className="mt-4 text-sm text-ink-3">
-        Mengubah nama toko dan reset password akun pengelola masih lewat SQL Editor (lihat OPERASI.md).
+        Mengubah nama toko dan reset password akun pengelola masih lewat SQL Editor (lihat OPERASI.md). Butuh cadangan
+        sebelum Reset data? Jalankan admin_export_store di SQL Editor dulu.
       </p>
     </>
   )
@@ -674,6 +690,7 @@ function CustomerItem({
   simUsage,
   activity,
   onAddSimulations,
+  onResetData,
 }: {
   row: CustomerRow
   onSubscription: () => void
@@ -683,6 +700,7 @@ function CustomerItem({
   /** null kalau SQL 20261116 belum dijalankan. */
   activity: ActivitySummary | null
   onAddSimulations: () => void
+  onResetData: () => void
 }) {
   const status = customerStatus(row.active_until)
   const statusColor = status.state === 'expired' || status.state === 'expiring' ? 'text-warn' : 'text-ink-2'
@@ -730,6 +748,9 @@ function CustomerItem({
               {row.trial ? 'Jadikan berlangganan' : 'Perpanjang'}
             </Button>
           )}
+          <Button variant="secondary" onClick={onResetData}>
+            Reset data
+          </Button>
         </div>
       </div>
     </li>
@@ -951,6 +972,97 @@ function ResetPasswordDialog({ row, onClose }: { row: CustomerRow; onClose: () =
           </div>
         </>
       )}
+    </Modal>
+  )
+}
+
+/**
+ * Jendela "Reset data": mengosongkan pesanan, penghasilan, produk & HPP, biaya, iklan, dan jatah simulasi terpakai.
+ * Nama toko, akun, langganan, dan pengaturan tetap. Nama toko harus diketik ulang supaya tidak salah toko.
+ */
+function ResetDataDialog({ row, onClose, onDone }: { row: CustomerRow; onClose: () => void; onDone: (text: string) => void }) {
+  const titleId = useId()
+  const inputId = useId()
+  const [typed, setTyped] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const matches = confirmNameMatches(typed, row.store_name)
+
+  const save = async () => {
+    if (!matches) {
+      setError(`Ketik nama toko persis: ${row.store_name}`)
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      onDone(resetSummary(row.store_name, await resetStoreData(row.store_id, typed)))
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal labelledBy={titleId} onClose={onClose} dismissible={!busy}>
+      <h2 id={titleId} className="font-display text-2xl font-extrabold tracking-tight [overflow-wrap:anywhere]">
+        Reset data {row.store_name}
+      </h2>
+      <p className="mt-3 text-ink-2">
+        Toko ini kembali kosong seperti baru dibuat, dan panduan 3 langkah muncul lagi. Data yang sudah dihapus tidak bisa
+        dikembalikan.
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div>
+          <p className="font-semibold">Dihapus</p>
+          <ul className="mt-1 list-disc pl-5 text-ink-2">
+            <li>Export pesanan</li>
+            <li>Laporan penghasilan</li>
+            <li>Produk & HPP</li>
+            <li>Biaya bulanan</li>
+            <li>Data iklan</li>
+            <li>Jatah simulasi yang terpakai</li>
+          </ul>
+        </div>
+        <div>
+          <p className="font-semibold">Tetap</p>
+          <ul className="mt-1 list-disc pl-5 text-ink-2">
+            <li>Nama toko</li>
+            <li>Akun & password</li>
+            <li>Uji coba / langganan</li>
+            <li>Pengaturan hitungan</li>
+          </ul>
+        </div>
+      </div>
+      <label htmlFor={inputId} className="mt-5 block font-semibold">
+        Ketik nama toko untuk memastikan: <span className="[overflow-wrap:anywhere]">{row.store_name}</span>
+      </label>
+      <input
+        id={inputId}
+        type="text"
+        autoComplete="off"
+        spellCheck={false}
+        value={typed}
+        onChange={(e) => setTyped(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && matches && !busy) void save()
+        }}
+        className={`mt-1.5 font-normal ${inputClass}`}
+      />
+      {error && (
+        <div className="mt-4">
+          <Alert tone="error">{error}</Alert>
+        </div>
+      )}
+      <div className="mt-5 flex flex-col gap-3">
+        <Button variant="danger" onClick={save} disabled={busy || !matches}>
+          {busy ? 'Menghapus…' : 'Hapus data toko ini'}
+        </Button>
+        <Button variant="secondary" onClick={onClose} disabled={busy}>
+          Batal
+        </Button>
+      </div>
     </Modal>
   )
 }

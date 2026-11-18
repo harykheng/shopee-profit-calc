@@ -396,6 +396,11 @@ try {
       () => A.client.from('activity_events').insert({ store_id: storeB.id, event: 'subscription_paid' }),
     ],
     ['A melihat aktivitas semua toko (platform_activity_summary)', () => A.client.rpc('platform_activity_summary')],
+    // Nama toko sengaja salah: kalau akun A ternyata pengelola, database menolak karena nama, bukan menghapus data B.
+    [
+      'A mereset data toko B (platform_reset_store_data)',
+      () => A.client.rpc('platform_reset_store_data', { p_store_id: storeB.id, p_confirm_name: `${MARK}-bukan-nama-toko` }),
+    ],
   ]
   for (const [name, run] of platformCalls) {
     const res = await run()

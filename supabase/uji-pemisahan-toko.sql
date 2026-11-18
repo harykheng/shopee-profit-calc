@@ -55,6 +55,7 @@ declare
   n     bigint;
   n2    bigint;
   m     bigint;
+  m0    bigint;
   sisa  jsonb := '{}';
   daftar text;
   kueri  text;
@@ -107,7 +108,8 @@ begin
                                                      where s.nspname = 'public' and p.proname = 'trial_simulation_limit'
                                                        and p.prosrc like '%select 10%')),
     ('20261111000000_trial_links.sql',             to_regprocedure('public.claim_trial_link(text, text, text)') is not null),
-    ('20261116000000_activity_events.sql',         to_regclass('public.activity_events') is not null)
+    ('20261116000000_activity_events.sql',         to_regclass('public.activity_events') is not null),
+    ('20261118000000_platform_reset_store_data.sql', to_regprocedure('public.platform_reset_store_data(bigint, text)') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
@@ -222,7 +224,7 @@ begin
                             'platform_create_account', 'platform_subscribe_store', 'platform_reset_password',
                             'platform_add_trial_simulations', 'platform_trial_simulation_usage',
                             'platform_create_trial_link', 'platform_list_trial_links', 'platform_revoke_trial_link',
-                            'platform_activity_summary',
+                            'platform_activity_summary', 'platform_reset_store_data',
                             -- Terbuka TANPA login, tapi hanya bekerja dengan kode link yang benar; diuji di bagian 3.
                             'trial_link_status', 'claim_trial_link',
                             -- Memeriksa keanggotaan toko sendiri; diuji di bagian 2c.
@@ -478,6 +480,10 @@ begin
          'select count(*) from (select public.platform_reset_password(''' || a_email || ''', ''UjiPemisahan999'')) x'),
         ('Bukan pengelola: tambah jatah simulasi tokonya sendiri (platform_add_trial_simulations)',
          'select count(*) from (select public.platform_add_trial_simulations(' || sa || ', 1000)) x'),
+        ('Bukan pengelola: reset data tokonya sendiri (platform_reset_store_data)',
+         'select count(*) from (select public.platform_reset_store_data(' || sa || ', ''UJI-PEMISAHAN A'')) x'),
+        ('Bukan pengelola: reset data toko lain (platform_reset_store_data)',
+         'select count(*) from (select public.platform_reset_store_data(' || sb || ', ''UJI-PEMISAHAN B'')) x'),
         ('Bukan pengelola: lihat pemakaian simulasi semua toko (platform_trial_simulation_usage)',
          'select count(*) from public.platform_trial_simulation_usage()'),
         ('Bukan pengelola: lihat daftar pelanggan (platform_list_customers)',
@@ -646,6 +652,54 @@ begin
       v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
     end;
     v_uji := v_uji || 'Pengelola: tambah jatah simulasi toko uji coba (kontrol)'::text;
+
+    -- Kontrol: pengelola mereset data toko B. Nama yang salah ditolak; setelah reset, isi toko kosong tapi
+    -- toko, pemilik, pengaturan, dan kategori biaya tetap ada. Lalu DIBATALKAN (UJ001), karena
+    -- uji berikutnya masih memakai data toko B.
+    begin
+      reset role;
+      execute 'insert into public.platform_admins (user_id) values ($1) on conflict do nothing' using a_user;
+      -- Pemilik toko B (akun lain), supaya terlihat bahwa akun & keanggotaan tidak ikut terhapus.
+      execute 'insert into public.store_members (store_id, user_id, role) select $1, id, ''owner'' from auth.users where id = $2 on conflict do nothing'
+        using sb, other;
+      execute 'select (select count(*) from public.stores where id = $1 and name = ''UJI-PEMISAHAN B'')
+                    + (select count(*) from public.store_members where store_id = $1)
+                    + coalesce((select count(*) from public.store_settings where store_id = $1), 0)
+                    + (select count(*) from public.fee_categories where store_id = $1)' into m0 using sb;
+      set local role authenticated;
+      begin
+        execute 'select public.platform_reset_store_data($1, ''UJI-PEMISAHAN A'')' into sisa using sb;
+        n2 := 1;  -- nama toko lain diterima: celah
+      exception when sqlstate '22023' then
+        n2 := 0;
+      end;
+      execute 'select public.platform_reset_store_data($1, ''uji-pemisahan b'')' into sisa using sb;
+      reset role;
+      execute 'select (select count(*) from public.order_items where store_id = $1)
+                    + (select count(*) from public.products where store_id = $1)
+                    + (select count(*) from public.income where store_id = $1)
+                    + (select count(*) from public.income_adjustments where store_id = $1)
+                    + (select count(*) from public.income_orders where store_id = $1)
+                    + (select count(*) from public.expenses where store_id = $1)
+                    + (select count(*) from public.ad_reports where store_id = $1)
+                    + (select count(*) from public.trial_simulations where store_id = $1)' into n using sb;
+      execute 'select (select count(*) from public.stores where id = $1 and name = ''UJI-PEMISAHAN B'')
+                    + (select count(*) from public.store_members where store_id = $1)
+                    + coalesce((select count(*) from public.store_settings where store_id = $1), 0)
+                    + (select count(*) from public.fee_categories where store_id = $1)' into m using sb;
+      raise exception using errcode = 'UJ001';
+    exception
+      when sqlstate 'UJ001' then
+        v_status := v_status || case when n = 0 and n2 = 0 and m = m0 and m0 > 0 then 'LULUS' else 'GAGAL' end;
+        v_ket := v_ket || case when n = 0 and n2 = 0 and m = m0 and m0 > 0 then 'isi toko kosong; nama toko, pemilik & pengaturan tetap; nama salah ditolak'
+                               else format('sisa isi toko: %s, nama salah diterima: %s, yang tetap ada: %s dari %s', n, n2, m, m0) end;
+      when others then
+        reset role;
+        v_status := v_status || 'CEK'::text;
+        v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
+    end;
+    reset role;
+    v_uji := v_uji || 'Pengelola: reset data toko, nama toko tetap (kontrol)'::text;
 
     -- 2f. Akun uji coba: bulan di atas batas ditolak, bulan yang sudah ada tetap boleh. Mengikuti
     --     angka di trial_month_limit(), jadi tidak perlu diubah kalau batasnya diganti.

@@ -204,6 +204,20 @@ mengeluh "laporan bulan lain ditolak", cek dulu kolom `trial` tokonya. Angka bat
 
 Setelah dihentikan, pelanggan masih bisa **melihat** Rekap (baca saja) tapi tidak bisa mengubah data.
 
+**Reset data toko** (mulai dari nol: akun tes, demo, atau pelanggan yang minta datanya dikosongkan):
+halaman Pelanggan → tombol **Reset data** di toko itu → ketik ulang nama tokonya → **Hapus data toko ini**. Ulangi per
+toko kalau ada beberapa akun.
+- **Dihapus**: export pesanan (`order_items`), laporan penghasilan (`income`, `income_adjustments`, `income_orders`),
+  produk & HPP (`products`), biaya bulanan (`expenses`), data iklan (`ad_reports`, `ad_rows`), dan simulasi uji coba
+  yang sudah terpakai (`trial_simulations`). Rekap ikut kosong karena dihitung dari tabel-tabel itu.
+- **Tetap**: nama toko, akun & password, uji coba/langganan & tanggal berakhir, jatah simulasi tambahan, pengaturan
+  hitungan, kategori biaya admin, catatan aktivitas (tahap di Pelanggan tidak mundur).
+- Jatah **1 bulan data** uji coba ikut kembali penuh (bulan dihitung dari data yang ada). Karena itu tombolnya hanya
+  untuk pengelola, bukan pelanggan.
+- Tidak bisa dibatalkan. Toko sungguhan? Ambil cadangan dulu: `select public.admin_export_store(<id toko>);`.
+- Butuh migration `20261118000000_platform_reset_store_data.sql`. Lewat SQL Editor (tanpa aplikasi) sama dengan
+  menghapus tabel di atas per `store_id`; fungsinya sendiri hanya bisa dipanggil akun pengelola yang login.
+
 **Lupa password** (pelanggan menekan "Lupa password?" di halaman login → WhatsApp ke kamu):
 
 **Cara cepat:** halaman Pelanggan → tombol **Reset password** di toko itu → password acak sudah terisi → **Reset

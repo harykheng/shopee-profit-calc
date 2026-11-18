@@ -736,6 +736,12 @@ Dua alasan:
 Hubungi pengelola aplikasi untuk menghapus datanya. Untuk mencegahnya, selalu cek nama toko di bar atas
 sebelum upload. Kotak data iklan di halaman Upload juga memberi peringatan kalau tokonya terlihat beda.
 
+**Mau mulai dari nol lagi (data toko dikosongkan)?**
+Minta ke pengelola aplikasi. Pengelola bisa mengosongkan export pesanan, laporan penghasilan, produk & HPP,
+biaya, dan data iklan tokomu sekaligus. **Nama toko, akun, password, dan masa langganan tidak berubah.** Setelah
+itu panduan 3 langkah (Upload → HPP → Lihat hasil) muncul lagi di Rekap. Data yang sudah dikosongkan tidak bisa
+dikembalikan.
+
 **Apakah data pembeli tersimpan?**
 Tidak. Nama, alamat, no. HP, username, catatan, dan no. resi pembeli **tidak pernah dibaca maupun
 disimpan**. File dibaca langsung di browser.
