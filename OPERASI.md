@@ -85,6 +85,35 @@ sampai). **Matikan** kalau link tersebar ke tempat yang salah; akun yang sudah d
 untuk banyak orang = siapa pun yang memegangnya bisa membuat akun sampai kuotanya habis, jadi pakai kuota
 sekecil yang perlu.
 
+**Sumber** (boleh kosong, mis. "Instagram", "Grup FB"): tulis dari mana link itu disebar. Buat satu link per
+tempat supaya di **Pelanggan** kelihatan pendaftar dari mana yang benar-benar mencoba. Butuh migration
+`20261116000000_activity_events.sql`.
+
+**Aktivitas uji coba (Pelanggan).** Di bawah email tiap toko tampil sejauh mana pemiliknya mencoba:
+**Belum dipakai** → **Masuk saja, belum upload** → **Sudah upload, belum buka Rekap** → **Sudah melihat hasil
+Rekap** → **Sudah bayar**. Tiga yang pertama berwarna kuning di toko uji coba: saatnya ditanya lewat WhatsApp.
+Rinciannya: berapa kali masuk, berapa hari aktif, upload, buka Rekap, terakhir aktif, dan sumber link. Kalimat
+di atas halaman menyebut berapa uji coba yang sudah upload laporan.
+
+Yang dicatat (tabel `activity_events`, hanya nama kegiatan + waktu, tanpa isi toko):
+
+| Catatan | Kapan | Dicatat oleh |
+|---|---|---|
+| `trial_registered` | Daftar lewat link uji coba | Database (toko lama yang daftar lewat link ikut dicatat saat SQL dijalankan) |
+| `trial_logged_in` | Membuka aplikasi | Aplikasi, paling sering 1× per 30 menit |
+| `report_uploaded` | Berhasil menyimpan di Upload | Aplikasi, paling sering 1× per menit |
+| `profit_report_viewed` | Membuka Rekap yang ada isinya | Aplikasi, paling sering 1× per 10 menit |
+| `subscription_paid` | **Jadikan berlangganan**, **Perpanjang**, akun berlangganan baru, atau tanggal langganan dimajukan lewat SQL Editor | Database |
+
+`subscription_paid` artinya **pengelola menandai sudah bayar**, bukan bukti transfer: aplikasi tidak
+menerima pembayaran. Aktivitas sebelum SQL ini dijalankan tidak ada (kecuali tanggal daftar lewat link).
+Rincian per toko lewat SQL Editor:
+
+```sql
+select event, created_at at time zone 'Asia/Jakarta' as waktu_wib
+from public.activity_events where store_id = 5 order by created_at;
+```
+
 Catatan: email tidak diverifikasi. Orang bisa mendaftar dengan email yang bukan miliknya (atau salah
 ketik); kalau pemilik email asli nanti mau daftar, hapus toko dan akun salah itu dulu (bagian 4).
 
@@ -174,6 +203,20 @@ mengeluh "laporan bulan lain ditolak", cek dulu kolom `trial` tokonya. Angka bat
 `trial_month_limit()` dan `trial_simulation_limit()`; mengubahnya cukup `create or replace` fungsi itu.
 
 Setelah dihentikan, pelanggan masih bisa **melihat** Rekap (baca saja) tapi tidak bisa mengubah data.
+
+**Reset data toko** (mulai dari nol: akun tes, demo, atau pelanggan yang minta datanya dikosongkan):
+halaman Pelanggan → tombol **Reset data** di toko itu → ketik ulang nama tokonya → **Hapus data toko ini**. Ulangi per
+toko kalau ada beberapa akun.
+- **Dihapus**: export pesanan (`order_items`), laporan penghasilan (`income`, `income_adjustments`, `income_orders`),
+  produk & HPP (`products`), biaya bulanan (`expenses`), data iklan (`ad_reports`, `ad_rows`), dan simulasi uji coba
+  yang sudah terpakai (`trial_simulations`). Rekap ikut kosong karena dihitung dari tabel-tabel itu.
+- **Tetap**: nama toko, akun & password, uji coba/langganan & tanggal berakhir, jatah simulasi tambahan, pengaturan
+  hitungan, kategori biaya admin, catatan aktivitas (tahap di Pelanggan tidak mundur).
+- Jatah **1 bulan data** uji coba ikut kembali penuh (bulan dihitung dari data yang ada). Karena itu tombolnya hanya
+  untuk pengelola, bukan pelanggan.
+- Tidak bisa dibatalkan. Toko sungguhan? Ambil cadangan dulu: `select public.admin_export_store(<id toko>);`.
+- Butuh migration `20261118000000_platform_reset_store_data.sql`. Lewat SQL Editor (tanpa aplikasi) sama dengan
+  menghapus tabel di atas per `store_id`; fungsinya sendiri hanya bisa dipanggil akun pengelola yang login.
 
 **Lupa password** (pelanggan menekan "Lupa password?" di halaman login → WhatsApp ke kamu):
 
@@ -315,7 +358,7 @@ bertanya, dan jangan memulihkan cadangan lama tanpa memeriksa apakah ada toko ya
 |---|---|
 | Tiap pagi | Cek `client_error_summary` (bagian 1) |
 | Awal bulan | Lihat siapa yang belum mengunggah data bulan lalu (kartu pengingat di aplikasi menolong pelanggan; kamu bisa mengingatkan lewat WhatsApp) |
-| Tiap beberapa hari | Halaman Pengelola → **Uji coba**: tanya lewat WhatsApp yang masih "Belum pernah login" |
+| Tiap beberapa hari | Halaman Pengelola → **Uji coba**: tanya lewat WhatsApp yang masih "Belum pernah login" atau aktivitasnya kuning (belum upload / belum buka Rekap) |
 | Sebelum langganan habis | Hubungi pelanggan (status kuning di halaman Pengelola saat sisa ≤ 3 hari); banner pengingat di aplikasi muncul 7 hari sebelumnya |
 | Sebulan sekali | `select public.admin_purge_client_errors(90);` dan tinjau akun yatim |
 | Setiap migration baru | Jalankan berurutan, lalu jalankan `supabase/uji-pemisahan-toko.sql` di SQL Editor (harus `0 gagal, 0 perlu dicek`; tidak mengubah data). Cek `client_error_summary` beberapa jam kemudian |

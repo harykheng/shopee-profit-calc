@@ -13,7 +13,7 @@ import {
   type ParsedAdsFile,
   type SavedAdsPeriod,
 } from '../components/adsUpload'
-import { fetchProducts, fetchTrialMonthsUsed, findAdShopElsewhere, saveIncomeReport, saveOrderItems } from '../lib/api'
+import { fetchProducts, fetchTrialMonthsUsed, findAdShopElsewhere, logActivity, saveIncomeReport, saveOrderItems } from '../lib/api'
 import { QUICK_CHECK_TRIAL_NOTE, trialMonthsNotice, trialUploadCheck, trialUploadProblem, uploadMonths } from '../lib/trialLimits'
 import { notifyDataChanged } from '../lib/events'
 import { ROUTES, navigate } from '../lib/router'
@@ -281,6 +281,7 @@ export function UploadPage({
     } finally {
       if (savedSomething) {
         notifyDataChanged()
+        logActivity(store.id, 'report_uploaded')
         setTrialVersion((v) => v + 1)
       }
       setSaving(false)

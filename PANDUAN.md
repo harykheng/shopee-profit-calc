@@ -49,6 +49,17 @@ Hal penting yang perlu diingat:
   Biaya). Di laptop menunya ada di **bar atas**; di HP/iPad keenam menu ada di **bawah layar**.
   Aplikasi langsung terbuka di **Rekap**, dan angka **untung bersih** tampil paling atas.
 
+**Pertama kali memakai: 3 langkah.** Toko yang baru mulai disambut panduan di halaman Rekap:
+**Upload laporan Shopee → Masukkan HPP → Lihat hasil keuntungan**. Langkah yang sudah beres diberi
+centang hijau (dicek dari data yang tersimpan, jadi tetap benar walau pindah dari laptop ke HP), dan tombol
+di langkah yang sedang dikerjakan langsung membuka halamannya. Selama panduan ini tampil, halaman Upload dan
+HPP menampilkan satu baris "Langkah 2 dari 3 …" dengan tombol ke langkah berikutnya. Begitu laporan dan
+semua HPP terisi, Rekap langsung menampilkan untung bersih, dengan kartu hijau **3 dari 3 langkah selesai**
+di hari itu. Setelah itu panduan tidak muncul lagi; kekurangan data bulan berikutnya diingatkan oleh
+pengingat otomatis (di bawah).
+
+---
+
 ---
 
 ## 2. Rutinitas tiap awal bulan (ringkas)
@@ -725,6 +736,12 @@ Dua alasan:
 Hubungi pengelola aplikasi untuk menghapus datanya. Untuk mencegahnya, selalu cek nama toko di bar atas
 sebelum upload. Kotak data iklan di halaman Upload juga memberi peringatan kalau tokonya terlihat beda.
 
+**Mau mulai dari nol lagi (data toko dikosongkan)?**
+Minta ke pengelola aplikasi. Pengelola bisa mengosongkan export pesanan, laporan penghasilan, produk & HPP,
+biaya, dan data iklan tokomu sekaligus. **Nama toko, akun, password, dan masa langganan tidak berubah.** Setelah
+itu panduan 3 langkah (Upload → HPP → Lihat hasil) muncul lagi di Rekap. Data yang sudah dikosongkan tidak bisa
+dikembalikan.
+
 **Apakah data pembeli tersimpan?**
 Tidak. Nama, alamat, no. HP, username, catatan, dan no. resi pembeli **tidak pernah dibaca maupun
 disimpan**. File dibaca langsung di browser.
@@ -802,3 +819,8 @@ Data tokomu adalah milikmu. Di halaman Akun, **Minta salinan data** dan **Minta 
 membuka WhatsApp ke pengelola dengan pesan yang sudah berisi akun dan tokomu. Pengelola memprosesnya
 secara manual setelah memastikan permintaan itu benar dari pemilik akun. Penghapusan tidak bisa
 dibatalkan, jadi minta salinan dulu kalau kamu masih membutuhkan datanya.
+
+**Catatan pemakaian.** Aplikasi mencatat **kapan** kamu masuk, berhasil upload, dan membuka Rekap, supaya
+pengelola tahu bagian mana yang sudah dicoba dan bisa membantu kalau kamu tersendat. Yang dicatat hanya nama
+kegiatan dan waktunya; isi laporan, angka untung, produk, dan data pembeli **tidak** ikut dicatat. Catatan
+ini ikut di salinan data dan ikut terhapus saat data dihapus.

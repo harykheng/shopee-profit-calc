@@ -71,6 +71,8 @@ export function HppPage({
       const updated = await updateHpp(product.id, hpp)
       setProducts((list) => list?.map((p) => (p.id === updated.id ? updated : p)) ?? null)
       setStatus((s) => ({ ...s, [product.id]: { state: 'saved' } }))
+      // Panduan langkah awal & pengingat bulanan ikut diperbarui (mis. "Langkah 2 selesai").
+      notifyDataChanged()
       // Pesanan selesai yang HPP-nya masih kosong langsung memakai HPP ini, supaya Rekap tidak perlu
       // "Hitung ulang HPP". Kalau gagal, Rekap mengisinya sendiri saat dibuka.
       if (storeId && updated.hpp !== null) {

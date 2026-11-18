@@ -5,14 +5,17 @@ import {
   addTrialSimulations,
   createAccount,
   createTrialLink,
+  fetchActivitySummary,
   fetchCustomers,
   fetchTrialLinks,
   revokeTrialLink,
   fetchTrialSimUsage,
   resetCustomerPassword,
+  resetStoreData,
   subscribeStore,
   type TrialSimUsage,
 } from '../lib/api'
+import { SOURCE_MAX_LENGTH, activityDetail, activityVerdict, countTried, normalizeSource, type ActivitySummary } from '../lib/activity'
 import { APP_NAME } from '../lib/brand'
 import { adminHint, friendlyError } from '../lib/errors'
 import { formatDate } from '../lib/format'
@@ -27,6 +30,7 @@ import {
   type TrialLinkRow,
 } from '../lib/trialLinks'
 import { wibToday } from '../lib/subscription'
+import { confirmNameMatches, resetSummary } from '../lib/storeReset'
 import {
   DEFAULT_TRIAL_DAYS,
   countByGroup,
@@ -81,10 +85,12 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
   const [customers, setCustomers] = useState<CustomerRow[] | null>(null)
   const [listError, setListError] = useState<string | null>(null)
   const [simUsage, setSimUsage] = useState<Map<number, TrialSimUsage> | null>(null)
+  const [activity, setActivity] = useState<Map<number, ActivitySummary> | null>(null)
 
   const load = useCallback(() => {
-    // Pemakaian simulasi hanya pelengkap: kalau gagal, daftar tetap tampil tanpa itu.
+    // Pemakaian simulasi & aktivitas hanya pelengkap: kalau gagal, daftar tetap tampil tanpa itu.
     fetchTrialSimUsage().then(setSimUsage)
+    fetchActivitySummary().then(setActivity)
     fetchCustomers()
       .then((rows) => {
         setCustomers(rows)
@@ -96,6 +102,9 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
 
   const counts = customers ? countByGroup(customers) : null
   const summary = customers ? summarizeCustomers(customers) : null
+  // Uji coba aktif yang sudah benar-benar mencoba (upload laporan atau lebih jauh).
+  const activeTrialIds = customers ? customers.filter((r) => customerGroup(r) === 'trial').map((r) => r.store_id) : []
+  const tried = activity ? countTried(activeTrialIds, activity) : null
 
   return (
     <>
@@ -109,9 +118,10 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
           <p className="max-w-[40ch] font-display text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">
             <span className="hl">{counts.paid} berlangganan</span>, {counts.trial} sedang uji coba.
           </p>
-          {(summary.neverLoggedIn > 0 || counts.ended > 0) && (
+          {(summary.neverLoggedIn > 0 || counts.ended > 0 || (tried !== null && counts.trial > 0)) && (
             <p className="mt-2 text-lg text-ink-2">
               {[
+                tried !== null && counts.trial > 0 ? `${tried} dari ${counts.trial} uji coba sudah upload laporan` : null,
                 summary.neverLoggedIn > 0 ? `${summary.neverLoggedIn} akun uji coba belum pernah login` : null,
                 counts.ended > 0 ? `${counts.ended} toko sudah berakhir (baca saja)` : null,
               ]
@@ -131,7 +141,7 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
         ) : !customers ? (
           <Spinner />
         ) : (
-          <CustomerList rows={customers} simUsage={simUsage} onChanged={load} />
+          <CustomerList rows={customers} simUsage={simUsage} activity={activity} onChanged={load} />
         )}
       </Card>
     </>
@@ -195,6 +205,8 @@ function PillChoice<T extends number>({
 function TrialLinkCard() {
   const [maxUses, setMaxUses] = useState<(typeof LINK_USE_OPTIONS)[number]>(1)
   const [days, setDays] = useState<(typeof LINK_DAY_OPTIONS)[number]>(7)
+  const [source, setSource] = useState('')
+  const sourceId = useId()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<string | null>(null)
@@ -211,7 +223,7 @@ function TrialLinkCard() {
     setBusy(true)
     setError(null)
     try {
-      const link = await createTrialLink(maxUses, days)
+      const link = await createTrialLink(maxUses, days, normalizeSource(source))
       setCreated(linkInviteMessage({ appName: APP_NAME, url: signupUrl(window.location.origin, link.token) }))
       load()
     } catch (err) {
@@ -270,6 +282,20 @@ function TrialLinkCard() {
             onChange={setDays}
             format={(n) => `${n} hari`}
           />
+          <label htmlFor={sourceId} className="mt-4 block font-semibold">
+            Sumber <span className="font-normal text-ink-3">(boleh kosong)</span>
+          </label>
+          <input
+            id={sourceId}
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            maxLength={SOURCE_MAX_LENGTH}
+            placeholder="mis. Instagram, Grup FB, teman"
+            className={`${inputClass} mt-1.5`}
+          />
+          <span className="mt-1 block text-sm text-ink-3">
+            Tampil di daftar Pelanggan, supaya kelihatan pendaftar dari mana yang benar-benar mencoba.
+          </span>
           <Button onClick={create} disabled={busy} className="mt-6">
             {busy ? 'Membuat link…' : 'Buat link uji coba'}
           </Button>
@@ -290,6 +316,7 @@ function TrialLinkCard() {
               <li key={l.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
                 <span className="text-ink-2">
                   {linkSummary(l)}
+                  {l.source && <span className="text-ink-3"> · {l.source}</span>}
                   <span className="text-ink-3"> · dibuat {formatDate(l.created_at)}</span>
                 </span>
                 <Button variant="secondary" onClick={() => revoke(l.id)} disabled={revoking !== null}>
@@ -545,16 +572,19 @@ function sortRows(rows: CustomerRow[], filter: Filter): CustomerRow[] {
 function CustomerList({
   rows,
   simUsage,
+  activity,
   onChanged,
 }: {
   rows: CustomerRow[]
   simUsage: Map<number, TrialSimUsage> | null
+  activity: Map<number, ActivitySummary> | null
   onChanged: () => void
 }) {
   const counts = countByGroup(rows)
   const [subscribing, setSubscribing] = useState<CustomerRow | null>(null)
   const [resetting, setResetting] = useState<CustomerRow | null>(null)
   const [addingSims, setAddingSims] = useState<CustomerRow | null>(null)
+  const [wiping, setWiping] = useState<CustomerRow | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>(counts.trial > 0 ? 'trial' : counts.paid > 0 ? 'paid' : 'all')
   const shown = useMemo(
@@ -597,12 +627,25 @@ function CustomerList({
               onSubscription={() => setSubscribing(r)}
               onResetPassword={() => setResetting(r)}
               simUsage={r.trial ? (simUsage?.get(r.store_id) ?? null) : null}
+              activity={activity?.get(r.store_id) ?? null}
               onAddSimulations={() => setAddingSims(r)}
+              onResetData={() => setWiping(r)}
             />
           ))}
         </ul>
       )}
       {resetting && <ResetPasswordDialog row={resetting} onClose={() => setResetting(null)} />}
+      {wiping && (
+        <ResetDataDialog
+          row={wiping}
+          onClose={() => setWiping(null)}
+          onDone={(text) => {
+            setDone(text)
+            setWiping(null)
+            onChanged()
+          }}
+        />
+      )}
       {addingSims && (
         <AddSimulationsDialog
           row={addingSims}
@@ -633,7 +676,8 @@ function CustomerList({
         />
       )}
       <p className="mt-4 text-sm text-ink-3">
-        Mengubah nama toko dan reset password akun pengelola masih lewat SQL Editor (lihat OPERASI.md).
+        Mengubah nama toko dan reset password akun pengelola masih lewat SQL Editor (lihat OPERASI.md). Butuh cadangan
+        sebelum Reset data? Jalankan admin_export_store di SQL Editor dulu.
       </p>
     </>
   )
@@ -644,19 +688,24 @@ function CustomerItem({
   onSubscription,
   onResetPassword,
   simUsage,
+  activity,
   onAddSimulations,
+  onResetData,
 }: {
   row: CustomerRow
   onSubscription: () => void
   onResetPassword: () => void
   /** Hanya toko uji coba, dan hanya kalau SQL 20261102 sudah dijalankan. */
   simUsage: TrialSimUsage | null
+  /** null kalau SQL 20261116 belum dijalankan. */
+  activity: ActivitySummary | null
   onAddSimulations: () => void
+  onResetData: () => void
 }) {
   const status = customerStatus(row.active_until)
   const statusColor = status.state === 'expired' || status.state === 'expiring' ? 'text-warn' : 'text-ink-2'
   return (
-    <li className="grid gap-x-6 gap-y-1 py-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+    <li className="grid gap-x-6 gap-y-1 py-5 sm:grid-cols-[minmax(0,1fr)_auto]">
       <div className="min-w-0">
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="font-semibold [overflow-wrap:anywhere]">{row.store_name}</span>
@@ -667,6 +716,7 @@ function CustomerItem({
         <p className="text-ink-2 [overflow-wrap:anywhere]">
           {row.owner_emails.length ? row.owner_emails.join(', ') : 'Belum ada akun yang terhubung'}
         </p>
+        {activity && <ActivityLine activity={activity} trial={row.trial} />}
       </div>
       <div className="text-sm sm:text-right">
         <p className={`font-semibold ${statusColor}`}>
@@ -681,26 +731,51 @@ function CustomerItem({
             Simulasi: {simUsage.used} dari {simUsage.limit} produk{simUsage.used >= simUsage.limit ? ', habis' : ''}
           </p>
         )}
+      </div>
+      {/* Tombol di baris sendiri selebar kartu, supaya kolom nama & email tidak terjepit. Reset data (menghapus)
+          dipisah di ujung kanan dengan warna rugi, jauh dari tombol lain. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 sm:col-span-2">
         {/* Uji coba → berlangganan; berlangganan dengan tanggal berakhir → perpanjang (toko tanpa batas tidak perlu). */}
-        <div className="mt-2 flex flex-wrap gap-2 sm:justify-end">
-          {simUsage && (
-            <Button variant="secondary" onClick={onAddSimulations}>
-              Tambah jatah simulasi
-            </Button>
-          )}
-          {row.owner_emails.length > 0 && (
-            <Button variant="secondary" onClick={onResetPassword}>
-              Reset password
-            </Button>
-          )}
-          {(row.trial || row.active_until) && (
-            <Button variant="secondary" onClick={onSubscription}>
-              {row.trial ? 'Jadikan berlangganan' : 'Perpanjang'}
-            </Button>
-          )}
-        </div>
+        {(row.trial || row.active_until) && (
+          <Button variant="secondary" onClick={onSubscription}>
+            {row.trial ? 'Jadikan berlangganan' : 'Perpanjang'}
+          </Button>
+        )}
+        {simUsage && (
+          <Button variant="secondary" onClick={onAddSimulations}>
+            Tambah jatah simulasi
+          </Button>
+        )}
+        {row.owner_emails.length > 0 && (
+          <Button variant="secondary" onClick={onResetPassword}>
+            Reset password
+          </Button>
+        )}
+        <button
+          type="button"
+          onClick={onResetData}
+          className="min-h-11 rounded-full px-3 font-semibold text-loss underline-offset-4 transition-colors hover:bg-loss/10 hover:underline sm:ml-auto"
+        >
+          Reset data
+        </button>
       </div>
     </li>
+  )
+}
+
+/** Sudah sejauh mana akun ini mencoba aplikasinya (hanya nama aktivitas & waktu, tanpa isi toko). */
+function ActivityLine({ activity, trial }: { activity: ActivitySummary; trial: boolean }) {
+  const verdict = activityVerdict(activity)
+  const detail = activityDetail(activity)
+  return (
+    <div className="mt-1 text-sm">
+      <p className={trial && verdict.followUp ? 'font-semibold text-warn' : 'font-semibold text-ink-2'}>{verdict.label}</p>
+      {(detail || activity.source) && (
+        <p className="text-ink-3 [overflow-wrap:anywhere]">
+          {[detail, activity.source ? `Sumber: ${activity.source}` : null].filter(Boolean).join(' · ')}
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -903,6 +978,97 @@ function ResetPasswordDialog({ row, onClose }: { row: CustomerRow; onClose: () =
           </div>
         </>
       )}
+    </Modal>
+  )
+}
+
+/**
+ * Jendela "Reset data": mengosongkan pesanan, penghasilan, produk & HPP, biaya, iklan, dan jatah simulasi terpakai.
+ * Nama toko, akun, langganan, dan pengaturan tetap. Nama toko harus diketik ulang supaya tidak salah toko.
+ */
+function ResetDataDialog({ row, onClose, onDone }: { row: CustomerRow; onClose: () => void; onDone: (text: string) => void }) {
+  const titleId = useId()
+  const inputId = useId()
+  const [typed, setTyped] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const matches = confirmNameMatches(typed, row.store_name)
+
+  const save = async () => {
+    if (!matches) {
+      setError(`Ketik nama toko persis: ${row.store_name}`)
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      onDone(resetSummary(row.store_name, await resetStoreData(row.store_id, typed)))
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal labelledBy={titleId} onClose={onClose} dismissible={!busy}>
+      <h2 id={titleId} className="font-display text-2xl font-extrabold tracking-tight [overflow-wrap:anywhere]">
+        Reset data {row.store_name}
+      </h2>
+      <p className="mt-3 text-ink-2">
+        Toko ini kembali kosong seperti baru dibuat, dan panduan 3 langkah muncul lagi. Data yang sudah dihapus tidak bisa
+        dikembalikan.
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div>
+          <p className="font-semibold">Dihapus</p>
+          <ul className="mt-1 list-disc pl-5 text-ink-2">
+            <li>Export pesanan</li>
+            <li>Laporan penghasilan</li>
+            <li>Produk & HPP</li>
+            <li>Biaya bulanan</li>
+            <li>Data iklan</li>
+            <li>Jatah simulasi yang terpakai</li>
+          </ul>
+        </div>
+        <div>
+          <p className="font-semibold">Tetap</p>
+          <ul className="mt-1 list-disc pl-5 text-ink-2">
+            <li>Nama toko</li>
+            <li>Akun & password</li>
+            <li>Uji coba / langganan</li>
+            <li>Pengaturan hitungan</li>
+          </ul>
+        </div>
+      </div>
+      <label htmlFor={inputId} className="mt-5 block font-semibold">
+        Ketik nama toko untuk memastikan: <span className="[overflow-wrap:anywhere]">{row.store_name}</span>
+      </label>
+      <input
+        id={inputId}
+        type="text"
+        autoComplete="off"
+        spellCheck={false}
+        value={typed}
+        onChange={(e) => setTyped(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && matches && !busy) void save()
+        }}
+        className={`mt-1.5 font-normal ${inputClass}`}
+      />
+      {error && (
+        <div className="mt-4">
+          <Alert tone="error">{error}</Alert>
+        </div>
+      )}
+      <div className="mt-5 flex flex-col gap-3">
+        <Button variant="danger" onClick={save} disabled={busy || !matches}>
+          {busy ? 'Menghapus…' : 'Hapus data toko ini'}
+        </Button>
+        <Button variant="secondary" onClick={onClose} disabled={busy}>
+          Batal
+        </Button>
+      </div>
     </Modal>
   )
 }
