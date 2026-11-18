@@ -705,7 +705,7 @@ function CustomerItem({
   const status = customerStatus(row.active_until)
   const statusColor = status.state === 'expired' || status.state === 'expiring' ? 'text-warn' : 'text-ink-2'
   return (
-    <li className="grid gap-x-6 gap-y-1 py-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+    <li className="grid gap-x-6 gap-y-1 py-5 sm:grid-cols-[minmax(0,1fr)_auto]">
       <div className="min-w-0">
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="font-semibold [overflow-wrap:anywhere]">{row.store_name}</span>
@@ -731,27 +731,33 @@ function CustomerItem({
             Simulasi: {simUsage.used} dari {simUsage.limit} produk{simUsage.used >= simUsage.limit ? ', habis' : ''}
           </p>
         )}
+      </div>
+      {/* Tombol di baris sendiri selebar kartu, supaya kolom nama & email tidak terjepit. Reset data (menghapus)
+          dipisah di ujung kanan dengan warna rugi, jauh dari tombol lain. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 sm:col-span-2">
         {/* Uji coba → berlangganan; berlangganan dengan tanggal berakhir → perpanjang (toko tanpa batas tidak perlu). */}
-        <div className="mt-2 flex flex-wrap gap-2 sm:justify-end">
-          {simUsage && (
-            <Button variant="secondary" onClick={onAddSimulations}>
-              Tambah jatah simulasi
-            </Button>
-          )}
-          {row.owner_emails.length > 0 && (
-            <Button variant="secondary" onClick={onResetPassword}>
-              Reset password
-            </Button>
-          )}
-          {(row.trial || row.active_until) && (
-            <Button variant="secondary" onClick={onSubscription}>
-              {row.trial ? 'Jadikan berlangganan' : 'Perpanjang'}
-            </Button>
-          )}
-          <Button variant="secondary" onClick={onResetData}>
-            Reset data
+        {(row.trial || row.active_until) && (
+          <Button variant="secondary" onClick={onSubscription}>
+            {row.trial ? 'Jadikan berlangganan' : 'Perpanjang'}
           </Button>
-        </div>
+        )}
+        {simUsage && (
+          <Button variant="secondary" onClick={onAddSimulations}>
+            Tambah jatah simulasi
+          </Button>
+        )}
+        {row.owner_emails.length > 0 && (
+          <Button variant="secondary" onClick={onResetPassword}>
+            Reset password
+          </Button>
+        )}
+        <button
+          type="button"
+          onClick={onResetData}
+          className="min-h-11 rounded-full px-3 font-semibold text-loss underline-offset-4 transition-colors hover:bg-loss/10 hover:underline sm:ml-auto"
+        >
+          Reset data
+        </button>
       </div>
     </li>
   )
