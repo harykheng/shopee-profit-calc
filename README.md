@@ -102,6 +102,10 @@ menghapus data.
 > aplikasi tetap jalan tanpa batas; tanpa deploy, batas data tetap ditegakkan database (pesannya saja
 > yang kurang rapi).
 
+> Sudah setup sebelum 24 November 2026? Jalankan sekali file `20261124000000_close_old_trial_claim.sql` (aman
+> diulang) **sesudah** aplikasi versi 23 November (daftar dengan no HP) live. Isinya menutup daftar lewat link versi
+> lama tanpa no HP. Kalau dijalankan sebelum deploy itu, semua pendaftaran lewat link ditolak sampai deploy.
+
 > Sudah setup sebelum 23 November 2026? Jalankan sekali file `20261123000000_trial_signup_profile.sql` (aman
 > diulang) **setelah** `20261116000000_activity_events.sql`, **sebelum deploy**. Halaman daftar dari link uji coba
 > jadi meminta **no HP (WhatsApp)** dan **tahu dari mana**; keduanya tampil di halaman Pelanggan. Tanpa SQL ini,

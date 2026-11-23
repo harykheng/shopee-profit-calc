@@ -454,8 +454,10 @@ try {
       p_token: `${MARK}-kode-palsu`,
       p_email: `${MARK}-link@contoh.invalid`,
       p_password: 'UjiPemisahan123',
+      p_phone: '081234567890',
+      p_heard_from: 'Instagram',
     })
-    if (isMissing(res.error)) skip(name, 'belum ada (migration 20261111000000 belum dijalankan)')
+    if (isMissing(res.error)) skip(name, 'belum ada (migration 20261123000000 belum dijalankan)')
     else if (res.error) pass(name, 'ditolak')
     else fail(name, 'BOCOR: akun dibuat dengan kode link palsu')
   }

@@ -110,12 +110,13 @@ begin
     ('20261111000000_trial_links.sql',             to_regprocedure('public.claim_trial_link(text, text, text)') is not null),
     ('20261116000000_activity_events.sql',         to_regclass('public.activity_events') is not null),
     ('20261118000000_platform_reset_store_data.sql', to_regprocedure('public.platform_reset_store_data(bigint, text)') is not null),
-    ('20261123000000_trial_signup_profile.sql',    to_regclass('public.trial_signups') is not null)
+    ('20261123000000_trial_signup_profile.sql',    to_regclass('public.trial_signups') is not null),
+    ('20261124000000_close_old_trial_claim.sql',   not has_function_privilege('anon', 'public.claim_trial_link(text, text, text)', 'EXECUTE'))
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261123000000_trial_signup_profile.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261124000000_close_old_trial_claim.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -816,7 +817,7 @@ begin
     begin
       execute 'select public.trial_link_status(''kode-asal-asalan'')' into kueri;
       begin
-        execute 'select public.claim_trial_link(''kode-asal-asalan'', ''uji-pemisahan-anon@contoh.invalid'', ''UjiPemisahan123'')' into sisa;
+        execute 'select public.claim_trial_link(''kode-asal-asalan'', ''uji-pemisahan-anon@contoh.invalid'', ''UjiPemisahan123'', ''081234567890'', ''Instagram'')' into sisa;
         n := 1;
       exception when invalid_parameter_value then
         n := 0;
@@ -828,6 +829,24 @@ begin
       v_ket := v_ket || (case when sqlstate in ('42P01', '42703', '42883') then 'belum ada di database (migration belum dijalankan): ' else sqlstate || ' ' end || sqlerrm);
     end;
     v_uji := v_uji || 'Tanpa login: daftar lewat link uji coba palsu'::text;
+
+    -- Versi lama tanpa no HP (3 isian) tertutup untuk aplikasi (20261124).
+    begin
+      execute 'select public.claim_trial_link(''kode-asal-asalan'', ''uji-pemisahan-anon2@contoh.invalid'', ''UjiPemisahan123'')' into sisa;
+      v_status := v_status || 'GAGAL'::text;
+      v_ket := v_ket || 'versi lama masih bisa dipanggil'::text;
+    exception
+      when insufficient_privilege then
+        v_status := v_status || 'LULUS'::text;
+        v_ket := v_ket || ('ditolak: ' || sqlerrm);
+      when invalid_parameter_value then
+        v_status := v_status || 'GAGAL'::text;
+        v_ket := v_ket || 'versi lama masih terbuka (hanya kodenya yang ditolak)'::text;
+      when others then
+        v_status := v_status || 'CEK'::text;
+        v_ket := v_ket || (sqlstate || ' ' || sqlerrm);
+    end;
+    v_uji := v_uji || 'Tanpa login: daftar lewat versi lama tanpa no HP'::text;
 
     begin
       -- Pengelola membuat link untuk 1 orang.
