@@ -386,6 +386,8 @@ try {
     ['A membuat link uji coba (platform_create_trial_link)', () => A.client.rpc('platform_create_trial_link', { p_max_uses: 1000, p_valid_days: 90 })],
     ['A melihat link uji coba (platform_list_trial_links)', () => A.client.rpc('platform_list_trial_links')],
     ['A membaca tabel link uji coba (trial_links)', () => A.client.from('trial_links').select('*').limit(5)],
+    ['A melihat no HP pendaftar (platform_signup_details)', () => A.client.rpc('platform_signup_details')],
+    ['A membaca no HP pendaftar (trial_signups)', () => A.client.from('trial_signups').select('*').limit(5)],
     ['A mencatat aktivitas atas nama toko B (log_activity)', () => A.client.rpc('log_activity', { p_store_id: storeB.id, p_event: 'report_uploaded' })],
     [
       'A mencatat "sudah bayar" untuk tokonya sendiri (log_activity)',

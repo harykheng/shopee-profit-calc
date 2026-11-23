@@ -109,12 +109,13 @@ begin
                                                        and p.prosrc like '%select 10%')),
     ('20261111000000_trial_links.sql',             to_regprocedure('public.claim_trial_link(text, text, text)') is not null),
     ('20261116000000_activity_events.sql',         to_regclass('public.activity_events') is not null),
-    ('20261118000000_platform_reset_store_data.sql', to_regprocedure('public.platform_reset_store_data(bigint, text)') is not null)
+    ('20261118000000_platform_reset_store_data.sql', to_regprocedure('public.platform_reset_store_data(bigint, text)') is not null),
+    ('20261123000000_trial_signup_profile.sql',    to_regclass('public.trial_signups') is not null)
   ) as x (berkas, ada)
   where not x.ada;
   v_status := v_status || case when daftar is null then 'LULUS' else 'CEK' end;
   v_uji := v_uji || 'Struktur: semua migration sudah dijalankan'::text;
-  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261116000000_activity_events.sql');
+  v_ket := v_ket || coalesce('Belum dijalankan: ' || daftar || '. Jalankan berurutan di SQL Editor, lalu ulangi uji ini.', 'ya, sampai 20261123000000_trial_signup_profile.sql');
 
   begin  -- Semua di blok ini dibatalkan oleh raise 'UJ000' di akhir.
 
@@ -224,7 +225,7 @@ begin
                             'platform_create_account', 'platform_subscribe_store', 'platform_reset_password',
                             'platform_add_trial_simulations', 'platform_trial_simulation_usage',
                             'platform_create_trial_link', 'platform_list_trial_links', 'platform_revoke_trial_link',
-                            'platform_activity_summary', 'platform_reset_store_data',
+                            'platform_activity_summary', 'platform_reset_store_data', 'platform_signup_details',
                             -- Terbuka TANPA login, tapi hanya bekerja dengan kode link yang benar; diuji di bagian 3.
                             'trial_link_status', 'claim_trial_link',
                             -- Memeriksa keanggotaan toko sendiri; diuji di bagian 2c.
@@ -500,6 +501,8 @@ begin
          'select count(*) from public.platform_activity_summary()'),
         ('Bukan pengelola: catat "sudah bayar" untuk tokonya sendiri (log_activity)',
          'select public.log_activity(' || sa || ', ''subscription_paid'')'),
+        ('Bukan pengelola: lihat no HP pendaftar (platform_signup_details)',
+         'select count(*) from public.platform_signup_details()'),
         ('Bukan pengelola: panggil pembuat akun internal (create_store_account)',
          'select count(*) from (select public.create_store_account(''uji-pemisahan-tolak4@contoh.invalid'', ''UjiPemisahan123'', ''UJI-PEMISAHAN J'', current_date + 7, true)) x')
       ) as x (nama, kueri)
@@ -840,9 +843,16 @@ begin
       perform set_config('request.jwt.claims', '{"role":"anon"}', true);
       set local role anon;
       daftar := 'uji-pemisahan-' || substr(md5(random()::text), 1, 8) || '@contoh.invalid';
-      execute 'select public.claim_trial_link($1, $2, ''UjiPemisahan123'')' into sisa using kueri, upper(daftar);
+      -- No HP salah: ditolak, dan jatah link tidak terpakai (pendaftaran berikutnya tetap bisa).
       begin
-        execute 'select public.claim_trial_link($1, $2, ''UjiPemisahan123'')'
+        execute 'select public.claim_trial_link($1, $2, ''UjiPemisahan123'', ''12345'', ''Instagram'')' into sisa using kueri, daftar;
+        m := 1;
+      exception when invalid_parameter_value then
+        m := 0;
+      end;
+      execute 'select public.claim_trial_link($1, $2, ''UjiPemisahan123'', ''0812-3456 7890'', ''Instagram'')' into sisa using kueri, upper(daftar);
+      begin
+        execute 'select public.claim_trial_link($1, $2, ''UjiPemisahan123'', ''081234567890'', ''TikTok'')'
           into sisa using kueri, 'uji-pemisahan-' || substr(md5(random()::text), 1, 8) || '@contoh.invalid';
         n2 := 1;  -- jatah 1 orang terpakai dua kali: celah
       exception when invalid_parameter_value then
@@ -857,13 +867,15 @@ begin
           and (u.raw_user_meta_data ->> 'password_changed')::boolean
           and s.trial and s.name_pending and s.trial_link_id is not null
           and s.active_until = (now() at time zone 'Asia/Jakarta')::date + 6;
-      select count(*) into m from public.stores s
+      -- m = 1: no HP salah tadi ditolak (kalau lolos, +100), dan toko punya no HP 628… + jawaban "tahu dari".
+      select count(*) + m * 100 into m from public.stores s
         join public.trial_links l on l.id = s.trial_link_id
+        join public.trial_signups t on t.store_id = s.id and t.phone = '6281234567890' and t.heard_from = 'Instagram'
         where l.token_hash = public.trial_link_hash(kueri) and l.used_count = 1;
       v_status := v_status || case when n = 1 and n2 = 0 and m = 1 and v_link_status = 'used_up' then 'LULUS' else 'GAGAL' end;
       v_ket := v_ket || case when n = 1 and n2 = 0 and m = 1 and v_link_status = 'used_up'
-                             then 'akun uji coba 7 hari terbentuk (nama toko diisi pemilik); pemakaian kedua ditolak'
-                             else format('akun lengkap %s, pemakaian kedua berhasil %s, akun baru %s, status link %s', n, n2, m, v_link_status) end;
+                             then 'akun uji coba 7 hari terbentuk (nama toko diisi pemilik, no HP & tahu dari tersimpan); no HP salah dan pemakaian kedua ditolak'
+                             else format('akun lengkap %s, pemakaian kedua berhasil %s, toko+no HP %s (>=100: no HP salah lolos), status link %s', n, n2, m, v_link_status) end;
     exception when others then
       reset role;
       v_status := v_status || 'CEK'::text;

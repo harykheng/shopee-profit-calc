@@ -9,7 +9,17 @@ import { formatDate } from '../lib/format'
 import { MIN_PASSWORD_LENGTH } from '../lib/password'
 import { supabase } from '../lib/supabase'
 import { DEFAULT_TRIAL_DAYS, defaultTrialEnd, trialErrorMessage } from '../lib/trialAccounts'
-import { linkProblem, trialLimitsSentence, validateSignup, type TrialLinkState } from '../lib/trialLinks'
+import {
+  HEARD_FROM_MAX_LENGTH,
+  HEARD_FROM_OPTIONS,
+  heardFromValue,
+  linkProblem,
+  normalizePhone,
+  trialLimitsSentence,
+  validateSignup,
+  type HeardFromChoice,
+  type TrialLinkState,
+} from '../lib/trialLinks'
 
 /** Pesan dari database (link salah, email sudah terdaftar, isian salah) sudah ditulis untuk pemakai. */
 const errorMessage = (err: unknown) => trialErrorMessage(err, friendlyError, () => null)
@@ -23,6 +33,9 @@ export function SignupPage({ code, session, onFinished }: { code: string; sessio
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [phone, setPhone] = useState('')
+  const [heardFrom, setHeardFrom] = useState<HeardFromChoice | null>(null)
+  const [heardFromOther, setHeardFromOther] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Akun sudah dibuat tapi masuk otomatis gagal (jarang): minta masuk manual.
@@ -36,12 +49,18 @@ export function SignupPage({ code, session, onFinished }: { code: string; sessio
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    const problem = validateSignup({ email, password })
+    const problem = validateSignup({ email, password, phone, heardFrom, heardFromOther })
     setError(problem)
     if (problem) return
     setBusy(true)
     try {
-      const created = await claimTrialLink(code, email, password)
+      const created = await claimTrialLink({
+        token: code,
+        email,
+        password,
+        phone: normalizePhone(phone)!,
+        heardFrom: heardFromValue(heardFrom, heardFromOther),
+      })
       const { error: loginError } = await supabase.auth.signInWithPassword({ email: created.email, password })
       if (loginError) {
         setCreatedOnly(created.email)
@@ -71,7 +90,7 @@ export function SignupPage({ code, session, onFinished }: { code: string; sessio
           </span>
         </h1>
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-2 sm:text-xl">
-          Lihat untung bersih tokomu, iklan yang bikin rugi, dan harga jual yang masih untung. Cukup email dan password,
+          Lihat untung bersih tokomu, iklan yang bikin rugi, dan harga jual yang masih untung. Daftar 1 menit,
           langsung bisa dipakai.
         </p>
         <p className="mt-6 max-w-xl text-sm text-ink-2 max-lg:hidden">
@@ -165,6 +184,56 @@ export function SignupPage({ code, session, onFinished }: { code: string; sessio
                 Minimal {MIN_PASSWORD_LENGTH} karakter. Simpan baik-baik: dipakai untuk masuk lagi nanti.
               </span>
             </div>
+
+            <label className="mt-4 block font-semibold">
+              No HP (WhatsApp)
+              <input
+                type="tel"
+                autoComplete="tel"
+                inputMode="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="0812 3456 7890"
+                className={`num mt-1.5 font-normal ${inputClass}`}
+              />
+              <span className="mt-1 block text-sm font-normal text-ink-3">
+                Hanya untuk dihubungi pengelola soal uji coba & bantuan.
+              </span>
+            </label>
+
+            <fieldset className="mt-4">
+              <legend className="font-semibold">Tahu {APP_NAME} dari mana?</legend>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {HEARD_FROM_OPTIONS.map((o) => (
+                  <button
+                    key={o}
+                    type="button"
+                    aria-pressed={heardFrom === o}
+                    onClick={() => setHeardFrom(o)}
+                    className={`min-h-11 rounded-full border-2 px-4 font-semibold transition-colors ${
+                      heardFrom === o ? 'border-ink bg-ink text-paper' : 'border-control bg-paper text-ink hover:border-ink'
+                    }`}
+                  >
+                    {o}
+                  </button>
+                ))}
+              </div>
+              {heardFrom === 'Lainnya' && (
+                <label className="mt-3 block">
+                  <span className="sr-only">Sebutkan dari mana</span>
+                  <input
+                    type="text"
+                    value={heardFromOther}
+                    onChange={(e) => setHeardFromOther(e.target.value)}
+                    placeholder="Sebutkan, mis. nama akun atau grupnya"
+                    maxLength={HEARD_FROM_MAX_LENGTH - 'Lainnya: '.length}
+                    autoFocus
+                    className={inputClass}
+                  />
+                </label>
+              )}
+            </fieldset>
 
             {error && (
               <div className="mt-4">

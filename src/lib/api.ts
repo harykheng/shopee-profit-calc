@@ -813,10 +813,31 @@ export async function fetchTrialLinkState(token: string): Promise<TrialLinkState
 }
 
 /** Tanpa login: buat akun uji coba dari link. Database menolak kode yang salah, kedaluwarsa, atau habis. */
-export async function claimTrialLink(token: string, email: string, password: string): Promise<{ email: string; active_until: string }> {
+export async function claimTrialLink(input: {
+  token: string
+  email: string
+  password: string
+  /** "62812…" */
+  phone: string
+  heardFrom: string
+}): Promise<{ email: string; active_until: string }> {
   return check(
-    await supabase.rpc('claim_trial_link', { p_token: token, p_email: email.trim().toLowerCase(), p_password: password }),
+    await supabase.rpc('claim_trial_link', {
+      p_token: input.token,
+      p_email: input.email.trim().toLowerCase(),
+      p_password: input.password,
+      p_phone: input.phone,
+      p_heard_from: input.heardFrom,
+    }),
   ) as { email: string; active_until: string }
+}
+
+/** Pengelola: no HP & "tahu dari mana" per toko (SQL 20261123). null kalau SQL belum dijalankan / gagal. */
+export async function fetchSignupDetails(): Promise<Map<number, { phone: string; heard_from: string }> | null> {
+  const res = await supabase.rpc('platform_signup_details')
+  if (res.error) return null
+  const rows = (res.data ?? []) as { store_id: number; phone: string; heard_from: string }[]
+  return new Map(rows.map((r) => [Number(r.store_id), { phone: r.phone, heard_from: r.heard_from }]))
 }
 
 /** Pengelola: jadikan toko uji coba berlangganan sampai tanggal itu (SQL 20261031). */

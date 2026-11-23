@@ -74,7 +74,12 @@ lalu **Buat link uji coba**. Muncul teks siap kirim berisi link-nya: **Salin tek
 WhatsApp**. Link hanya tampil saat itu (yang disimpan database hanya sidik/hash-nya); kalau hilang, buat link
 baru. Butuh migration `20261111000000_trial_links.sql`.
 
-Orang yang membuka link mengisi email dan password **sendiri**, lalu langsung masuk. Yang terbentuk:
+Orang yang membuka link mengisi email, password, **no HP (WhatsApp)**, dan **tahu dari mana** (Instagram, TikTok,
+Facebook, YouTube, Teman / keluarga, Grup / komunitas, Google, atau Lainnya + isian sendiri), lalu langsung
+masuk. No HP & jawabannya tampil di **Pelanggan** di bawah email pemilik (klik nomornya untuk membuka
+WhatsApp); butuh migration `20261123000000_trial_signup_profile.sql`. Jawaban "tahu dari mana" diisi
+pendaftar, beda dengan **Sumber** link yang kamu isi sendiri saat membuat link. No HP ikut di
+`admin_export_store` dan ikut terhapus di `admin_delete_store`. Yang terbentuk:
 akun (tanpa verifikasi email, tanpa banner "ganti password"), toko **Uji coba** 7 hari (hari ini ikut
 dihitung) dengan batas uji coba, nama toko diisi pemiliknya saat pertama masuk (sementara "Toko " + bagian
 depan email). Email yang sudah terdaftar ditolak. Toko itu muncul di **Pelanggan** seperti akun uji coba

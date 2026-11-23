@@ -102,6 +102,11 @@ menghapus data.
 > aplikasi tetap jalan tanpa batas; tanpa deploy, batas data tetap ditegakkan database (pesannya saja
 > yang kurang rapi).
 
+> Sudah setup sebelum 23 November 2026? Jalankan sekali file `20261123000000_trial_signup_profile.sql` (aman
+> diulang) **setelah** `20261116000000_activity_events.sql`, **sebelum deploy**. Halaman daftar dari link uji coba
+> jadi meminta **no HP (WhatsApp)** dan **tahu dari mana**; keduanya tampil di halaman Pelanggan. Tanpa SQL ini,
+> halaman daftar versi baru menolak pendaftaran dengan pesan gangguan sistem.
+
 > Sudah setup sebelum 11 November 2026? Jalankan sekali file `20261111000000_trial_links.sql` (aman diulang)
 > **setelah** `20261029000000_store_name_by_customer.sql`, **sebelum deploy**. Isinya **link uji coba**: pengelola
 > membuat link di halaman Buat akun, calon pelanggan mendaftar sendiri dengan email + password (OPERASI.md

@@ -6,6 +6,7 @@ import {
   createAccount,
   createTrialLink,
   fetchActivitySummary,
+  fetchSignupDetails,
   fetchCustomers,
   fetchTrialLinks,
   revokeTrialLink,
@@ -23,6 +24,7 @@ import { MIN_PASSWORD_LENGTH } from '../lib/password'
 import { TRIAL_MONTH_LIMIT, TRIAL_SIMULATION_LIMIT } from '../lib/trialLimits'
 import {
   LINK_DAY_OPTIONS,
+  formatPhone,
   LINK_USE_OPTIONS,
   linkInviteMessage,
   linkSummary,
@@ -52,6 +54,9 @@ import {
   type CustomerGroup,
   type CustomerRow,
 } from '../lib/trialAccounts'
+
+/** No HP & jawaban "tahu dari mana" dari halaman daftar. */
+type SignupDetail = { phone: string; heard_from: string }
 
 const errorMessage = (err: unknown) => trialErrorMessage(err, friendlyError, adminHint)
 
@@ -86,11 +91,13 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
   const [listError, setListError] = useState<string | null>(null)
   const [simUsage, setSimUsage] = useState<Map<number, TrialSimUsage> | null>(null)
   const [activity, setActivity] = useState<Map<number, ActivitySummary> | null>(null)
+  const [signups, setSignups] = useState<Map<number, SignupDetail> | null>(null)
 
   const load = useCallback(() => {
     // Pemakaian simulasi & aktivitas hanya pelengkap: kalau gagal, daftar tetap tampil tanpa itu.
     fetchTrialSimUsage().then(setSimUsage)
     fetchActivitySummary().then(setActivity)
+    fetchSignupDetails().then(setSignups)
     fetchCustomers()
       .then((rows) => {
         setCustomers(rows)
@@ -141,7 +148,7 @@ export function CustomersPage({ showTabs }: { showTabs: boolean }) {
         ) : !customers ? (
           <Spinner />
         ) : (
-          <CustomerList rows={customers} simUsage={simUsage} activity={activity} onChanged={load} />
+          <CustomerList rows={customers} simUsage={simUsage} activity={activity} signups={signups} onChanged={load} />
         )}
       </Card>
     </>
@@ -573,11 +580,13 @@ function CustomerList({
   rows,
   simUsage,
   activity,
+  signups,
   onChanged,
 }: {
   rows: CustomerRow[]
   simUsage: Map<number, TrialSimUsage> | null
   activity: Map<number, ActivitySummary> | null
+  signups: Map<number, SignupDetail> | null
   onChanged: () => void
 }) {
   const counts = countByGroup(rows)
@@ -628,6 +637,7 @@ function CustomerList({
               onResetPassword={() => setResetting(r)}
               simUsage={r.trial ? (simUsage?.get(r.store_id) ?? null) : null}
               activity={activity?.get(r.store_id) ?? null}
+              signup={signups?.get(r.store_id) ?? null}
               onAddSimulations={() => setAddingSims(r)}
               onResetData={() => setWiping(r)}
             />
@@ -689,6 +699,7 @@ function CustomerItem({
   onResetPassword,
   simUsage,
   activity,
+  signup,
   onAddSimulations,
   onResetData,
 }: {
@@ -699,6 +710,8 @@ function CustomerItem({
   simUsage: TrialSimUsage | null
   /** null kalau SQL 20261116 belum dijalankan. */
   activity: ActivitySummary | null
+  /** Hanya toko yang daftar lewat link (SQL 20261123). */
+  signup: SignupDetail | null
   onAddSimulations: () => void
   onResetData: () => void
 }) {
@@ -716,6 +729,20 @@ function CustomerItem({
         <p className="text-ink-2 [overflow-wrap:anywhere]">
           {row.owner_emails.length ? row.owner_emails.join(', ') : 'Belum ada akun yang terhubung'}
         </p>
+        {signup && (
+          <p className="text-ink-2 [overflow-wrap:anywhere]">
+            <a
+              href={`https://wa.me/${signup.phone}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`num inline-flex items-center gap-1 ${linkClass}`}
+            >
+              <IconWhatsApp size={15} />
+              {formatPhone(signup.phone)}
+            </a>
+            <span className="text-ink-3"> · Tahu dari: {signup.heard_from}</span>
+          </p>
+        )}
         {activity && <ActivityLine activity={activity} trial={row.trial} />}
       </div>
       <div className="text-sm sm:text-right">
