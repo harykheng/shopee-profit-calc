@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { Alert, Brand, Button, ButtonLink, Spinner, WhatsAppButton, inputClass, linkClass } from '../components/ui'
+import { Alert, Brand, Button, ButtonLink, PasswordInput, Spinner, WhatsAppButton, inputClass, linkClass } from '../components/ui'
 import { SupportButton } from '../components/SupportButton'
 import { APP_NAME, hasSupportWhatsApp } from '../lib/brand'
 import { claimTrialLink, fetchTrialLinkState } from '../lib/api'
@@ -32,7 +32,6 @@ export function SignupPage({ code, session, onFinished }: { code: string; sessio
   const [state, setState] = useState<TrialLinkState | null>(code ? null : 'invalid')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [phone, setPhone] = useState('')
   const [heardFrom, setHeardFrom] = useState<HeardFromChoice | null>(null)
   const [heardFromOther, setHeardFromOther] = useState('')
@@ -164,22 +163,14 @@ export function SignupPage({ code, session, onFinished }: { code: string; sessio
               <label htmlFor="signup-password" className="block font-semibold">
                 Buat password
               </label>
-              <div className="mt-1.5 flex gap-2">
-                <input
-                  id="signup-password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={`min-w-0 flex-1 font-normal ${inputClass}`}
-                />
-                <Button variant="secondary" onClick={() => setShowPassword((v) => !v)} className="shrink-0">
-                  {showPassword ? 'Sembunyikan' : 'Lihat'}
-                </Button>
-              </div>
+              <PasswordInput
+                id="signup-password"
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1.5"
+              />
               <span className="mt-1 block text-sm text-ink-3">
                 Minimal {MIN_PASSWORD_LENGTH} karakter. Simpan baik-baik: dipakai untuk masuk lagi nanti.
               </span>

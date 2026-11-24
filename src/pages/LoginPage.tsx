@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Brand, Button, ErrorBox, SupportLink, inputClass } from '../components/ui'
+import { Brand, Button, ErrorBox, PasswordInput, SupportLink, inputClass } from '../components/ui'
 import { APP_NAME, hasSupportWhatsApp } from '../lib/brand'
 import { SupportButton } from '../components/SupportButton'
 import { supabase } from '../lib/supabase'
@@ -12,7 +12,6 @@ import { supabase } from '../lib/supabase'
 export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
 
@@ -63,27 +62,14 @@ export function LoginPage() {
           <label htmlFor="login-password" className="block font-semibold">
             Password
           </label>
-          <div className="mt-1.5 flex gap-2">
-            <input
-              id="login-password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              autoCapitalize="none"
-              spellCheck={false}
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={`min-w-0 flex-1 font-normal ${inputClass}`}
-            />
-            <Button
-              variant="secondary"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-pressed={showPassword}
-              className="shrink-0"
-            >
-              {showPassword ? 'Sembunyikan' : 'Lihat'}
-            </Button>
-          </div>
+          <PasswordInput
+            id="login-password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mt-1.5"
+          />
         </div>
 
         {error ? (
