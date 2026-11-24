@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase'
 export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
 
@@ -58,17 +59,32 @@ export function LoginPage() {
             className={`mt-1.5 font-normal ${inputClass}`}
           />
         </label>
-        <label className="mt-4 block font-semibold">
-          Password
-          <input
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={`mt-1.5 font-normal ${inputClass}`}
-          />
-        </label>
+        <div className="mt-4">
+          <label htmlFor="login-password" className="block font-semibold">
+            Password
+          </label>
+          <div className="mt-1.5 flex gap-2">
+            <input
+              id="login-password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              autoCapitalize="none"
+              spellCheck={false}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`min-w-0 flex-1 font-normal ${inputClass}`}
+            />
+            <Button
+              variant="secondary"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-pressed={showPassword}
+              className="shrink-0"
+            >
+              {showPassword ? 'Sembunyikan' : 'Lihat'}
+            </Button>
+          </div>
+        </div>
 
         {error ? (
           <div className="mt-4">
