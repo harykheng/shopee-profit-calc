@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Alert, Button, Card, ErrorBox, PageTitle, SupportLink, inputClass } from '../components/ui'
+import { Alert, Button, Card, ErrorBox, PageTitle, PasswordInput, SupportLink } from '../components/ui'
 import { hasSupportWhatsApp } from '../lib/brand'
 import { MIN_PASSWORD_LENGTH, validateNewPassword } from '../lib/password'
 import { supabase } from '../lib/supabase'
@@ -66,27 +66,27 @@ export function AccountPage({
           </div>
         )}
         <form onSubmit={submit} noValidate>
-          <label className="block font-semibold">
+          <label htmlFor="new-password" className="block font-semibold">
             Password baru
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={`mt-1.5 font-normal ${inputClass}`}
-            />
-            <span className="mt-1 block text-sm font-normal text-ink-3">Minimal {MIN_PASSWORD_LENGTH} karakter.</span>
           </label>
-          <label className="mt-4 block font-semibold">
+          <PasswordInput
+            id="new-password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mt-1.5"
+          />
+          <span className="mt-1 block text-sm text-ink-3">Minimal {MIN_PASSWORD_LENGTH} karakter.</span>
+          <label htmlFor="confirm-password" className="mt-4 block font-semibold">
             Ulangi password baru
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              className={`mt-1.5 font-normal ${inputClass}`}
-            />
           </label>
+          <PasswordInput
+            id="confirm-password"
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className="mt-1.5"
+          />
 
           <Button type="submit" disabled={busy} className="mt-6">
             {busy ? 'Menyimpan…' : 'Simpan password baru'}

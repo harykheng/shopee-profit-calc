@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { APP_NAME, hasSupportWhatsApp, isHitungCuan, supportUrl } from '../lib/brand'
 import { adminHint, errorText, friendlyError } from '../lib/errors'
 import { ParseError } from '../lib/parsers/common'
 import { reportError } from '../lib/reportError'
-import { IconAlertCircle, IconArrowRight, IconCheck, IconCheckCircle, IconError, IconInfo, IconMinus, IconWarning, IconWhatsApp, IconX } from './icons'
+import { IconAlertCircle, IconArrowRight, IconCheck, IconCheckCircle, IconError, IconEye, IconEyeOff, IconInfo, IconMinus, IconWarning, IconWhatsApp, IconX } from './icons'
 
 type Variant = 'primary' | 'secondary' | 'danger'
 
@@ -521,3 +521,34 @@ export function Stamp({
 /** Kotak isian teks biasa (email, catatan, cari). */
 export const inputClass =
   'min-h-11 w-full rounded-xl border border-control bg-paper px-3 text-base text-ink transition-colors placeholder:text-ink-3 hover:border-ink focus:border-accent focus:outline-none focus:ring-[3px] focus:ring-accent/25'
+
+/**
+ * Kolom password dengan ikon mata di sisi kanan untuk melihat/menutup isinya (pola yang umum di situs lain).
+ * Tombolnya 44px (sasaran sentuh), `type="button"` supaya tidak mengirim form, dan namanya berubah untuk pembaca layar.
+ */
+export function PasswordInput({ className = '', ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const [shown, setShown] = useState(false)
+  const Icon = shown ? IconEyeOff : IconEye
+  const label = shown ? 'Sembunyikan password' : 'Lihat password'
+  return (
+    <div className={`relative ${className}`}>
+      <input
+        {...props}
+        type={shown ? 'text' : 'password'}
+        autoCapitalize="none"
+        spellCheck={false}
+        className={`pr-12 font-normal ${inputClass}`}
+      />
+      <button
+        type="button"
+        onClick={() => setShown((v) => !v)}
+        aria-label={label}
+        aria-pressed={shown}
+        title={label}
+        className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-xl text-ink-2 hover:text-ink focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-accent/25"
+      >
+        <Icon />
+      </button>
+    </div>
+  )
+}

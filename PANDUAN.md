@@ -81,6 +81,9 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 membuka WhatsApp ke pengelola. Pesan awalnya sudah berisi akun, toko, dan halaman yang sedang kamu
 buka, jadi tinggal tulis masalahnya lalu kirim. Tombol ini ada juga di halaman login.
 
+**Login.** Tekan ikon **mata** di ujung kanan kolom password untuk memastikan ketikanmu benar; tekan
+sekali lagi untuk menutupnya. Ikon yang sama ada di halaman daftar uji coba dan di **Akun → Ganti password**.
+
 **Pengingat otomatis.** Kalau rekap bulan lalu belum lengkap, kartu pengingat muncul di atas halaman
 ("Rekap September 2026 belum lengkap") dengan tombol langsung ke langkah yang tersisa: Upload laporan,
 Upload pesanan, Isi HPP, atau Isi biaya. Kartu ini ikut berubah begitu kamu menyimpan data, dan

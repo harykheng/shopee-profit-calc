@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Brand, Button, ErrorBox, SupportLink, inputClass } from '../components/ui'
+import { Brand, Button, ErrorBox, PasswordInput, SupportLink, inputClass } from '../components/ui'
 import { APP_NAME, hasSupportWhatsApp } from '../lib/brand'
 import { SupportButton } from '../components/SupportButton'
 import { supabase } from '../lib/supabase'
@@ -58,17 +58,19 @@ export function LoginPage() {
             className={`mt-1.5 font-normal ${inputClass}`}
           />
         </label>
-        <label className="mt-4 block font-semibold">
-          Password
-          <input
-            type="password"
+        <div className="mt-4">
+          <label htmlFor="login-password" className="block font-semibold">
+            Password
+          </label>
+          <PasswordInput
+            id="login-password"
             autoComplete="current-password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={`mt-1.5 font-normal ${inputClass}`}
+            className="mt-1.5"
           />
-        </label>
+        </div>
 
         {error ? (
           <div className="mt-4">
