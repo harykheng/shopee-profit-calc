@@ -123,3 +123,14 @@ export function monthEnd(month: string): string {
 export function periodDays(start: string, end: string): number {
   return Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000) + 1
 }
+
+/** Nama toko untuk nama file: huruf kecil, tanpa spasi/tanda baca. */
+export function fileSlug(text: string, fallback = 'toko'): string {
+  const slug = text
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+  return slug || fallback
+}

@@ -6,7 +6,7 @@ dulu sebelum mengubah kode. Untuk **pemakai aplikasi**: [PANDUAN.md](PANDUAN.md)
 toko, pantau error): [OPERASI.md](OPERASI.md). Fakta produk: [PRODUCT.md](PRODUCT.md). Sistem desain:
 [DESIGN.md](DESIGN.md).
 
-Terakhir diperbarui: 18 November 2026 (tombol Reset data toko di Pelanggan).
+Terakhir diperbarui: 27 November 2026 (Download rekap .md di Rekap).
 
 ---
 
@@ -98,6 +98,7 @@ src/lib/adsMath.ts          Iklan per produk, potongan asli per Kode Produk, sim
 src/lib/adCandidates.ts     Calon iklan: produk terjual yang belum diiklankan, apakah untungnya cukup untuk diiklankan
 src/lib/adsLoad.ts          Memuat data untuk analisis iklan (halaman Iklan, Cek cepat, bab Iklan di Rekap)
 src/lib/adsQuickExport.ts   Label Cek cepat + file .md hasil Cek cepat untuk dibagikan ke Claude
+src/lib/recapExport.ts      Angka Bab 1–2 Rekap (recapSummary, dipakai halaman & file) + file .md rekap bulanan
 src/lib/feeCategories.ts    Kategori biaya admin per toko
 src/lib/storeSettings.ts    Pengaturan hitungan per toko (target untung, retur)
 src/lib/trialLinks.ts       Link uji coba: alamat #/coba?kode=…, cek isian daftar, teks undangan, ringkasan link
@@ -111,7 +112,7 @@ src/components/trialSim.tsx Hook jatah simulasi uji coba (Satu produk & Grup ikl
 src/lib/errors.ts           Pesan error ramah + petunjuk migration yang belum dijalankan (untuk pengelola)
 src/lib/format.ts           Format Rupiah/angka/bulan (formatRupiahShort = "Rp2,78 juta", dibulatkan ke bawah)
 src/pages/                  Login, Daftar (SignupPage, dari link uji coba), Upload, HPP, Biaya, Rekap, Iklan (+ AdsQuickCheck), Simulasi (+ AdGroupSim), Akun, Pengelola (OperatorPage)
-src/components/             ui.tsx, pickers.tsx, icons.tsx, motion.tsx, adsUpload.tsx, MonthlyReminder.tsx
+src/components/             ui.tsx, pickers.tsx, icons.tsx, motion.tsx, adsUpload.tsx, MonthlyReminder.tsx, download.ts (unduh file di browser)
 tests/                      Test Vitest; *.local.test.ts memakai file asli di sample-data/ (dilewati kalau tidak ada)
 ```
 
@@ -302,6 +303,7 @@ npm run build
 | (16 Nov) | Iklan: kotak **calon iklan** (produk belum diiklankan yang untungnya cukup, patokan ROAS nyata toko), `src/lib/adCandidates.ts`. Potongan & statistik pesanan per produk dipisah jadi `resolveProductFee` / `orderLineStats` (hasil `analyzeAds` sama). Tanpa SQL. |
 | (16 Nov) | **Panduan pengguna baru** (`src/lib/onboarding.ts`, `src/components/Onboarding.tsx`): Upload laporan Shopee → Masukkan HPP → Lihat hasil keuntungan, menggantikan layar "3 langkah" lama di Rekap kosong (yang hilang setelah file pertama sehingga langkah HPP tidak pernah terlihat). Langkah dari data (`fetchSetupProgress`: ada pesanan, ada penghasilan, jumlah produk & HPP kosong). Tampil kalau belum ada pesanan/penghasilan, atau HPP belum ada sama sekali / panduan sudah pernah tampil di perangkat ini (`localStorage onboarding:<toko>`); toko lama dengan produk baru tanpa HPP tidak kena (urusan pengingat bulanan). Selesai = upload + HPP lengkap → Rekap langsung tampil + kartu "3 dari 3 langkah selesai" di hari itu. Selama panduan tampil, kartu pengingat bulanan disembunyikan; Upload & HPP menampilkan baris langkah. Simpan HPP kini memanggil `notifyDataChanged`. Tanpa SQL. |
 | (18 Nov) | Pelanggan: tombol **Reset data** per toko (`ResetDataDialog`, `src/lib/storeReset.ts`): kosongkan pesanan, penghasilan, produk & HPP, biaya, iklan, simulasi terpakai; nama toko/akun/langganan/pengaturan tetap; konfirmasi dengan mengetik nama toko. Hanya pengelola (di Rekap/panduan pelanggan sengaja tidak ada: uji coba bisa memakainya untuk melewati batas 1 bulan data). SQL 20261118. |
+| (27 Nov) | Rekap: tombol **Download rekap (.md)** (`src/lib/recapExport.ts`): untung, status bulan + hal yang belum lengkap, diagnosa, hitungan dari omzet, per bulan, per produk (urut paling untung), cara membaca, contoh pertanyaan untuk Claude. Angka Bab 1–2 kini dihitung satu fungsi `recapSummary` (halaman & file sama; rumus tidak berubah). Tanpa data pembeli, tanpa bab iklan. Dibuat di browser. Tanpa SQL. |
 | (17 Nov) | Data sample Cek cepat evaluasi 11.11: `npm run sample:1111` (`scripts/make-sample-1111.mjs`) → `sample-store/cek-cepat-1111/` (export pesanan 1–14 Nov + data iklan 2 periode 7 hari). Katalog/SKU/HPP sama dengan `npm run sample`; skenario: harga promo menaikkan ROAS balik modal (Sunscreen turun ke Lanjut, pantau; Micellar Stop), batal tinggi (Paket Hemat Stop), iklan tanpa penjualan (Hair Serum Stop), produk baru tanpa HPP (Glow Kit, Isi HPP). Tanpa SQL, tanpa perubahan aplikasi. |
 | (18 Nov) | Data sample "laris belum tentu untung": `npm run sample:2produk` (`scripts/make-sample-2produk.mjs`) → `sample-store/2-produk/` (export pesanan + penghasilan "Sudah Dilepas" .xlsx Oktober 2026, 2 produk, 1 barang per pesanan; potongan per unit A Rp8.000, B Rp12.000 dari uang masuk asli). Tanpa SQL, tanpa perubahan aplikasi. |
 

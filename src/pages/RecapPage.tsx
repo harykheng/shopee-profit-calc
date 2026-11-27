@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, useSyncExternalStore, type PointerEvent, type ReactNode } from 'react'
 import { MonthSelect } from '../components/pickers'
 import { Alert, Button, ButtonLink, ErrorBox, FitLine, Kicker, Modal, NotaTotal, ScrollX, Spinner, Stamp, linkClass } from '../components/ui'
-import { IconAlertCircle, IconArrowRight, IconCheck, IconChevronDown, IconInfo } from '../components/icons'
+import { IconAlertCircle, IconArrowRight, IconCheck, IconChevronDown, IconDownload, IconInfo } from '../components/icons'
 import {
   countItemsWithoutCreatedAt,
   fetchAdReports,
@@ -31,9 +31,7 @@ import { missingOrdersAction, monthStatus, monthTodos, returnWindow, type MonthS
 import {
   THIN_MARGIN,
   estimateProfit,
-  incomeBreakdown,
   productRows,
-  recapInsights,
   soldFlow,
   sortProducts,
   type FlowStep,
@@ -45,6 +43,8 @@ import {
   type RecapInsight,
 } from '../lib/recapMath'
 import { resolveSettings } from '../lib/storeSettings'
+import { buildRecapExport, recapExportFileName, recapSummary } from '../lib/recapExport'
+import { downloadText } from '../components/download'
 import { navigate } from '../lib/router'
 import { wibToday } from '../lib/subscription'
 import { fullMonthOf } from '../lib/adsMath'
@@ -235,6 +235,28 @@ export function RecapPage({
         >
           {multi ? 'Satu bulan saja' : 'Lihat beberapa bulan'}
         </button>
+        {data && data.months.length > 0 && rangeValid && (
+          <Button
+            variant="secondary"
+            className="sm:ml-auto"
+            onClick={() =>
+              downloadText(
+                recapExportFileName(storeName, from, end),
+                buildRecapExport({
+                  storeName,
+                  createdAt: new Date().toISOString(),
+                  months: data.months,
+                  products: data.products,
+                  breakdown: data.breakdown,
+                  statuses: data.months.map((m) => ({ month: m.month, status: monthStatus(m, data.reconciliation) })),
+                }),
+              )
+            }
+          >
+            <IconDownload size={18} />
+            Download rekap (.md)
+          </Button>
+        )}
       </div>
       {!rangeValid && (
         <p className="mb-4 flex items-center gap-2 font-semibold text-warn">
@@ -400,18 +422,11 @@ function NotaCard({
   onShowProducts: (sort: ProductSort) => void
 }) {
   const readOnly = useContext(ReadOnlyContext)
-  const t = data.months.reduce(
-    (a, m) => ({
-      income: a.income + Number(m.total_income),
-      adjustments: a.adjustments + Number(m.adjustments ?? 0),
-      modal: a.modal + Number(m.total_modal),
-      returnedLoss: a.returnedLoss + Number(m.returned_loss ?? 0),
-      expenses: a.expenses + Number(m.total_expenses),
-      profit: a.profit + Number(m.net_profit),
-      qty: a.qty + Number(m.total_qty),
-    }),
-    { income: 0, adjustments: 0, modal: 0, returnedLoss: 0, expenses: 0, profit: 0, qty: 0 },
+  const summary = useMemo(
+    () => recapSummary(data.months, data.products, data.breakdown),
+    [data.months, data.products, data.breakdown],
   )
+  const { totals: t, breakdown, insights, margin } = summary
   const today = wibToday()
   const statuses = data.months.map((m) => ({
     month: m.month,
@@ -440,27 +455,7 @@ function NotaCard({
     .map(([label, key]) => [label, data.months.reduce((n, m) => n + Number(m[key]), 0)] as const)
     .filter(([, v]) => v > 0)
     .map(([label, v]) => [label, v] as const)
-  // Rincian dari omzet (Bab 2). Hanya dipakai kalau uang cairnya pas dengan rekap bulanan.
-  const breakdown = useMemo(() => {
-    const b = incomeBreakdown(data.breakdown)
-    return b && Math.abs(b.released + t.adjustments - t.income) <= 1 ? b : null
-  }, [data.breakdown, t.adjustments, t.income])
-  const ads = data.months.reduce((n, m) => n + Number(m.iklan_shopee) + Number(m.meta_ads), 0)
-  const products = useMemo(() => productRows(data.products), [data.products])
-  const insights = breakdown
-    ? recapInsights({
-        omzet: breakdown.omzet,
-        shopeeFee: breakdown.shopeeFee,
-        feeParts: breakdown.feeParts,
-        ads,
-        modal: t.modal,
-        profit: t.profit,
-        rugi: products.filter((p) => p.status === 'rugi').length,
-        tipis: products.filter((p) => p.status === 'tipis').length,
-      })
-    : []
   const ofOmzet = (v: number) => (breakdown && breakdown.omzet > 0 ? formatPercent((v / breakdown.omzet) * 100) : '')
-  const margin = breakdown && breakdown.omzet > 0 ? (t.profit / breakdown.omzet) * 100 : t.income > 0 ? (t.profit / t.income) * 100 : null
 
   const flow = orders ? buildFlow(orders, t.qty, rangeEnd) : null
   const biayaMonth = unfilledExpenses[0]?.month ?? singleMonth ?? data.months[0]?.month

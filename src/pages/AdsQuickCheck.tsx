@@ -7,6 +7,7 @@ import { IconUpload, IconX } from '../components/icons'
 import { RupiahInput } from '../components/pickers'
 import { AdsHowTo, adsProblem, formatPeriod, groupAdsFiles, parseAdsFiles, type ParsedAdsFile } from '../components/adsUpload'
 import { saveOrderItems } from '../lib/api'
+import { downloadText } from '../components/download'
 import { notifyDataChanged } from '../lib/events'
 import { hrefFor } from '../lib/router'
 import { ParseError } from '../lib/parsers/common'
@@ -78,18 +79,6 @@ const QUICK = Object.fromEntries(
 ) as Record<AdVerdict, { label: string; tone: StampTone; note: string }>
 
 const roas = formatRoas
-
-/** Unduh teks sebagai file di browser (tanpa server). */
-function downloadText(fileName: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = fileName
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
 
 export function AdsQuickCheck({ store, onClose }: { store: Store | null; onClose: () => void }) {
   const [state, setState] = useState<State>({ kind: 'idle' })

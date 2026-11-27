@@ -291,6 +291,23 @@ Yang dicek:
 | **Per produk** | Barang terjual dan modal per produk, plus daftar barang retur. Dengan laporan Excel "Sudah Dilepas", tiap produk juga menampilkan **uang masuk** (setelah potongan Shopee asli) dan **untung** sebelum biaya iklan & packaging, dengan label **RUGI** (untung di bawah 0) atau **TIPIS** (di bawah 10% dari uang masuk). Urutannya bisa diganti: **Terlaris**, **Paling untung**, atau **Rugi dulu**. Kalau sebagian uangnya belum cair, tertulis dari berapa barang angka itu dihitung. |
 | **Per bulan** | Muncul kalau melihat beberapa bulan sekaligus. |
 
+### Download rekap (.md)
+
+Tombol **Download rekap (.md)** di samping pilihan bulan menyimpan rekap bulan (atau beberapa bulan) yang
+sedang dilihat sebagai satu file. Isinya sama dengan halaman Rekap: untung bersih, status bulan (final atau
+apa yang belum lengkap), "Kenapa untungnya segini?", hitungan dari omzet sampai untung, tabel per bulan
+(kalau beberapa bulan), dan tabel per produk (urut dari yang paling untung). **Tidak ada data pembeli**
+(nomor pesanan, nama, alamat). Bagian iklan per produk tidak ikut; untuk itu pakai Cek cepat di halaman Iklan.
+
+Kegunaannya:
+- **Arsip bulanan**: simpan di laptop/Drive supaya angka bulan lalu tetap ada walau datanya diubah.
+- **Dikirim** ke keluarga, partner, atau akuntan (file .md adalah teks biasa: bisa dibuka di Notepad,
+  TextEdit, atau aplikasi catatan).
+- **Ditanyakan ke Claude**: lampirkan filenya di chat; di bagian bawah file ada contoh pertanyaan.
+
+> File ini berisi HPP dan untung toko. Bagikan hanya ke orang atau layanan yang kamu percaya.
+> Kalau statusnya masih **Belum lengkap**, angkanya bisa berubah: download lagi setelah data lengkap.
+
 ---
 
 ## 8. Halaman Iklan
