@@ -3,12 +3,15 @@ import type { AdRow, AdsParseResult } from './parsers/ads'
 import type { SettingsPercent, StoreSettingsRow } from './storeSettings'
 import type { IncomeParseResult } from './parsers/income'
 import type { IncomeBreakdownRow } from './recapMath'
+import type { SetupCounts } from './onboarding'
 import type { OrderItemRow } from './parsers/orders'
 import { supabase } from './supabase'
 import { addMonths, monthEnd, wibDay } from './format'
 import { MAX_SHIFT_DAYS } from './monthStatus'
 import type { CustomerRow, TrialForm } from './trialAccounts'
+import type { ActivitySummary, AppActivity } from './activity'
 import { toLinkState, type TrialLinkRow, type TrialLinkState } from './trialLinks'
+import { toResetCounts, type StoreResetCounts } from './storeReset'
 import type { AdSource } from './shopeeColumns'
 import type {
   AdReport,
@@ -56,27 +59,26 @@ function errorTextOf(err: unknown): string {
 }
 
 /** Sudah sampai mana toko ini mengisi data. Dipakai untuk panduan awal di halaman Rekap. */
-export interface SetupProgress {
-  hasOrders: boolean
-  hasIncome: boolean
-  hasProducts: boolean
-  /** Ada produk yang HPP-nya masih kosong. */
-  hasMissingHpp: boolean
-}
+/** Langkah awal toko (panduan pengguna baru, lihat lib/onboarding.ts). */
+export type SetupProgress = SetupCounts
 
 export async function fetchSetupProgress(storeId: number): Promise<SetupProgress> {
-  const any = async (table: 'order_items' | 'income' | 'products', missingHpp = false) => {
-    let q = supabase.from(table).select('id').eq('store_id', storeId)
+  const any = async (table: 'order_items' | 'income') =>
+    check(await supabase.from(table).select('id').eq('store_id', storeId).limit(1)).length > 0
+  const count = async (missingHpp: boolean) => {
+    let q = supabase.from('products').select('id', { count: 'exact', head: true }).eq('store_id', storeId)
     if (missingHpp) q = q.is('hpp', null)
-    return check(await q.limit(1)).length > 0
+    const res = await q
+    if (res.error) throw res.error
+    return res.count ?? 0
   }
-  const [hasOrders, hasIncome, hasProducts, hasMissingHpp] = await Promise.all([
+  const [hasOrders, hasIncome, productCount, missingHppCount] = await Promise.all([
     any('order_items'),
     any('income'),
-    any('products'),
-    any('products', true),
+    count(false),
+    count(true),
   ])
-  return { hasOrders, hasIncome, hasProducts, hasMissingHpp }
+  return { hasOrders, hasIncome, productCount, missingHppCount }
 }
 
 // --- Upload -----------------------------------------------------------------
@@ -773,18 +775,31 @@ export async function createAccount(
   return check(res) as { user_id: string; store_id: number }
 }
 
-/** Pengelola: buat link uji coba (SQL 20261111). Kode link hanya dikembalikan sekali ini. */
-export async function createTrialLink(maxUses: number, validDays: number): Promise<{ token: string; expires_at: string }> {
-  return check(await supabase.rpc('platform_create_trial_link', { p_max_uses: maxUses, p_valid_days: validDays })) as {
-    token: string
-    expires_at: string
-  }
+/**
+ * Pengelola: buat link uji coba (SQL 20261111). Kode link hanya dikembalikan sekali ini.
+ * Dengan sumber ("Instagram") memakai versi 3 parameter (SQL 20261116); tanpa sumber tetap jalan tanpa SQL itu.
+ */
+export async function createTrialLink(
+  maxUses: number,
+  validDays: number,
+  source: string | null = null,
+): Promise<{ token: string; expires_at: string }> {
+  const args = source
+    ? { p_max_uses: maxUses, p_valid_days: validDays, p_source: source }
+    : { p_max_uses: maxUses, p_valid_days: validDays }
+  return check(await supabase.rpc('platform_create_trial_link', args)) as { token: string; expires_at: string }
 }
 
 /** Pengelola: link uji coba yang masih bisa dipakai (tanpa kodenya). */
 export async function fetchTrialLinks(): Promise<TrialLinkRow[]> {
   const rows = check(await supabase.rpc('platform_list_trial_links')) as TrialLinkRow[] | null
-  return (rows ?? []).map((r) => ({ ...r, id: Number(r.id), max_uses: Number(r.max_uses), used_count: Number(r.used_count) }))
+  return (rows ?? []).map((r) => ({
+    ...r,
+    id: Number(r.id),
+    max_uses: Number(r.max_uses),
+    used_count: Number(r.used_count),
+    source: r.source ?? null,
+  }))
 }
 
 /** Pengelola: matikan link uji coba (orang yang sudah daftar tetap bisa memakai akunnya). */
@@ -798,15 +813,48 @@ export async function fetchTrialLinkState(token: string): Promise<TrialLinkState
 }
 
 /** Tanpa login: buat akun uji coba dari link. Database menolak kode yang salah, kedaluwarsa, atau habis. */
-export async function claimTrialLink(token: string, email: string, password: string): Promise<{ email: string; active_until: string }> {
+export async function claimTrialLink(input: {
+  token: string
+  email: string
+  password: string
+  /** "62812…" */
+  phone: string
+  heardFrom: string
+}): Promise<{ email: string; active_until: string }> {
   return check(
-    await supabase.rpc('claim_trial_link', { p_token: token, p_email: email.trim().toLowerCase(), p_password: password }),
+    await supabase.rpc('claim_trial_link', {
+      p_token: input.token,
+      p_email: input.email.trim().toLowerCase(),
+      p_password: input.password,
+      p_phone: input.phone,
+      p_heard_from: input.heardFrom,
+    }),
   ) as { email: string; active_until: string }
+}
+
+/** Pengelola: no HP & "tahu dari mana" per toko (SQL 20261123). null kalau SQL belum dijalankan / gagal. */
+export async function fetchSignupDetails(): Promise<Map<number, { phone: string; heard_from: string }> | null> {
+  const res = await supabase.rpc('platform_signup_details')
+  if (res.error) return null
+  const rows = (res.data ?? []) as { store_id: number; phone: string; heard_from: string }[]
+  return new Map(rows.map((r) => [Number(r.store_id), { phone: r.phone, heard_from: r.heard_from }]))
 }
 
 /** Pengelola: jadikan toko uji coba berlangganan sampai tanggal itu (SQL 20261031). */
 export async function subscribeStore(storeId: number, activeUntil: string): Promise<void> {
   check(await supabase.rpc('platform_subscribe_store', { p_store_id: storeId, p_active_until: activeUntil }))
+}
+
+/**
+ * Pengelola: hapus isi toko (pesanan, penghasilan, produk & HPP, biaya, iklan, jatah simulasi terpakai). Nama toko,
+ * akun, langganan, dan pengaturan tetap. `confirmName` harus sama dengan nama toko. SQL 20261118.
+ */
+export async function resetStoreData(storeId: number, confirmName: string): Promise<StoreResetCounts> {
+  const r = check(await supabase.rpc('platform_reset_store_data', { p_store_id: storeId, p_confirm_name: confirmName })) as Record<
+    string,
+    unknown
+  >
+  return toResetCounts(r)
 }
 
 /** Pengelola: reset password pemilik toko (bukan akun pengelola). SQL 20261101. */
@@ -839,6 +887,35 @@ export async function addTrialSimulations(storeId: number, amount: number): Prom
 /** Pemilik mengisi nama tokonya (sekali, hanya kalau name_pending). */
 export async function setStoreName(storeId: number, name: string): Promise<void> {
   check(await supabase.rpc('set_store_name', { p_store_id: storeId, p_name: name }))
+}
+
+/**
+ * Catat satu aktivitas (SQL 20261116). Tidak ditunggu dan tidak pernah membuat halaman error: kalau SQL belum
+ * dijalankan atau jaringan putus, catatannya dilewati saja. Database membuang catatan yang terlalu rapat.
+ */
+export function logActivity(storeId: number, event: AppActivity): void {
+  void Promise.resolve(supabase.rpc('log_activity', { p_store_id: storeId, p_event: event })).catch(() => undefined)
+}
+
+/** Pengelola: ringkasan aktivitas per toko. null kalau SQL 20261116 belum dijalankan / gagal. */
+export async function fetchActivitySummary(): Promise<Map<number, ActivitySummary> | null> {
+  const res = await supabase.rpc('platform_activity_summary')
+  if (res.error) return null
+  const rows = (res.data ?? []) as ActivitySummary[]
+  return new Map(
+    rows.map((r) => [
+      Number(r.store_id),
+      {
+        ...r,
+        store_id: Number(r.store_id),
+        logins: Number(r.logins),
+        active_days: Number(r.active_days),
+        uploads: Number(r.uploads),
+        report_views: Number(r.report_views),
+        payments: Number(r.payments),
+      },
+    ]),
+  )
 }
 
 export async function fetchCustomers(): Promise<CustomerRow[]> {

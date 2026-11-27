@@ -1,7 +1,7 @@
 // Ringkasan Cek cepat iklan sebagai file Markdown, untuk dibagikan ke Claude (atau AI lain) supaya pemakai bisa
 // bertanya lebih dalam. Fungsi murni: tidak ada data pembeli, hanya angka per produk yang sudah dihitung aplikasi.
 import type { AdProductResult, AdVerdict, AdsAnalysis, Targets } from './adsMath'
-import { formatDate, formatNumber, formatPercent, formatRupiah } from './format'
+import { fileSlug, formatDate, formatNumber, formatPercent, formatRupiah } from './format'
 
 /** Label Cek cepat (versi keputusan lanjut / stop). Dipakai di tampilan dan di file .md. */
 export const QUICK_VERDICT: Record<AdVerdict, { label: string; note: string }> = {
@@ -58,13 +58,7 @@ function table(out: string[], head: string[], textCols: number, rows: string[][]
 
 /** Nama file .md: huruf kecil, tanpa spasi/tanda baca. */
 export function quickExportFileName(storeName: string, end: string): string {
-  const slug = storeName
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40)
-  return `cek-cepat-iklan-${slug || 'toko'}-${end}.md`
+  return `cek-cepat-iklan-${fileSlug(storeName)}-${end}.md`
 }
 
 /**

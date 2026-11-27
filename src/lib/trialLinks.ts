@@ -29,12 +29,59 @@ export function signupCodeFromHash(hash: string): string | null {
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
+/**
+ * No HP Indonesia → "62812…" (format WhatsApp), atau null kalau bukan nomor HP.
+ * "0812-3456-7890", "+62 812 3456 7890", "812 3456 7890" → "6281234567890". Sama dengan normalize_phone_id (SQL).
+ */
+export function normalizePhone(phone: string): string | null {
+  const digits = phone.replace(/\D/g, '')
+  const intl = digits.startsWith('62') ? digits : digits.startsWith('0') ? `62${digits.slice(1)}` : digits.startsWith('8') ? `62${digits}` : digits
+  return /^628\d{7,11}$/.test(intl) ? intl : null
+}
+
+/** "6281234567890" → "0812-3456-7890" (untuk dibaca pengelola). */
+export function formatPhone(phone: string): string {
+  const local = `0${phone.replace(/^62/, '')}`
+  return [local.slice(0, 4), local.slice(4, 8), local.slice(8)].filter(Boolean).join('-')
+}
+
+/** Pilihan "Tahu aplikasi ini dari mana?". "Lainnya" minta isian sendiri. */
+export const HEARD_FROM_OPTIONS = [
+  'Instagram',
+  'TikTok',
+  'Facebook',
+  'YouTube',
+  'Teman / keluarga',
+  'Grup / komunitas',
+  'Google',
+  'Lainnya',
+] as const
+export type HeardFromChoice = (typeof HEARD_FROM_OPTIONS)[number]
+export const HEARD_FROM_MAX_LENGTH = 80
+
+/** Jawaban yang disimpan: pilihan, atau "Lainnya: <isian>". "" kalau belum lengkap. */
+export function heardFromValue(choice: HeardFromChoice | null, other: string): string {
+  if (!choice) return ''
+  if (choice !== 'Lainnya') return choice
+  const text = other.trim().replace(/\s+/g, ' ')
+  return text ? `Lainnya: ${text}`.slice(0, HEARD_FROM_MAX_LENGTH) : ''
+}
+
 /** Pesan kesalahan isian daftar, atau null kalau sudah benar. Aturannya sama dengan database. */
-export function validateSignup(input: { email: string; password: string }): string | null {
+export function validateSignup(input: {
+  email: string
+  password: string
+  phone: string
+  heardFrom: HeardFromChoice | null
+  heardFromOther: string
+}): string | null {
   const email = input.email.trim()
   if (!EMAIL_RE.test(email) || email.length > 254) return 'Email belum benar. Contoh: nama@gmail.com'
   if (input.password.length < MIN_PASSWORD_LENGTH) return `Password minimal ${MIN_PASSWORD_LENGTH} karakter.`
   if (new TextEncoder().encode(input.password).length > 72) return 'Password terlalu panjang (maksimal 72 karakter).'
+  if (!normalizePhone(input.phone)) return 'No HP belum benar. Contoh: 0812 3456 7890'
+  if (!input.heardFrom) return 'Pilih dari mana kamu tahu aplikasi ini.'
+  if (!heardFromValue(input.heardFrom, input.heardFromOther)) return 'Tulis dari mana kamu tahu aplikasi ini.'
   return null
 }
 
@@ -63,7 +110,7 @@ export function linkInviteMessage(input: { appName: string; url: string }): stri
   return [
     `Halo! Coba ${input.appName} gratis ${DEFAULT_TRIAL_DAYS} hari: lihat untung bersih tokomu, iklan yang bikin rugi, dan harga jual yang masih untung.`,
     '',
-    `Daftar di sini (cukup email dan password, langsung bisa dipakai):`,
+    `Daftar di sini (1 menit, langsung bisa dipakai):`,
     input.url,
   ].join('\n')
 }
@@ -75,6 +122,8 @@ export interface TrialLinkRow {
   used_count: number
   expires_at: string
   created_at: string
+  /** Sumber yang diisi pengelola ("Instagram"). null kalau kosong atau SQL 20261116 belum dijalankan. */
+  source?: string | null
 }
 
 /** "Untuk 10 orang · 3 sudah daftar · berlaku sampai 18 Nov 2026" */

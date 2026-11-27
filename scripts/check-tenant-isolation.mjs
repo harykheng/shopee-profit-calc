@@ -116,6 +116,7 @@ const STORE_TABLES = [
   'income_monthly_breakdown',
   'daily_reconciliation',
   'orders_by_created',
+  'activity_events',
 ]
 
 // --- Baris penanda di toko B (ditulis B sendiri), supaya percobaan baca/ubah/hapus A punya sasaran ---
@@ -385,6 +386,23 @@ try {
     ['A membuat link uji coba (platform_create_trial_link)', () => A.client.rpc('platform_create_trial_link', { p_max_uses: 1000, p_valid_days: 90 })],
     ['A melihat link uji coba (platform_list_trial_links)', () => A.client.rpc('platform_list_trial_links')],
     ['A membaca tabel link uji coba (trial_links)', () => A.client.from('trial_links').select('*').limit(5)],
+    ['A melihat no HP pendaftar (platform_signup_details)', () => A.client.rpc('platform_signup_details')],
+    ['A membaca no HP pendaftar (trial_signups)', () => A.client.from('trial_signups').select('*').limit(5)],
+    ['A mencatat aktivitas atas nama toko B (log_activity)', () => A.client.rpc('log_activity', { p_store_id: storeB.id, p_event: 'report_uploaded' })],
+    [
+      'A mencatat "sudah bayar" untuk tokonya sendiri (log_activity)',
+      () => A.client.rpc('log_activity', { p_store_id: [...A.storeIds][0], p_event: 'subscription_paid' }),
+    ],
+    [
+      'A menulis catatan aktivitas langsung (activity_events)',
+      () => A.client.from('activity_events').insert({ store_id: storeB.id, event: 'subscription_paid' }),
+    ],
+    ['A melihat aktivitas semua toko (platform_activity_summary)', () => A.client.rpc('platform_activity_summary')],
+    // Nama toko sengaja salah: kalau akun A ternyata pengelola, database menolak karena nama, bukan menghapus data B.
+    [
+      'A mereset data toko B (platform_reset_store_data)',
+      () => A.client.rpc('platform_reset_store_data', { p_store_id: storeB.id, p_confirm_name: `${MARK}-bukan-nama-toko` }),
+    ],
   ]
   for (const [name, run] of platformCalls) {
     const res = await run()
@@ -436,8 +454,10 @@ try {
       p_token: `${MARK}-kode-palsu`,
       p_email: `${MARK}-link@contoh.invalid`,
       p_password: 'UjiPemisahan123',
+      p_phone: '081234567890',
+      p_heard_from: 'Instagram',
     })
-    if (isMissing(res.error)) skip(name, 'belum ada (migration 20261111000000 belum dijalankan)')
+    if (isMissing(res.error)) skip(name, 'belum ada (migration 20261123000000 belum dijalankan)')
     else if (res.error) pass(name, 'ditolak')
     else fail(name, 'BOCOR: akun dibuat dengan kode link palsu')
   }

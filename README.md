@@ -102,10 +102,31 @@ menghapus data.
 > aplikasi tetap jalan tanpa batas; tanpa deploy, batas data tetap ditegakkan database (pesannya saja
 > yang kurang rapi).
 
+> Sudah setup sebelum 24 November 2026? Jalankan sekali file `20261124000000_close_old_trial_claim.sql` (aman
+> diulang) **sesudah** aplikasi versi 23 November (daftar dengan no HP) live. Isinya menutup daftar lewat link versi
+> lama tanpa no HP. Kalau dijalankan sebelum deploy itu, semua pendaftaran lewat link ditolak sampai deploy.
+
+> Sudah setup sebelum 23 November 2026? Jalankan sekali file `20261123000000_trial_signup_profile.sql` (aman
+> diulang) **setelah** `20261116000000_activity_events.sql`, **sebelum deploy**. Halaman daftar dari link uji coba
+> jadi meminta **no HP (WhatsApp)** dan **tahu dari mana**; keduanya tampil di halaman Pelanggan. Tanpa SQL ini,
+> halaman daftar versi baru menolak pendaftaran dengan pesan gangguan sistem.
+
 > Sudah setup sebelum 11 November 2026? Jalankan sekali file `20261111000000_trial_links.sql` (aman diulang)
 > **setelah** `20261029000000_store_name_by_customer.sql`, **sebelum deploy**. Isinya **link uji coba**: pengelola
 > membuat link di halaman Buat akun, calon pelanggan mendaftar sendiri dengan email + password (OPERASI.md
 > bagian 2). Tanpa SQL ini tombol **Buat link uji coba** menampilkan pesan gangguan sistem.
+
+> Sudah setup sebelum 18 November 2026? Jalankan sekali file `20261118000000_platform_reset_store_data.sql`
+> (aman diulang) **setelah** `20261102000000_trial_simulation_bonus.sql`. Isinya tombol **Reset data** di halaman
+> Pelanggan (hanya pengelola): mengosongkan pesanan, penghasilan, produk & HPP, biaya, iklan, dan simulasi terpakai
+> satu toko; nama toko, akun, dan langganan tetap (OPERASI.md bagian 2). Boleh sebelum atau sesudah deploy: tanpa
+> SQL ini tombolnya menampilkan pesan gangguan sistem.
+
+> Sudah setup sebelum 16 November 2026? Jalankan sekali file `20261116000000_activity_events.sql` (aman diulang)
+> **setelah** `20261111000000_trial_links.sql`. Isinya **catatan aktivitas** (daftar, masuk, upload, buka Rekap,
+> sudah bayar; tanpa isi laporan) untuk daftar Pelanggan, dan isian **Sumber** di link uji coba (OPERASI.md
+> bagian 2). Boleh sebelum atau sesudah deploy: tanpa SQL ini aplikasi tetap jalan tanpa catatan, dan link
+> dengan Sumber terisi menampilkan pesan gangguan sistem.
 
 > Sudah setup sebelum 3 November 2026? Jalankan sekali file `20261103000000_trial_simulation_10.sql` (aman
 > diulang). Batas Simulasi Harga akun uji coba jadi **10 produk** (sebelumnya 50; jatah tambahan per toko tetap
@@ -280,6 +301,13 @@ npm run build                # build production ke dist/
 - Data sample toko testing (palsu, 2 bulan: pesanan, penghasilan, iklan, SQL isi HPP):
   `npm run sample -- "Nama Toko"` → folder `sample-store/` (di-gitignore). Urutan upload dan hasil
   yang seharusnya muncul ada di `sample-store/BACA-DULU.txt`.
+- Data sample **Cek cepat evaluasi 11.11** (palsu; minggu biasa 1–7 Nov vs minggu 11.11 8–14 Nov,
+  harga promo, pesanan batal, produk baru tanpa HPP): `npm run sample:1111 -- "Nama Toko"` → folder
+  `sample-store/cek-cepat-1111/`. Pakai toko yang sudah berisi data `npm run sample` (HPP & potongan
+  diambil dari sana). Label yang seharusnya muncul ada di `BACA-DULU.txt` folder itu.
+- Data sample **laris belum tentu untung** (palsu; 2 produk, Oktober 2026, export pesanan + penghasilan
+  "Sudah Dilepas" .xlsx): `npm run sample:2produk -- "Nama Toko"` → folder `sample-store/2-produk/`.
+  Pakai toko kosong. Rekap → Per produk: A 100 terjual untung Rp1.000.000, B 60 terjual untung Rp1.680.000.
 - Untuk menguji dengan file Shopee asli, taruh file di folder `sample-data/` (sudah di-gitignore,
   **jangan pernah di-commit**). `tests/sampleData.local.test.ts` otomatis berjalan kalau folder itu
   ada, dan dilewati kalau tidak ada.
@@ -289,7 +317,7 @@ npm run build                # build production ke dist/
 ### SheetJS
 
 `xlsx` (SheetJS) membaca export pesanan (.xlsx) di halaman Upload, dan dipakai
-`scripts/make-fixtures.mjs` serta `scripts/make-sample-store.mjs` untuk membuat file contoh.
+`scripts/make-fixtures.mjs`, `scripts/make-sample-store.mjs`, `scripts/make-sample-1111.mjs`, serta `scripts/make-sample-2produk.mjs` untuk membuat file contoh.
 
 Registry npm berhenti di `xlsx@0.18.5`, yang punya celah keamanan (prototype pollution dan ReDoS).
 Versi resmi terbaru hanya ada di CDN SheetJS, jadi paketnya **disimpan di repo**:

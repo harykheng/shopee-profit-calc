@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Alert, Brand, Card, ErrorBox, Spinner, Stamp, SupportLink, WhatsAppButton, linkClass } from './components/ui'
 import { MonthlyReminderCard } from './components/MonthlyReminder'
+import { OnboardingStrip, useOnboarding } from './components/Onboarding'
 import { SupportButton } from './components/SupportButton'
 import { StoreNameModal } from './components/StoreNameModal'
 import { APP_NAME, hasSupportWhatsApp, isHitungCuan } from './lib/brand'
@@ -9,7 +10,7 @@ import { formatDate } from './lib/format'
 import { expiryNotice, subscriptionStatus } from './lib/subscription'
 import { needsPasswordChange } from './lib/password'
 import { setErrorContext } from './lib/reportError'
-import { fetchIsPlatformAdmin, fetchStores } from './lib/api'
+import { fetchIsPlatformAdmin, fetchStores, logActivity } from './lib/api'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import type { Store } from './lib/types'
 import { LoginPage } from './pages/LoginPage'
@@ -201,6 +202,12 @@ function MainApp({ user }: { user: User }) {
   const selectedStore = stores?.find((s) => s.id === storeId) ?? null
   // Laporan error hanya membawa toko yang terbukti milik akun ini (id dari localStorage bisa basi).
   useEffect(() => setErrorContext({ storeId: selectedStore ? selectedStore.id : null }), [selectedStore])
+  // Catatan "masuk aplikasi" untuk pengelola (apakah akun uji coba benar-benar dipakai). Database hanya
+  // menyimpan satu per 30 menit, jadi memuat ulang halaman tidak membuat catatan dobel.
+  const selectedStoreId = selectedStore?.id ?? null
+  useEffect(() => {
+    if (selectedStoreId !== null) logActivity(selectedStoreId, 'trial_logged_in')
+  }, [selectedStoreId])
   const subscription = subscriptionStatus(selectedStore?.active_until)
   // Layar penuh menggantikan semua halaman: belum punya toko, atau langganan toko terpilih habis.
   const expired = subscription.state === 'expired' && selectedStore !== null
@@ -210,6 +217,10 @@ function MainApp({ user }: { user: User }) {
   const navItems = operatorOnly ? OPERATOR_NAV : NAV_ORDER
   const homeRoute: Route = isOperator ? 'pelanggan' : 'rekap'
   const blocked = stores !== null && ((stores.length === 0 && !operatorOnly) || expired)
+  // Panduan pengguna baru (Upload → HPP → Lihat hasil). Selama panduan tampil, pengingat bulanan disembunyikan
+  // supaya langkah yang sama tidak disebut dua kali.
+  const onboarding = useOnboarding(selectedStore ? selectedStore.id : null, route, selectedStore !== null && !expired)
+  const onboardingView = onboarding.status === 'ready' ? onboarding.view : null
 
   // Halaman awal pengelola = daftar pelanggan. Halaman toko dialihkan ke sana kalau pengelola tidak punya toko.
   useEffect(() => {
@@ -412,7 +423,10 @@ function MainApp({ user }: { user: User }) {
         ) : (
           <>
             {/* Di luar pembungkus per-halaman supaya tidak berkedip tiap pindah halaman. */}
-            {storeId !== null && <MonthlyReminderCard storeId={storeId} route={route} />}
+            {storeId !== null && onboardingView?.kind !== 'guide' && onboarding.status !== 'loading' && (
+              <MonthlyReminderCard storeId={storeId} route={route} />
+            )}
+            {onboardingView && (route === 'upload' || route === 'hpp') && <OnboardingStrip view={onboardingView} route={route} />}
           <div key={route} className="page-in">
             {notice && selectedStore && (
               <div className="mb-6">
@@ -437,7 +451,7 @@ function MainApp({ user }: { user: User }) {
                 initialMonth={params.get('bulan')}
               />
             )}
-            {route === 'rekap' && <RecapPage stores={stores} storeId={storeId} />}
+            {route === 'rekap' && <RecapPage stores={stores} storeId={storeId} onboarding={onboarding} />}
             {route === 'iklan' && (
               <AdsPage key={storeId} stores={stores} storeId={storeId} quickCheck={params.get('cek') === '1'} />
             )}

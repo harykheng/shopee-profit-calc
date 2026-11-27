@@ -6,12 +6,20 @@ const SYSTEM_TROUBLE = 'Ada gangguan di sistem kami. Coba lagi sebentar lagi; ka
 
 /** Error karena migration belum dijalankan: [kata kunci, nama file SQL]. */
 const MISSING_MIGRATIONS: [match: (lower: string) => boolean, file: string][] = [
+  // Link dengan sumber (versi 3 parameter) dan catatan aktivitas; sebelum "trial_link" di bawah.
+  [
+    (l) => l.includes('p_source') || l.includes('log_activity') || l.includes('activity_events') || l.includes('platform_activity_summary'),
+    '20261116000000_activity_events.sql',
+  ],
+  // claim_trial_link versi 5 isian (p_phone) / data no HP belum ada; sebelum "trial_link" di bawah.
+  [(l) => l.includes('p_phone') || l.includes('p_heard_from') || l.includes('platform_signup_details') || l.includes('trial_signups'), '20261123000000_trial_signup_profile.sql'],
   // Sebelum platform_create_trial: "platform_create_trial_link" juga memuat kata itu.
   [(l) => l.includes('trial_link'), '20261111000000_trial_links.sql'],
   [(l) => l.includes('platform_create_account'), '20261030000000_platform_create_account.sql'],
   [(l) => l.includes('platform_subscribe_store'), '20261031000000_platform_set_subscription.sql'],
   [(l) => l.includes('platform_reset_password'), '20261101000000_platform_reset_password.sql'],
   [(l) => l.includes('platform_add_trial_simulations'), '20261102000000_trial_simulation_bonus.sql'],
+  [(l) => l.includes('platform_reset_store_data'), '20261118000000_platform_reset_store_data.sql'],
   [
     (l) => l.includes('platform_create_trial') || l.includes('platform_list_customers') || l.includes('is_platform_admin'),
     '20261026000000_platform_admin.sql',

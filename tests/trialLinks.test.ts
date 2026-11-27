@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatPhone,
+  heardFromValue,
   linkInviteMessage,
+  normalizePhone,
   linkProblem,
   linkSummary,
   signupCodeFromHash,
@@ -24,15 +27,51 @@ describe('signupUrl & signupCodeFromHash', () => {
   })
 })
 
+const ok = { email: 'budi@gmail.com', password: 'Rahasia123', phone: '0812 3456 7890', heardFrom: 'Instagram' as const, heardFromOther: '' }
+
 describe('validateSignup', () => {
-  it('menolak email dan password yang salah', () => {
-    expect(validateSignup({ email: 'budi', password: 'Rahasia123' })).toMatch(/Email/)
-    expect(validateSignup({ email: 'budi@gmail.com', password: 'pendek' })).toMatch(/minimal 8/)
-    expect(validateSignup({ email: 'budi@gmail.com', password: 'é'.repeat(37) })).toMatch(/terlalu panjang/)
+  it('menolak email, password, no HP, dan jawaban yang salah', () => {
+    expect(validateSignup({ ...ok, email: 'budi' })).toMatch(/Email/)
+    expect(validateSignup({ ...ok, password: 'pendek' })).toMatch(/minimal 8/)
+    expect(validateSignup({ ...ok, password: 'é'.repeat(37) })).toMatch(/terlalu panjang/)
+    expect(validateSignup({ ...ok, phone: '021 555 1234' })).toMatch(/No HP/)
+    expect(validateSignup({ ...ok, heardFrom: null })).toMatch(/Pilih/)
+    expect(validateSignup({ ...ok, heardFrom: 'Lainnya', heardFromOther: '  ' })).toMatch(/Tulis/)
   })
 
   it('menerima isian yang benar (spasi di email dirapikan)', () => {
-    expect(validateSignup({ email: '  Budi@Gmail.com ', password: 'Rahasia123' })).toBeNull()
+    expect(validateSignup({ ...ok, email: '  Budi@Gmail.com ' })).toBeNull()
+    expect(validateSignup({ ...ok, heardFrom: 'Lainnya', heardFromOther: 'Grup WA penjual' })).toBeNull()
+  })
+})
+
+describe('normalizePhone & formatPhone', () => {
+  it('berbagai cara menulis nomor HP jadi format 62…', () => {
+    for (const p of ['0812-3456-7890', '+62 812 3456 7890', '6281234567890', '812 3456 7890', '(0812) 3456 7890']) {
+      expect(normalizePhone(p)).toBe('6281234567890')
+    }
+    expect(normalizePhone('0812345678')).toBe('62812345678')
+  })
+
+  it('menolak yang bukan nomor HP Indonesia', () => {
+    for (const p of ['', '12345', '021 555 1234', '0812', '0812 3456 7890 1234', '+1 555 123 4567']) {
+      expect(normalizePhone(p)).toBeNull()
+    }
+  })
+
+  it('tampil seperti nomor lokal', () => {
+    expect(formatPhone('6281234567890')).toBe('0812-3456-7890')
+    expect(formatPhone('62812345678')).toBe('0812-3456-78')
+  })
+})
+
+describe('heardFromValue', () => {
+  it('pilihan biasa apa adanya; Lainnya memakai isian', () => {
+    expect(heardFromValue(null, '')).toBe('')
+    expect(heardFromValue('TikTok', 'abaikan')).toBe('TikTok')
+    expect(heardFromValue('Lainnya', '  grup   WA ')).toBe('Lainnya: grup WA')
+    expect(heardFromValue('Lainnya', '')).toBe('')
+    expect(heardFromValue('Lainnya', 'x'.repeat(200))).toHaveLength(80)
   })
 })
 

@@ -49,6 +49,17 @@ Hal penting yang perlu diingat:
   Biaya). Di laptop menunya ada di **bar atas**; di HP/iPad keenam menu ada di **bawah layar**.
   Aplikasi langsung terbuka di **Rekap**, dan angka **untung bersih** tampil paling atas.
 
+**Pertama kali memakai: 3 langkah.** Toko yang baru mulai disambut panduan di halaman Rekap:
+**Upload laporan Shopee → Masukkan HPP → Lihat hasil keuntungan**. Langkah yang sudah beres diberi
+centang hijau (dicek dari data yang tersimpan, jadi tetap benar walau pindah dari laptop ke HP), dan tombol
+di langkah yang sedang dikerjakan langsung membuka halamannya. Selama panduan ini tampil, halaman Upload dan
+HPP menampilkan satu baris "Langkah 2 dari 3 …" dengan tombol ke langkah berikutnya. Begitu laporan dan
+semua HPP terisi, Rekap langsung menampilkan untung bersih, dengan kartu hijau **3 dari 3 langkah selesai**
+di hari itu. Setelah itu panduan tidak muncul lagi; kekurangan data bulan berikutnya diingatkan oleh
+pengingat otomatis (di bawah).
+
+---
+
 ---
 
 ## 2. Rutinitas tiap awal bulan (ringkas)
@@ -69,6 +80,9 @@ Lakukan di awal bulan untuk bulan sebelumnya (contoh: awal September untuk Agust
 **Butuh bantuan?** Tombol hijau **Bantuan** di pojok kanan bawah (di HP, tepat di atas menu bawah)
 membuka WhatsApp ke pengelola. Pesan awalnya sudah berisi akun, toko, dan halaman yang sedang kamu
 buka, jadi tinggal tulis masalahnya lalu kirim. Tombol ini ada juga di halaman login.
+
+**Login.** Tekan ikon **mata** di ujung kanan kolom password untuk memastikan ketikanmu benar; tekan
+sekali lagi untuk menutupnya. Ikon yang sama ada di halaman daftar uji coba dan di **Akun → Ganti password**.
 
 **Pengingat otomatis.** Kalau rekap bulan lalu belum lengkap, kartu pengingat muncul di atas halaman
 ("Rekap September 2026 belum lengkap") dengan tombol langsung ke langkah yang tersisa: Upload laporan,
@@ -279,6 +293,23 @@ Yang dicek:
 | **Semua pesanan** | Semua pesanan yang **dibuat** di bulan itu (selesai, masih dikirim, batal) dan **untung** dari pesanan yang sudah selesai. Kalau uang tiap pesanan sudah ada di laporan Excel "Sudah Dilepas", angkanya pasti; kalau belum (laporan PDF, atau uangnya belum cair), ditulis **perkiraan** karena PDF hanya mencatat uang cair per hari. |
 | **Per produk** | Barang terjual dan modal per produk, plus daftar barang retur. Dengan laporan Excel "Sudah Dilepas", tiap produk juga menampilkan **uang masuk** (setelah potongan Shopee asli) dan **untung** sebelum biaya iklan & packaging, dengan label **RUGI** (untung di bawah 0) atau **TIPIS** (di bawah 10% dari uang masuk). Urutannya bisa diganti: **Terlaris**, **Paling untung**, atau **Rugi dulu**. Kalau sebagian uangnya belum cair, tertulis dari berapa barang angka itu dihitung. |
 | **Per bulan** | Muncul kalau melihat beberapa bulan sekaligus. |
+
+### Download rekap (.md)
+
+Tombol **Download rekap (.md)** di samping pilihan bulan menyimpan rekap bulan (atau beberapa bulan) yang
+sedang dilihat sebagai satu file. Isinya sama dengan halaman Rekap: untung bersih, status bulan (final atau
+apa yang belum lengkap), "Kenapa untungnya segini?", hitungan dari omzet sampai untung, tabel per bulan
+(kalau beberapa bulan), dan tabel per produk (urut dari yang paling untung). **Tidak ada data pembeli**
+(nomor pesanan, nama, alamat). Bagian iklan per produk tidak ikut; untuk itu pakai Cek cepat di halaman Iklan.
+
+Kegunaannya:
+- **Arsip bulanan**: simpan di laptop/Drive supaya angka bulan lalu tetap ada walau datanya diubah.
+- **Dikirim** ke keluarga, partner, atau akuntan (file .md adalah teks biasa: bisa dibuka di Notepad,
+  TextEdit, atau aplikasi catatan).
+- **Ditanyakan ke Claude**: lampirkan filenya di chat; di bagian bawah file ada contoh pertanyaan.
+
+> File ini berisi HPP dan untung toko. Bagikan hanya ke orang atau layanan yang kamu percaya.
+> Kalau statusnya masih **Belum lengkap**, angkanya bisa berubah: download lagi setelah data lengkap.
 
 ---
 
@@ -725,6 +756,12 @@ Dua alasan:
 Hubungi pengelola aplikasi untuk menghapus datanya. Untuk mencegahnya, selalu cek nama toko di bar atas
 sebelum upload. Kotak data iklan di halaman Upload juga memberi peringatan kalau tokonya terlihat beda.
 
+**Mau mulai dari nol lagi (data toko dikosongkan)?**
+Minta ke pengelola aplikasi. Pengelola bisa mengosongkan export pesanan, laporan penghasilan, produk & HPP,
+biaya, dan data iklan tokomu sekaligus. **Nama toko, akun, password, dan masa langganan tidak berubah.** Setelah
+itu panduan 3 langkah (Upload → HPP → Lihat hasil) muncul lagi di Rekap. Data yang sudah dikosongkan tidak bisa
+dikembalikan.
+
 **Apakah data pembeli tersimpan?**
 Tidak. Nama, alamat, no. HP, username, catatan, dan no. resi pembeli **tidak pernah dibaca maupun
 disimpan**. File dibaca langsung di browser.
@@ -753,10 +790,11 @@ disimpan**. File dibaca langsung di browser.
 Buka lewat ikon orang di pojok kanan atas.
 
 **Daftar uji coba lewat link.** Kalau kamu menerima link uji coba dari pengelola, buka link itu, isi
-**email** dan **buat password** sendiri, lalu tekan **Mulai uji coba 7 hari**. Akunmu langsung jadi dan
+**email**, **buat password** sendiri, **no HP (WhatsApp)**, dan pilih dari mana kamu tahu aplikasi ini, lalu tekan **Mulai uji coba 7 hari**. Akunmu langsung jadi dan
 aplikasi langsung terbuka. Simpan password-nya: dipakai untuk masuk lagi nanti (di perangkat lain juga).
 Kalau muncul "link tidak berlaku" atau "kuota habis", minta link baru ke pengelola. Email yang sudah
-punya akun tidak bisa daftar lagi; pakai **Masuk**.
+punya akun tidak bisa daftar lagi; pakai **Masuk**. No HP hanya dipakai pengelola untuk menghubungimu soal uji coba
+dan bantuan.
 
 **Login pertama: nama toko.** Kalau akunmu dibuat tanpa nama toko, aplikasi menanyakan **nama tokomu di
 Shopee** saat pertama login. Tulis persis seperti di Seller Centre: nama ini dicocokkan dengan laporan
@@ -802,3 +840,8 @@ Data tokomu adalah milikmu. Di halaman Akun, **Minta salinan data** dan **Minta 
 membuka WhatsApp ke pengelola dengan pesan yang sudah berisi akun dan tokomu. Pengelola memprosesnya
 secara manual setelah memastikan permintaan itu benar dari pemilik akun. Penghapusan tidak bisa
 dibatalkan, jadi minta salinan dulu kalau kamu masih membutuhkan datanya.
+
+**Catatan pemakaian.** Aplikasi mencatat **kapan** kamu masuk, berhasil upload, dan membuka Rekap, supaya
+pengelola tahu bagian mana yang sudah dicoba dan bisa membantu kalau kamu tersendat. Yang dicatat hanya nama
+kegiatan dan waktunya; isi laporan, angka untung, produk, dan data pembeli **tidak** ikut dicatat. Catatan
+ini ikut di salinan data dan ikut terhapus saat data dihapus.
